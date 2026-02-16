@@ -266,7 +266,7 @@ function App() {
                 onClick={() => setShowQuoteDialog(true)}
                 className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-6"
               >
-                Free Quote
+                Schedule a Walkthrough
               </Button>
             </div>
 
