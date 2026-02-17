@@ -1,6 +1,6 @@
 export const content = {
   brand: {
-    name: "Torito pintura",
+    name: "Tauro Painting",
     tagline: "Luxury Finishes",
     cta: "Get a Free Estimate",
   },
