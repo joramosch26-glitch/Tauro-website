@@ -1,3 +1,4 @@
+import { content } from "./content";
 import { useState, useEffect, useRef } from 'react';
 import { 
   Paintbrush, 
@@ -235,10 +236,12 @@ function App() {
               </div>
               <div className="flex flex-col">
                 <span className={`text-xl font-bold tracking-tight transition-colors ${isScrolled ? 'text-slate-900' : 'text-white'}`}>
-                  Tauro Painting
+                  {content.brand.name}
+
                 </span>
                 <span className={`text-[10px] uppercase tracking-[0.2em] transition-colors ${isScrolled ? 'text-slate-500' : 'text-white/60'}`}>
-                  Luxury Finishes
+                  {content.brand.tagline}
+
                 </span>
               </div>
             </a>
