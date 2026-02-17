@@ -1,8 +1,16 @@
 import { content } from "./content";
 import { useState, useEffect, useRef } from 'react';
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+
+import Home from "./pages/Home";
+import Services from "./pages/Services";
+import Projects from "./pages/Projects";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+
 import { 
   Paintbrush, 
-  Home, 
+  Home as HomeIcon, 
   Building2, 
   Phone, 
   Mail, 
@@ -73,7 +81,7 @@ function App() {
 
   const services = [
     {
-      icon: <Home className="w-8 h-8" />,
+      icon: <HomeIcon className="w-8 h-8" />,
       title: 'Interior Painting',
       subtitle: 'Interiors',
       description: 'We transform interior spaces with impeccable finishes that elevate your home\'s aesthetics. We use premium low-VOC paints for a healthy environment.',
@@ -200,7 +208,7 @@ function App() {
 
   const stats = [
     { value: '15+', label: 'Years Experience', icon: <Clock className="w-5 h-5" /> },
-    { value: '2,500+', label: 'Projects Completed', icon: <Home className="w-5 h-5" /> },
+    { value: '2,500+', label: 'Projects Completed', icon: <HomeIcon className="w-5 h-5" /> },
     { value: '100%', label: 'Satisfaction', icon: <Star className="w-5 h-5" /> },
     { value: '50+', label: 'Custom Homes', icon: <Award className="w-5 h-5" /> }
   ];
