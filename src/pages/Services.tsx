@@ -39,13 +39,36 @@ const services: readonly Service[] = content.services;
                 {/* Image */}
                 <div className={`relative overflow-hidden ${index === 1 || index === 2 ? "h-48" : "h-64 lg:h-full"}`}>
                   <div className="w-full h-full bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 flex items-center justify-center">
-  <div className="text-slate-400 text-sm font-medium">Photo coming soon</div>
+  <div className="text-slate-400 text-sm font-medium">{/* Image */}
+<div
+  className={`relative overflow-hidden ${
+    index === 1 || index === 2 ? "h-48" : "h-64 lg:h-full"
+  }`}
+>
+  <img
+    src={service.image}
+    alt={service.title}
+    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+    loading="lazy"
+  />
+  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
+</div>
+</div>
 </div>
                     {/* Image */}
                     
 <div className={`relative overflow-hidden ${index === 1 || index === 2 ? 'h-48' : 'h-64 lg:h-full'}`}>
   <div className="w-full h-full bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 flex items-center justify-center">
-    <div className="text-slate-400 text-sm font-medium">Photo coming soon</div>
+    <div className="text-slate-400 text-sm font-medium">{/* Image */}
+<div className={`relative overflow-hidden ${index === 1 || index === 2 ? 'h-48' : 'h-64 lg:h-full'}`}>
+  <img
+    src={service.image}
+    alt={service.title}
+    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+  />
+  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
+</div>
+</div>
   </div>
 
   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
