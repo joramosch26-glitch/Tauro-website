@@ -1,7 +1,6 @@
 import { content } from "./content";
 import { useState, useEffect, useRef } from 'react';
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-
+import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
 import Home from "./pages/Home";
 import Services from "./pages/Services";
 import Projects from "./pages/Projects";
@@ -43,6 +42,10 @@ function App() {
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
   const heroRef = useRef<HTMLDivElement>(null);
 
+  const location = useLocation();
+  const navigate = useNavigate();
+  const isHome = location.pathname === "/";
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 100);
@@ -51,33 +54,31 @@ function App() {
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add('reveal-visible');
-          }
-        });
-      },
-      { threshold: 0.15, rootMargin: '-50px 0px' }
-    );
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("reveal-visible");
+        }
+      });
+    },
+    { threshold: 0.15, rootMargin: "-50px 0px" }
+  );
 
-    document.querySelectorAll('.reveal').forEach((el) => {
-      observer.observe(el);
-    });
+  document.querySelectorAll(".reveal").forEach((el) => observer.observe(el));
 
-    return () => observer.disconnect();
-  }, []);
+  return () => observer.disconnect();
+}, [location.pathname]);
 
   const navLinks = [
-    { name: 'Home', href: '#home' },
-    { name: 'Services', href: '#services' },
-    { name: 'Projects', href: '#projects' },
-    { name: 'About', href: '#about' },
-    { name: 'Process', href: '#process' },
-    { name: 'Contact', href: '#contact' },
-  ];
+  { name: 'Home', to: '/' },
+  { name: 'Services', to: '/services' },
+  { name: 'Projects', to: '/projects' },
+  { name: 'About', to: '/about' },
+  { name: 'Contact', to: '/contact' },
+];
+
 
   const services = [
     {
@@ -257,17 +258,12 @@ function App() {
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-8">
               {navLinks.map((link) => (
-                <a
-                  key={link.name}
-                  href={link.href}
-                  onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
-                  className={`text-sm font-medium transition-all duration-300 hover:text-amber-500 relative group ${
-                    isScrolled ? 'text-slate-700' : 'text-white/90'
-                  }`}
-                >
+                <Link
+  to={link.to}
+>
                   {link.name}
                   <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-500 transition-all duration-300 group-hover:w-full" />
-                </a>
+                </Link>
               ))}
             </div>
 
@@ -297,14 +293,12 @@ function App() {
             <div className="lg:hidden mt-4 pb-4 border-t border-white/10 pt-4 bg-white/95 backdrop-blur-md rounded-xl mt-2 p-4">
               <div className="flex flex-col gap-3">
                 {navLinks.map((link) => (
-                  <a
-                    key={link.name}
-                    href={link.href}
-                    onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
-                    className="text-sm font-medium text-slate-700 hover:text-amber-600 py-2"
-                  >
+                  <Link
+  to={link.to}
+>
+
                     {link.name}
-                  </a>
+                  </Link>
                 ))}
                 <Button 
                   onClick={() => { setShowQuoteDialog(true); setIsMobileMenuOpen(false); }}
@@ -318,8 +312,22 @@ function App() {
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section id="home" ref={heroRef} className="relative min-h-screen flex items-center overflow-hidden">
+    {!isHome && (
+  <main className="pt-28">
+    <Routes>
+      <Route path="/services" element={<Services />} />
+      <Route path="/projects" element={<Projects />} />
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="*" element={<Home />} />
+    </Routes>
+  </main>
+)}
+
+ {isHome && (
+  <>
+    {/* Hero Section */}
+    <section id="home" ref={heroRef} className="relative min-h-screen flex items-center overflow-hidden">
         {/* Background Image with Parallax */}
         <div className="absolute inset-0">
           <div 
@@ -867,7 +875,8 @@ function App() {
           </div>
         </div>
       </section>
-
+        </>
+)}
       {/* Footer */}
       <footer className="bg-slate-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -913,13 +922,12 @@ function App() {
               <ul className="space-y-3">
                 {navLinks.map((link) => (
                   <li key={link.name}>
-                    <a 
-                      href={link.href}
-                      onClick={(e) => { e.preventDefault(); scrollToSection(link.href); }}
-                      className="text-slate-400 hover:text-amber-400 transition-colors"
-                    >
+                    <Link
+  to={link.to}
+>
+
                       {link.name}
-                    </a>
+                    </Link>
                   </li>
                 ))}
               </ul>
