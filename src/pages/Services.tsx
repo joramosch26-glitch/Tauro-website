@@ -1,8 +1,11 @@
 import { content } from "../content";
 import { Sparkles, CheckCircle2 } from "lucide-react";
 
+type Service = (typeof content.services)[number];
+
 export default function Services() {
-  const services = content.services ?? [];
+  
+const services: readonly Service[] = content.services;
 
   return (
     <section className="py-24 lg:py-32 bg-slate-50">
@@ -24,7 +27,7 @@ export default function Services() {
 
         {/* Services Grid */}
         <div className="grid lg:grid-cols-2 gap-8">
-          {services.map((serviceName, index) => (
+          {services.map((service, index) => (
             <div
               key={index}
               className={`reveal reveal-fade-up group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 ${
@@ -39,6 +42,7 @@ export default function Services() {
   <div className="text-slate-400 text-sm font-medium">Photo coming soon</div>
 </div>
                     {/* Image */}
+                    
 <div className={`relative overflow-hidden ${index === 1 || index === 2 ? 'h-48' : 'h-64 lg:h-full'}`}>
   <div className="w-full h-full bg-gradient-to-br from-slate-100 via-slate-50 to-slate-200 flex items-center justify-center">
     <div className="text-slate-400 text-sm font-medium">Photo coming soon</div>
@@ -46,6 +50,11 @@ export default function Services() {
 
   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
 </div>
+<img
+  src={service.image}
+  alt={service.title}
+  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+/>
 
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
                 </div>
@@ -55,7 +64,7 @@ export default function Services() {
                   <div className="w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 mb-6 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
                     <Sparkles className="w-6 h-6" />
                   </div>
-                  <h2 className="text-2xl font-bold text-slate-900 mb-4">{serviceName}</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 mb-4">{service.title}</h2>
                 </div>
               </div>
             </div>
