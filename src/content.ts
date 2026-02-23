@@ -49,6 +49,57 @@ export const content = {
     },
   ],
 
+ projects: [
+  {
+    id: "mountain-view-residence",
+    image: "/interior-luxury-1.jpg",
+    title: "Mountain View Residence",
+    location: "Park City, UT",
+    category: "Interior",
+    description: "Complete interior painting of 8,000 sq ft home",
+  },
+  {
+    id: "desert-villa",
+    image: "/villa-exterior.jpg",
+    title: "Desert Villa",
+    location: "St. George, UT",
+    category: "Exterior",
+    description: "Exterior painting of Mediterranean villa",
+  },
+  {
+    id: "gourmet-kitchen",
+    image: "/kitchen-luxury.jpg",
+    title: "Gourmet Kitchen",
+    location: "Salt Lake City, UT",
+    category: "Cabinetry",
+    description: "Cabinet refinishing and premium enamel finish",
+  },
+  {
+    id: "executive-dining-room",
+    image: "/Projects/project-4.jpg",
+    title: "Executive Dining Room",
+    location: "Provo, UT",
+    category: "Interior",
+    description: "Interior repaint with refined trim work and crisp line detailing",
+  },
+  {
+    id: "master-spa-suite",
+    image: "/spa-suite.jpg",
+    title: "Master Spa Suite",
+    location: "Lehi, UT",
+    category: "Interior",
+    description: "Luxury bathroom refresh with smooth finishes and durable coatings",
+  },
+  {
+    id: "executive-office",
+    image: "/executive-office.jpg",
+    title: "Executive Office",
+    location: "Orem, UT",
+    category: "Interior",
+    description: "Warm, high-end office transformation with clean modern tones",
+  },
+],
+
   seo: {
     title: "Tauro Painting | Luxury Residential & Commercial Painting in Utah",
     description:

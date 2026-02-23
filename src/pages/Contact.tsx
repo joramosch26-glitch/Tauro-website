@@ -1,3 +1,5 @@
+import ContactSection from "../components/ContactSection";
+
 export default function Contact() {
-  return <div style={{ padding: 24 }}>Contact</div>;
+  return <ContactSection />;
 }
