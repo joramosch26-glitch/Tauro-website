@@ -2,11 +2,25 @@ import { Quote, Star } from "lucide-react";
 
 const testimonials = [
   {
-    name: "Client",
-    location: "Utah",
+    name: "Sarah M.",
+    location: "Salt Lake City, UT",
     rating: 5,
-    text: "Great work!",
+    text: "Excellent prep work and flawless finish. The team was professional and fast.",
     project: "Interior Painting",
+  },
+  {
+    name: "James R.",
+    location: "Park City, UT",
+    rating: 5,
+    text: "High-end results. Communication was clear, and the work exceeded expectations.",
+    project: "Exterior Painting",
+  },
+  {
+    name: "Emily T.",
+    location: "Draper, UT",
+    rating: 5,
+    text: "Clean lines, great attention to detail, and they left everything spotless.",
+    project: "Cabinet Refinishing",
   },
 ];
 
@@ -15,7 +29,7 @@ export default function TestimonialsSection() {
     <section className="py-24 lg:py-32 bg-white">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         {/* Section Header */}
-        <div className="reveal reveal-fade-up text-center max-w-3xl mx-auto mb-16">
+        <div className="text-center max-w-3xl mx-auto mb-16">
           <span className="inline-flex items-center gap-2 text-amber-600 font-semibold text-sm uppercase tracking-wider mb-4">
             <Quote className="w-4 h-4" />
             Testimonials
@@ -24,7 +38,7 @@ export default function TestimonialsSection() {
             What Our Clients Say
           </h2>
           <p className="text-slate-600 text-lg">
-            Our clients' satisfaction is the true testament to our work.
+            Our clients&apos; satisfaction is the true testament to our work.
           </p>
         </div>
 
@@ -33,7 +47,7 @@ export default function TestimonialsSection() {
           {testimonials.map((testimonial, index) => (
             <div
               key={index}
-              className="reveal reveal-fade-up bg-slate-50 rounded-2xl p-8 relative"
+              className="bg-slate-50 rounded-2xl p-8 relative"
               style={{ transitionDelay: `${index * 100 + 200}ms` }}
             >
               {/* Quote Icon */}
@@ -44,13 +58,16 @@ export default function TestimonialsSection() {
               {/* Rating */}
               <div className="flex gap-1 mb-4">
                 {[...Array(testimonial.rating)].map((_, i) => (
-                  <Star key={i} className="w-5 h-5 text-amber-400 fill-amber-400" />
+                  <Star
+                    key={i}
+                    className="w-5 h-5 text-amber-400 fill-amber-400"
+                  />
                 ))}
               </div>
 
               {/* Text */}
               <p className="text-slate-700 mb-6 leading-relaxed">
-                "{testimonial.text}"
+                &quot;{testimonial.text}&quot;
               </p>
 
               {/* Project Tag */}
