@@ -79,21 +79,35 @@
   background: #94a3b8;
 }
 
-/* Reveal Animations */
+/* =========================
+   SAFE REVEAL SYSTEM
+   - Nunca ocultar contenido por defecto
+   - Animación solo si JS agrega reveal-visible
+   ========================= */
+
+/* Base reveal: VISIBLE por defecto */
 .reveal {
-  opacity: 0;
-  transform: translateY(30px);
-  transition: all 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
-.reveal-visible {
+/* Si algún día quieres animar “desde oculto”, agrega class="reveal animate" */
+.reveal.animate {
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.reveal.animate.reveal-visible {
   opacity: 1;
   transform: translateY(0);
 }
 
+/* Fade-up (SAFE) */
 .reveal-fade-up {
-  opacity: 0;
-  transform: translateY(40px);
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
 .reveal-fade-up.reveal-visible {
@@ -101,9 +115,11 @@
   transform: translateY(0);
 }
 
+/* Slide left (SAFE) */
 .reveal-slide-left {
-  opacity: 0;
-  transform: translateX(-60px);
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
 .reveal-slide-left.reveal-visible {
@@ -111,9 +127,11 @@
   transform: translateX(0);
 }
 
+/* Slide right (SAFE) */
 .reveal-slide-right {
-  opacity: 0;
-  transform: translateX(60px);
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
 .reveal-slide-right.reveal-visible {
@@ -121,9 +139,11 @@
   transform: translateX(0);
 }
 
+/* Scale (SAFE) */
 .reveal-scale {
-  opacity: 0;
-  transform: scale(0.9);
+  opacity: 1;
+  transform: none;
+  transition: opacity 0.8s ease, transform 0.8s ease;
 }
 
 .reveal-scale.reveal-visible {
