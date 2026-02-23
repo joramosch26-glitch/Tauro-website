@@ -47,6 +47,7 @@ function App() {
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === "/";
+  const navSolid = !isHome || isScrolled;
 
   useEffect(() => {
     const handleScroll = () => {
@@ -229,10 +230,10 @@ useEffect(() => {
       {/* Navigation */}
       <nav 
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
-          isScrolled 
-            ? 'bg-white/95 backdrop-blur-md shadow-sm py-4' 
-            : 'bg-transparent py-6'
-        }`}
+  navSolid
+    ? 'bg-white/95 backdrop-blur-md shadow-sm py-4'
+    : 'bg-transparent py-6'
+}`}
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between">
@@ -242,15 +243,15 @@ useEffect(() => {
               onClick={(e) => { e.preventDefault(); scrollToSection('#home'); }}
               className="flex items-center gap-3 group"
             >
-              <div className={`p-2.5 rounded-lg transition-all duration-300 ${isScrolled ? 'bg-slate-900' : 'bg-white/10 backdrop-blur-sm'}`}>
+              <div className={`p-2.5 rounded-lg transition-all duration-300 ${navSolid ? 'bg-slate-900' : 'bg-white/10 backdrop-blur-sm'}`}>
                 <Paintbrush className="w-6 h-6 text-amber-400" />
               </div>
               <div className="flex flex-col">
-                <span className={`text-xl font-bold tracking-tight transition-colors ${isScrolled ? 'text-slate-900' : 'text-white'}`}>
+                <span className={`text-xl font-bold tracking-tight transition-colors ${navSolid ? 'text-slate-900' : 'text-white'}`}>
                   {content.brand.name}
 
                 </span>
-                <span className={`text-[10px] uppercase tracking-[0.2em] transition-colors ${isScrolled ? 'text-slate-500' : 'text-white/60'}`}>
+                <span className={`text-[10px] uppercase tracking-[0.2em] transition-colors ${navSolid ? 'text-slate-500' : 'text-white/60'}`}>
                   {content.brand.tagline}
 
                 </span>
@@ -265,8 +266,9 @@ useEffect(() => {
       to={link.to}
       className={({ isActive }) =>
         `relative group px-1 py-2 text-sm font-medium transition-colors ${
-          isScrolled ? "text-slate-700 hover:text-slate-900" : "text-white/80 hover:text-white"
-        } ${isActive ? (isScrolled ? "text-amber-600" : "text-amber-400") : ""}`
+          navSolid ? "text-slate-700 hover:text-slate-900" : "text-white/80 hover:text-white"
+        } 
+        ${isActive ? (navSolid ? "text-amber-600" : "text-amber-400") : ""}`
       }
     >
       {({ isActive }) => (
