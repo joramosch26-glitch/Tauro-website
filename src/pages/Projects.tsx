@@ -43,12 +43,12 @@ export default function Projects() {
 
             return (
               <article
-                key={(p as any).id ?? idx}
-                className={[
-                  "group relative overflow-hidden rounded-2xl border bg-card",
-                  tileClass(idx),
-                ].join(" ")}
-              >
+  key={`${(p as any).id ?? (p as any).title ?? "project"}-${idx}`}
+  className={[
+    "group relative overflow-hidden rounded-2xl border bg-card",
+    tileClass(idx),
+  ].join(" ")}
+>
                 <img
                   src={(p as any).image}
                   alt={(p as any).title}
