@@ -2,7 +2,6 @@ import { content } from "./content";
 import { useState, useEffect } from "react";
 import { Routes, Route, Link, NavLink, useLocation } from "react-router-dom";
 
-import Home from "./pages/Home";
 import Services from "./pages/Services";
 import Projects from "./pages/Projects";
 import About from "./pages/About";
@@ -19,8 +18,6 @@ import ServicesSection from "./components/ServicesSection";
 
 import {
   Paintbrush,
-  Home as HomeIcon,
-  Building2,
   Phone,
   Mail,
   MapPin,
@@ -28,12 +25,6 @@ import {
   Facebook,
   Menu,
   X,
-  Star,
-  CheckCircle2,
-  Clock,
-  Award,
-  Sparkles,
-  Palette,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -62,24 +53,60 @@ function App() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  // ✅ UN SOLO observer, estable (evita secciones en blanco)
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            entry.target.classList.add("reveal-visible");
-          }
-        });
-      },
-      { threshold: 0.15, rootMargin: "-50px 0px" }
-    );
+  const selector =
+    ".reveal, .reveal-fade-up, .reveal-slide-left, .reveal-slide-right, .reveal-scale";
 
-    document.querySelectorAll(".reveal").forEach((el) =>
-      observer.observe(el)
-    );
+  const observer = new IntersectionObserver(
+    (entries, obs) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          const el = entry.target as HTMLElement;
+          el.classList.add("reveal-visible");
+          el.classList.remove("animate");
+          obs.unobserve(el);
+        }
+      });
+    },
+    { threshold: 0.15, rootMargin: "-50px 0px" }
+  );
 
-    return () => observer.disconnect();
-  }, [location.pathname]);
+  const elements = Array.from(document.querySelectorAll<HTMLElement>(selector));
+
+  // 1) Preparar estado inicial animado (pero SIN forzar visible)
+  elements.forEach((el) => {
+    el.classList.add("reveal"); // normaliza base
+    el.classList.remove("reveal-visible");
+    el.classList.add("animate");
+  });
+
+  // 2) IMPORTANTE: observar en el próximo frame para que el navegador
+  // pinte primero el estado "animate" (si no, en Home se ve instantáneo)
+  const raf = requestAnimationFrame(() => {
+    elements.forEach((el) => observer.observe(el));
+  });
+
+  // 3) Fallback SAFE: SOLO liberar lo que esté actualmente en viewport.
+  // (Esto evita que todo Home quede visible antes de hacer scroll)
+  const fallback = window.setTimeout(() => {
+    elements.forEach((el) => {
+      if (!el.classList.contains("animate")) return; // ya animó
+      const r = el.getBoundingClientRect();
+      const inViewport = r.top < window.innerHeight && r.bottom > 0;
+      if (inViewport) {
+        el.classList.add("reveal-visible");
+        el.classList.remove("animate");
+      }
+    });
+  }, 1200);
+
+  return () => {
+    cancelAnimationFrame(raf);
+    window.clearTimeout(fallback);
+    observer.disconnect();
+  };
+}, [location.pathname]);
 
   const navLinks = [
     { name: "Home", to: "/" },
@@ -89,72 +116,24 @@ function App() {
     { name: "Contact", to: "/contact" },
   ];
 
-  const services = [
-    {
-      icon: <HomeIcon className="w-8 h-8" />,
-      title: "Interior Painting",
-      subtitle: "Interiors",
-      description:
-        "We transform interior spaces with impeccable finishes that elevate your home's aesthetics.",
-      features: [
-        "Walls & ceilings",
-        "Trim & moldings",
-        "Specialty finishes",
-        "Custom colors",
-      ],
-      image: "/interior-luxury-1.jpg",
-    },
-    {
-      icon: <Building2 className="w-8 h-8" />,
-      title: "Exterior Painting",
-      subtitle: "Exteriors",
-      description:
-        "We protect and beautify your property's facade with durable paints.",
-      features: [
-        "Residential facades",
-        "Doors & windows",
-        "Decks & patios",
-        "Siding",
-      ],
-      image: "/villa-exterior.jpg",
-    },
-    {
-      icon: <Palette className="w-8 h-8" />,
-      title: "Cabinets & Woodwork",
-      subtitle: "Cabinetry",
-      description:
-        "We refinish your cabinets with factory-quality finishes.",
-      features: [
-        "Kitchen cabinets",
-        "Bathroom vanities",
-        "Interior doors",
-        "Moldings",
-      ],
-      image: "/kitchen-luxury.jpg",
-    },
-    {
-      icon: <Sparkles className="w-8 h-8" />,
-      title: "Custom Homes",
-      subtitle: "Luxury",
-      description:
-        "Specialists in luxury custom homes with premium finishes.",
-      features: [
-        "New construction",
-        "Remodeling",
-        "Premium finishes",
-        "Attention to detail",
-      ],
-      image: "/interior-luxury-2.jpg",
-    },
-  ];
-
   const scrollToSection = (href: string) => {
     const element = document.querySelector(href);
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" });
-    }
+    if (element) element.scrollIntoView({ behavior: "smooth" });
     setIsMobileMenuOpen(false);
   };
+
+  const HomeRoute = () => (
+    <>
+      <HeroSection />
+      <ServicesSection />
+      <ProjectsSection />
+      <AboutSection />
+      <ProcessSection />
+      <TestimonialsSection />
+      <CTASection />
+      <ContactSection />
+    </>
+  );
 
   return (
     <div className="min-h-screen bg-white">
@@ -168,16 +147,18 @@ function App() {
       >
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="flex items-center justify-between">
+            {/* Logo */}
             <a
               href="#home"
               onClick={(e) => {
                 e.preventDefault();
-                scrollToSection("#home");
+                if (isHome) scrollToSection("#home");
+                else window.location.href = "/";
               }}
               className="flex items-center gap-3 group"
             >
               <div
-                className={`p-2.5 rounded-lg ${
+                className={`p-2.5 rounded-lg transition-all duration-300 ${
                   navSolid ? "bg-slate-900" : "bg-white/10 backdrop-blur-sm"
                 }`}
               >
@@ -185,14 +166,14 @@ function App() {
               </div>
               <div className="flex flex-col">
                 <span
-                  className={`text-xl font-bold ${
+                  className={`text-xl font-bold tracking-tight transition-colors ${
                     navSolid ? "text-slate-900" : "text-white"
                   }`}
                 >
                   {content.brand.name}
                 </span>
                 <span
-                  className={`text-[10px] uppercase ${
+                  className={`text-[10px] uppercase tracking-[0.2em] transition-colors ${
                     navSolid ? "text-slate-500" : "text-white/60"
                   }`}
                 >
@@ -201,86 +182,231 @@ function App() {
               </div>
             </a>
 
+            {/* Desktop Navigation (con underline animado) */}
             <div className="hidden lg:flex items-center gap-8">
-  {navLinks.map((link) => (
-    <NavLink
-      key={link.name}
-      to={link.to}
-      className={({ isActive }) =>
-        `relative group px-1 py-2 text-sm font-medium transition-colors ${
-          navSolid
-            ? "text-slate-700 hover:text-slate-900"
-            : "text-white/80 hover:text-white"
-        } ${isActive ? (navSolid ? "text-amber-600" : "text-amber-400") : ""}`
-      }
-    >
-      {({ isActive }) => (
-        <>
-          {link.name}
-          <span
-            className={`pointer-events-none absolute left-0 right-0 -bottom-1 h-0.5 bg-amber-500 origin-left transform transition-transform duration-300 ${
-              isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
-            }`}
-          />
-        </>
-      )}
-    </NavLink>
-  ))}
-</div>
+              {navLinks.map((link) => (
+                <NavLink
+                  key={link.name}
+                  to={link.to}
+                  className={({ isActive }) =>
+                    `relative group px-1 py-2 text-sm font-medium transition-colors ${
+                      navSolid
+                        ? "text-slate-700 hover:text-slate-900"
+                        : "text-white/80 hover:text-white"
+                    } ${
+                      isActive
+                        ? navSolid
+                          ? "text-amber-600"
+                          : "text-amber-400"
+                        : ""
+                    }`
+                  }
+                >
+                  {({ isActive }) => (
+                    <>
+                      {link.name}
+                      <span
+                        className={`pointer-events-none absolute left-0 right-0 -bottom-1 h-0.5 bg-amber-500 origin-left transform transition-transform duration-300 ${
+                          isActive
+                            ? "scale-x-100"
+                            : "scale-x-0 group-hover:scale-x-100"
+                        }`}
+                      />
+                    </>
+                  )}
+                </NavLink>
+              ))}
+            </div>
 
-            <Button
-              onClick={() => setShowQuoteDialog(true)}
-              className="hidden lg:block bg-amber-500 hover:bg-amber-600 text-slate-900"
-            >
-              Schedule a Walkthrough
-            </Button>
+            {/* CTA Button */}
+            <div className="hidden lg:block">
+              <Button
+                onClick={() => setShowQuoteDialog(true)}
+                className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-6"
+              >
+                Schedule a Walkthrough
+              </Button>
+            </div>
 
+            {/* Mobile Menu Button */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              className="lg:hidden"
+              className={`lg:hidden p-2 rounded-lg transition-colors ${
+                isScrolled ? "text-slate-900" : "text-white"
+              }`}
             >
-              {isMobileMenuOpen ? <X /> : <Menu />}
+              {isMobileMenuOpen ? (
+                <X className="w-6 h-6" />
+              ) : (
+                <Menu className="w-6 h-6" />
+              )}
             </button>
           </div>
+
+          {/* Mobile Menu */}
+          {isMobileMenuOpen && (
+            <div className="lg:hidden mt-4 pb-4 border-t border-white/10 pt-4 bg-white/95 backdrop-blur-md rounded-xl mt-2 p-4">
+              <div className="flex flex-col gap-3">
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.name}
+                    to={link.to}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-slate-700"
+                  >
+                    {link.name}
+                  </Link>
+                ))}
+                <Button
+                  onClick={() => {
+                    setShowQuoteDialog(true);
+                    setIsMobileMenuOpen(false);
+                  }}
+                  className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold w-full mt-2"
+                >
+                  Free Quote
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
 
-      {!isHome && (
-        <main className="pt-28">
-          <Routes>
-            <Route path="/services" element={<Services />} />
-            <Route path="/projects" element={<Projects />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="*" element={<Home />} />
-          </Routes>
-        </main>
-      )}
+      {/* ✅ Una sola zona de rutas (App limpio) */}
+      <main className={isHome ? "" : "pt-28"}>
+        <Routes>
+          <Route path="/" element={<HomeRoute />} />
+          <Route path="/services" element={<Services />} />
+          <Route path="/projects" element={<Projects />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="*" element={<HomeRoute />} />
+        </Routes>
+      </main>
 
-      {isHome && (
-        <>
-          <HeroSection />
+      {/* Footer (global) */}
+      <footer className="bg-slate-900 text-white py-16">
+        <div className="max-w-7xl mx-auto px-6 lg:px-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
+            <div className="lg:col-span-2">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 rounded-lg bg-amber-500">
+                  <Paintbrush className="w-6 h-6 text-slate-900" />
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-xl font-bold tracking-tight">
+                    {content.brand.name}
+                  </span>
+                  <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
+                    {content.brand.tagline}
+                  </span>
+                </div>
+              </div>
 
-          <ServicesSection />
+              <p className="text-slate-400 mb-6 max-w-md leading-relaxed">
+                Specialists in custom home and luxury residence painting in Utah.
+                We transform spaces with impeccable finishes.
+              </p>
 
-          <ProjectsSection />
-          <AboutSection />
-          <ProcessSection />
-          <TestimonialsSection />
-          <CTASection />
-          <ContactSection />
-        </>
-      )}
+              <div className="flex gap-3">
+                <a
+                  href="https://www.instagram.com/tauropainting"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-amber-500 hover:text-slate-900 transition-colors"
+                >
+                  <Instagram className="w-5 h-5" />
+                </a>
+                <a
+                  href="https://www.facebook.com/tauropainting"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-amber-500 hover:text-slate-900 transition-colors"
+                >
+                  <Facebook className="w-5 h-5" />
+                </a>
+              </div>
+            </div>
 
-      {/* Dialog */}
+            <div>
+              <h4 className="font-semibold mb-6 text-white">Quick Links</h4>
+              <ul className="space-y-3">
+                {navLinks.map((link) => (
+                  <li key={link.name}>
+                    <Link
+                      className="text-slate-400 hover:text-white transition-colors"
+                      to={link.to}
+                    >
+                      {link.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-6 text-white">Contact</h4>
+              <ul className="space-y-3 text-slate-400">
+                <li className="flex items-center gap-2">
+                  <Phone className="w-4 h-4 text-amber-500" />
+                  <a
+                    className="hover:text-white transition-colors"
+                    href="tel:8019289520"
+                  >
+                    (801) 928-9520
+                  </a>
+                </li>
+                <li className="flex items-center gap-2">
+                  <Mail className="w-4 h-4 text-amber-500" />
+                  <a
+                    className="hover:text-white transition-colors"
+                    href="mailto:tauropaintingutah@gmail.com"
+                  >
+                    tauropaintingutah@gmail.com
+                  </a>
+                </li>
+                <li className="flex items-start gap-2">
+                  <MapPin className="w-4 h-4 text-amber-500 mt-1" />
+                  <span>
+                    1144 N Main St
+                    <br />
+                    Orem, UT 84057
+                  </span>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className="text-slate-500 text-sm">
+              &copy; {new Date().getFullYear()} Tauro Painting LLC. All rights
+              reserved.
+            </p>
+            <p className="text-slate-500 text-sm">License S270 • UVHBA Member</p>
+          </div>
+        </div>
+      </footer>
+
+      {/* Quote Dialog (global) */}
       <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Request Sent!</DialogTitle>
-            <DialogDescription>
-              We'll get back to you within 24 hours.
+            <DialogTitle className="text-xl font-bold text-slate-800">
+              Request Sent!
+            </DialogTitle>
+            <DialogDescription className="text-slate-600">
+              Thank you for contacting Tauro Painting. We'll get back to you
+              within 24 hours to discuss your project.
             </DialogDescription>
           </DialogHeader>
+          <div className="mt-4">
+            <Button
+              onClick={() => setShowQuoteDialog(false)}
+              className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold"
+            >
+              Got it
+            </Button>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
