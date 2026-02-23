@@ -1,12 +1,14 @@
 import { content } from "./content";
 import { useState, useEffect, useRef } from 'react';
-import { Routes, Route, Link, useLocation, useNavigate } from "react-router-dom";
+import { Routes, Route, Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import Home from "./pages/Home";
 import Services from "./pages/Services";
 import Projects from "./pages/Projects";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
-
+import ProjectsSection from "./components/ProjectsSection";
+import AboutSection from "./components/AboutSection";
+import ContactSection from "./components/ContactSection";
 import { 
   Paintbrush, 
   Home as HomeIcon, 
@@ -256,16 +258,30 @@ useEffect(() => {
             </a>
 
             {/* Desktop Navigation */}
-            <div className="hidden lg:flex items-center gap-8">
-              {navLinks.map((link) => (
-                <Link
-  to={link.to}
->
-                  {link.name}
-                  <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-amber-500 transition-all duration-300 group-hover:w-full" />
-                </Link>
-              ))}
-            </div>
+<div className="hidden lg:flex items-center gap-8">
+  {navLinks.map((link) => (
+    <NavLink
+      key={link.name}
+      to={link.to}
+      className={({ isActive }) =>
+        `relative group px-1 py-2 text-sm font-medium transition-colors ${
+          isScrolled ? "text-slate-700 hover:text-slate-900" : "text-white/80 hover:text-white"
+        } ${isActive ? (isScrolled ? "text-amber-600" : "text-amber-400") : ""}`
+      }
+    >
+      {({ isActive }) => (
+        <>
+          {link.name}
+          <span
+            className={`pointer-events-none absolute left-0 right-0 -bottom-1 h-0.5 bg-amber-500 origin-left transform transition-transform duration-300 ${
+              isActive ? "scale-x-100" : "scale-x-0 group-hover:scale-x-100"
+            }`}
+          />
+        </>
+      )}
+    </NavLink>
+  ))}
+</div>
 
             {/* CTA Button */}
             <div className="hidden lg:block">
@@ -474,154 +490,9 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* Projects Section */}
-      <section id="projects" className="py-24 lg:py-32 bg-white">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          {/* Section Header */}
-          <div className="reveal reveal-fade-up flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6 mb-16">
-            <div className="max-w-2xl">
-              <span className="inline-flex items-center gap-2 text-amber-600 font-semibold text-sm uppercase tracking-wider mb-4">
-                <TrendingUp className="w-4 h-4" />
-                Portfolio
-              </span>
-              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-4">
-                Featured Projects
-              </h2>
-              <p className="text-slate-600 text-lg">
-                Explore our collection of work on Utah's most exclusive residences.
-              </p>
-            </div>
-            <Button 
-              onClick={() => window.open('https://www.instagram.com/tauropainting', '_blank')}
-              variant="outline"
-              className="border-slate-300 text-slate-700 hover:bg-slate-50 w-fit"
-            >
-              <Instagram className="w-5 h-5 mr-2" />
-              View on Instagram
-            </Button>
-          </div>
+<ProjectsSection />
 
-          {/* Projects Grid - Masonry Style */}
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects.map((project, index) => (
-              <div
-                key={index}
-                className={`reveal reveal-fade-up group relative overflow-hidden rounded-2xl bg-slate-100 ${
-                  index === 0 || index === 3 ? 'md:col-span-2 lg:col-span-2' : ''
-                }`}
-                style={{ transitionDelay: `${index * 100 + 200}ms` }}
-              >
-                <div className={`relative overflow-hidden ${index === 0 || index === 3 ? 'h-80 lg:h-96' : 'h-72'}`}>
-                  <img 
-                    src={project.image} 
-                    alt={project.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent opacity-60 group-hover:opacity-80 transition-opacity duration-300" />
-                  
-                  {/* Category Badge */}
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-amber-500 rounded-full text-xs font-semibold text-slate-900 uppercase tracking-wider">
-                      {project.category}
-                    </span>
-                  </div>
-
-                  {/* Content Overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 p-6 translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
-                    <div className="flex items-center gap-2 text-amber-400 text-sm mb-2">
-                      <MapPin className="w-4 h-4" />
-                      {project.location}
-                    </div>
-                    <h3 className="text-xl font-bold text-white mb-1">{project.title}</h3>
-                    <p className="text-white/70 text-sm opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                      {project.description}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* About Section */}
-      <section id="about" className="py-24 lg:py-32 bg-slate-900 relative overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 2px 2px, white 1px, transparent 0)`,
-            backgroundSize: '40px 40px'
-          }} />
-        </div>
-
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 relative z-10">
-          <div className="grid lg:grid-cols-2 gap-16 items-center">
-            {/* Content */}
-            <div className="reveal reveal-slide-right">
-              <span className="inline-flex items-center gap-2 text-amber-400 font-semibold text-sm uppercase tracking-wider mb-4">
-                <Users className="w-4 h-4" />
-                About Us
-              </span>
-              <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
-                Excellence is Our Signature
-              </h2>
-              <div className="space-y-4 text-slate-300 leading-relaxed">
-                <p>
-                  Tauro Painting is a licensed and insured family-owned business based in Utah County. 
-                  We specialize in luxury custom homes, as well as commercial and residential new construction 
-                  and remodeling projects throughout Utah.
-                </p>
-                <p>
-                  Along with our team, who play a fundamental role in representing the company, we have 
-                  dedicated ourselves to perfecting every skill. We go above and beyond to ensure all needs 
-                  and expectations are met.
-                </p>
-                <p>
-                  Tauro's main goal is for every contractor and/or customer to feel complete satisfaction 
-                  with the result of their project and to know they made the right choice in hiring us.
-                </p>
-              </div>
-
-              {/* Features */}
-              <div className="grid grid-cols-2 gap-6 mt-10">
-                {[
-                  { icon: <Shield className="w-5 h-5" />, title: 'Licensed & Insured', desc: 'License S270 active' },
-                  { icon: <Award className="w-5 h-5" />, title: 'UVHBA Member', desc: 'Utah Valley Home Builders' },
-                  { icon: <Star className="w-5 h-5" />, title: 'Premium Quality', desc: 'First-class materials' },
-                  { icon: <Clock className="w-5 h-5" />, title: 'On Time', desc: 'We meet deadlines' }
-                ].map((item, index) => (
-                  <div key={index} className="flex items-start gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-amber-500/10 flex items-center justify-center text-amber-400 flex-shrink-0">
-                      {item.icon}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-white text-sm">{item.title}</h4>
-                      <p className="text-slate-400 text-xs">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Image */}
-            <div className="reveal reveal-slide-left" style={{ transitionDelay: '200ms' }}>
-              <div className="relative">
-                <div className="absolute -inset-4 bg-amber-500/20 rounded-3xl blur-2xl" />
-                <img 
-                  src="/craftsmanship.jpg" 
-                  alt="Tauro Painting Craftsmanship"
-                  className="relative rounded-2xl shadow-2xl w-full"
-                />
-                {/* Floating Badge */}
-                <div className="absolute -bottom-6 -left-6 bg-amber-500 text-slate-900 p-6 rounded-2xl shadow-xl">
-                  <div className="text-4xl font-bold">15+</div>
-                  <div className="text-sm font-medium">Years of Experience</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+<AboutSection />
 
       {/* Process Section */}
       <section id="process" className="py-24 lg:py-32 bg-slate-50">
@@ -761,120 +632,7 @@ useEffect(() => {
         </div>
       </section>
 
-      {/* Contact Section */}
-      <section id="contact" className="py-24 lg:py-32 bg-slate-50">
-        <div className="max-w-7xl mx-auto px-6 lg:px-8">
-          <div className="grid lg:grid-cols-2 gap-16">
-            {/* Contact Info */}
-            <div className="reveal reveal-slide-right">
-              <span className="inline-flex items-center gap-2 text-amber-600 font-semibold text-sm uppercase tracking-wider mb-4">
-                <Phone className="w-4 h-4" />
-                Contact Us
-              </span>
-              <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
-                Start Your Project
-              </h2>
-              <p className="text-slate-600 mb-10 leading-relaxed">
-                We're here to help transform your home. Contact us by phone, 
-                email, or fill out the form and we'll get back to you within 24 hours.
-              </p>
-
-              <div className="space-y-6">
-                {[
-                  { icon: <Phone className="w-5 h-5" />, label: 'Phone', value: '(801) 928-9520', href: 'tel:8019289520' },
-                  { icon: <Mail className="w-5 h-5" />, label: 'Email', value: 'tauropaintingutah@gmail.com', href: 'mailto:tauropaintingutah@gmail.com' },
-                  { icon: <MapPin className="w-5 h-5" />, label: 'Address', value: '1144 N Main St, Orem, UT 84057', href: '#' },
-                  { icon: <Clock className="w-5 h-5" />, label: 'Hours', value: 'Mon-Fri: 8AM-6PM | Sat: 9AM-2PM', href: '#' }
-                ].map((item, index) => (
-                  <a
-                    key={index}
-                    href={item.href}
-                    className="flex items-start gap-4 group"
-                  >
-                    <div className="w-12 h-12 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 group-hover:bg-amber-500 group-hover:text-white transition-colors">
-                      {item.icon}
-                    </div>
-                    <div>
-                      <h4 className="font-semibold text-slate-900 text-sm mb-1">{item.label}</h4>
-                      <p className="text-slate-600 group-hover:text-amber-600 transition-colors">{item.value}</p>
-                    </div>
-                  </a>
-                ))}
-              </div>
-
-              {/* Social Links */}
-              <div className="mt-10 pt-8 border-t border-slate-200">
-                <h4 className="font-semibold text-slate-900 mb-4">Follow Us</h4>
-                <div className="flex gap-3">
-                  <a 
-                    href="https://www.instagram.com/tauropainting" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-12 h-12 rounded-xl bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-amber-500 hover:text-white transition-colors"
-                  >
-                    <Instagram className="w-5 h-5" />
-                  </a>
-                  <a 
-                    href="https://www.facebook.com/tauropainting" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="w-12 h-12 rounded-xl bg-slate-200 flex items-center justify-center text-slate-600 hover:bg-amber-500 hover:text-white transition-colors"
-                  >
-                    <Facebook className="w-5 h-5" />
-                  </a>
-                </div>
-              </div>
-            </div>
-
-            {/* Contact Form */}
-            <div className="reveal reveal-slide-left" style={{ transitionDelay: '200ms' }}>
-              <div className="bg-white rounded-2xl p-8 lg:p-10 shadow-lg">
-                <h3 className="text-2xl font-bold text-slate-900 mb-2">Request a Quote</h3>
-                <p className="text-slate-600 mb-8">Fill out the form and we'll contact you soon.</p>
-                
-                <form className="space-y-5" onSubmit={(e) => { e.preventDefault(); setShowQuoteDialog(true); }}>
-                  <div className="grid sm:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Name</label>
-                      <Input placeholder="Your name" className="border-slate-200 h-12" />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-2">Phone</label>
-                      <Input placeholder="(801) 000-0000" className="border-slate-200 h-12" />
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Email</label>
-                    <Input type="email" placeholder="you@email.com" className="border-slate-200 h-12" />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Project Type</label>
-                    <select className="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500">
-                      <option value="">Select a type</option>
-                      <option value="interior">Interior Painting</option>
-                      <option value="exterior">Exterior Painting</option>
-                      <option value="cabinets">Cabinets</option>
-                      <option value="custom">Custom Home</option>
-                      <option value="complete">Complete Project</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">Message</label>
-                    <Textarea 
-                      placeholder="Tell us about your project..." 
-                      className="border-slate-200 min-h-[120px]"
-                    />
-                  </div>
-                  <Button type="submit" className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold h-12">
-                    Submit Request
-                    <ArrowUpRight className="w-5 h-5 ml-2" />
-                  </Button>
-                </form>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+<ContactSection />
         </>
 )}
       {/* Footer */}
