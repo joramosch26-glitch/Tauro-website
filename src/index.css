@@ -302,3 +302,111 @@ input:focus, textarea:focus, select:focus {
 .parallax {
   will-change: transform;
 }
+/* =========================================
+   FIX: SAFE reveal variants must hide when .animate is present
+   Default stays visible (SAFE).
+   JS adds .animate first, then swaps to .reveal-visible.
+   ========================================= */
+
+/* Ensure variants animate from hidden when JS adds .animate */
+.reveal-fade-up.animate,
+.reveal-slide-left.animate,
+.reveal-slide-right.animate,
+.reveal-scale.animate {
+  opacity: 0;
+}
+
+/* Variant transforms while hidden */
+.reveal-fade-up.animate {
+  transform: translateY(30px);
+}
+
+.reveal-slide-left.animate {
+  transform: translateX(-30px);
+}
+
+.reveal-slide-right.animate {
+  transform: translateX(30px);
+}
+
+.reveal-scale.animate {
+  transform: scale(0.97);
+}
+
+/* When revealed, reset to final state */
+.reveal-fade-up.animate.reveal-visible,
+.reveal-slide-left.animate.reveal-visible,
+.reveal-slide-right.animate.reveal-visible,
+.reveal-scale.animate.reveal-visible {
+  opacity: 1;
+  transform: none;
+}
+/* =========================================================
+   REVEAL SYSTEM (single source of truth)
+   - SAFE default: visible (prevents blank pages)
+   - JS adds .is-animating to hide + set transform
+   - JS adds .reveal-visible to show (transition runs)
+   ========================================================= */
+
+.reveal,
+.reveal-fade-up,
+.reveal-slide-left,
+.reveal-slide-right,
+.reveal-scale {
+  opacity: 1;
+  transform: none;
+  transition: opacity 700ms ease, transform 700ms ease;
+  will-change: opacity, transform;
+}
+
+/* Hidden state ONLY when JS adds .is-animating */
+.reveal.is-animating,
+.reveal-fade-up.is-animating,
+.reveal-slide-left.is-animating,
+.reveal-slide-right.is-animating,
+.reveal-scale.is-animating {
+  opacity: 0;
+}
+
+/* Variant transforms while hidden */
+.reveal.is-animating,
+.reveal-fade-up.is-animating {
+  transform: translateY(18px);
+}
+
+.reveal-slide-left.is-animating {
+  transform: translateX(-18px);
+}
+
+.reveal-slide-right.is-animating {
+  transform: translateX(18px);
+}
+
+.reveal-scale.is-animating {
+  transform: scale(0.97);
+}
+
+/* Visible end state */
+.reveal-visible {
+  opacity: 1;
+  transform: none;
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal-fade-up,
+  .reveal-slide-left,
+  .reveal-slide-right,
+  .reveal-scale {
+    transition: none !important;
+  }
+  .reveal.is-animating,
+  .reveal-fade-up.is-animating,
+  .reveal-slide-left.is-animating,
+  .reveal-slide-right.is-animating,
+  .reveal-scale.is-animating {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+}
