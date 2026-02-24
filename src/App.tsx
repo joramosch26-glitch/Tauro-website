@@ -7,6 +7,7 @@ import Services from "./pages/Services";
 import Projects from "./pages/Projects";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import HomeRoute from "./pages/HomeRoute";
 
 import ProjectsSection from "./components/ProjectsSection";
 import AboutSection from "./components/AboutSection";
