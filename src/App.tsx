@@ -98,29 +98,40 @@ function App() {
 
       canonical.href = canonicalUrl;
 
-      // OG/Twitter dinámico por ruta (previews sociales)
-const setMeta = (selector: string, attr: "content", value: string) => {
-  let el = document.querySelector(selector) as HTMLMetaElement | null;
-  if (!el) {
-    el = document.createElement("meta");
-    // selector tipo meta[property="og:title"] o meta[name="twitter:title"]
-    const isProperty = selector.includes('property="');
-    const key = isProperty ? "property" : "name";
-    const match = selector.match(/"(.*?)"/);
-    if (match?.[1]) el.setAttribute(key, match[1]);
-    document.head.appendChild(el);
-  }
-  el.setAttribute(attr, value);
-};
+            // OG/Twitter dinámico por ruta (previews sociales)
+      const upsertMeta = (
+        selector: string,
+        attrName: "property" | "name",
+        attrValue: string,
+        contentValue: string
+      ) => {
+        let el = document.querySelector(selector) as HTMLMetaElement | null;
+        if (!el) {
+          el = document.createElement("meta");
+          el.setAttribute(attrName, attrValue);
+          document.head.appendChild(el);
+        }
+        el.setAttribute("content", contentValue);
+      };
 
-// Usa el mismo data.title / data.desc que ya tienes
-setMeta('meta[property="og:title"]', "content", data.title);
-setMeta('meta[property="og:description"]', "content", data.desc);
-setMeta('meta[property="og:url"]', "content", canonicalUrl);
+      // Open Graph
+      upsertMeta('meta[property="og:title"]', "property", "og:title", data.title);
+      upsertMeta(
+        'meta[property="og:description"]',
+        "property",
+        "og:description",
+        data.desc
+      );
+      upsertMeta('meta[property="og:url"]', "property", "og:url", canonicalUrl);
 
-// Twitter
-setMeta('meta[name="twitter:title"]', "content", data.title);
-setMeta('meta[name="twitter:description"]', "content", data.desc);
+      // Twitter
+      upsertMeta('meta[name="twitter:title"]', "name", "twitter:title", data.title);
+      upsertMeta(
+        'meta[name="twitter:description"]',
+        "name",
+        "twitter:description",
+        data.desc
+      );
 
       let meta = document.querySelector(
         'meta[name="description"]'
