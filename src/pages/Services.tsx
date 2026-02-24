@@ -1,25 +1,9 @@
-import { useEffect } from "react";
 import { content } from "../content";
 import { Sparkles, CheckCircle2 } from "lucide-react";
 
 type Service = (typeof content.services)[number];
 
 export default function Services() {
-  useEffect(() => {
-    document.title = "Painting Services | Tauro Painting";
-
-    const desc =
-      "Explore Tauro Painting services: interior painting, exterior painting, cabinets, and detailed prep. Free estimates in Utah.";
-
-    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
-    if (!meta) {
-      meta = document.createElement("meta");
-      meta.name = "description";
-      document.head.appendChild(meta);
-    }
-    meta.content = desc;
-  }, []);
-
   const services: readonly Service[] = content.services;
 
   return (
@@ -35,8 +19,9 @@ export default function Services() {
             Excellence in Every Finish
           </h1>
           <p className="text-slate-600 text-lg leading-relaxed">
-            We offer complete painting solutions for luxury homes, using premium materials and specialized techniques
-            that guarantee exceptional results.
+            We offer complete painting solutions for luxury homes, using premium
+            materials and specialized techniques that guarantee exceptional
+            results.
           </p>
         </div>
 
@@ -50,9 +35,17 @@ export default function Services() {
               }`}
               style={{ transitionDelay: `${index * 100 + 200}ms` }}
             >
-              <div className={`grid ${index === 0 || index === 3 ? "lg:grid-cols-2" : ""} gap-0`}>
+              <div
+                className={`grid ${
+                  index === 0 || index === 3 ? "lg:grid-cols-2" : ""
+                } gap-0`}
+              >
                 {/* Image */}
-                <div className={`relative overflow-hidden ${index === 1 || index === 2 ? "h-48" : "h-64 lg:h-full"}`}>
+                <div
+                  className={`relative overflow-hidden ${
+                    index === 1 || index === 2 ? "h-48" : "h-64 lg:h-full"
+                  }`}
+                >
                   <img
                     src={service.image}
                     alt={service.title}
@@ -68,16 +61,25 @@ export default function Services() {
                     <Sparkles className="w-6 h-6" />
                   </div>
 
-                  <h2 className="text-2xl font-bold text-slate-900 mb-4">{service.title}</h2>
+                  <h2 className="text-2xl font-bold text-slate-900 mb-4">
+                    {service.title}
+                  </h2>
 
                   {"description" in service && service.description ? (
-                    <p className="text-slate-600 mb-6 leading-relaxed">{service.description}</p>
+                    <p className="text-slate-600 mb-6 leading-relaxed">
+                      {service.description}
+                    </p>
                   ) : null}
 
-                  {"features" in service && Array.isArray(service.features) && service.features.length ? (
+                  {"features" in service &&
+                  Array.isArray(service.features) &&
+                  service.features.length ? (
                     <ul className="grid grid-cols-2 gap-3">
                       {service.features.map((feature: string, fIndex: number) => (
-                        <li key={fIndex} className="flex items-center gap-2 text-sm text-slate-600">
+                        <li
+                          key={fIndex}
+                          className="flex items-center gap-2 text-sm text-slate-600"
+                        >
                           <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0" />
                           {feature}
                         </li>
