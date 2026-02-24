@@ -137,6 +137,11 @@ function App() {
         data.desc
       );
 
+      // Imagen social (site-wide)
+const ogImage = `${window.location.origin}/og.jpg`;
+upsertMeta('meta[property="og:image"]', "property", "og:image", ogImage);
+upsertMeta('meta[name="twitter:image"]', "name", "twitter:image", ogImage);
+
       let meta = document.querySelector(
         'meta[name="description"]'
       ) as HTMLMetaElement | null;
