@@ -1,9 +1,25 @@
+import { useEffect } from "react";
 import { content } from "../content";
 import { Sparkles, CheckCircle2 } from "lucide-react";
 
 type Service = (typeof content.services)[number];
 
 export default function Services() {
+  useEffect(() => {
+    document.title = "Painting Services | Tauro Painting";
+
+    const desc =
+      "Explore Tauro Painting services: interior painting, exterior painting, cabinets, and detailed prep. Free estimates in Utah.";
+
+    let meta = document.querySelector('meta[name="description"]') as HTMLMetaElement | null;
+    if (!meta) {
+      meta = document.createElement("meta");
+      meta.name = "description";
+      document.head.appendChild(meta);
+    }
+    meta.content = desc;
+  }, []);
+
   const services: readonly Service[] = content.services;
 
   return (
