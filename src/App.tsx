@@ -82,6 +82,46 @@ function App() {
     const t = window.setTimeout(() => {
       document.title = data.title;
 
+            // Canonical dinámico por ruta
+      const origin = window.location.origin;
+      const canonicalUrl = `${origin}${location.pathname}`;
+
+      let canonical = document.querySelector(
+        'link[rel="canonical"]'
+      ) as HTMLLinkElement | null;
+
+      if (!canonical) {
+        canonical = document.createElement("link");
+        canonical.rel = "canonical";
+        document.head.appendChild(canonical);
+      }
+
+      canonical.href = canonicalUrl;
+
+      // OG/Twitter dinámico por ruta (previews sociales)
+const setMeta = (selector: string, attr: "content", value: string) => {
+  let el = document.querySelector(selector) as HTMLMetaElement | null;
+  if (!el) {
+    el = document.createElement("meta");
+    // selector tipo meta[property="og:title"] o meta[name="twitter:title"]
+    const isProperty = selector.includes('property="');
+    const key = isProperty ? "property" : "name";
+    const match = selector.match(/"(.*?)"/);
+    if (match?.[1]) el.setAttribute(key, match[1]);
+    document.head.appendChild(el);
+  }
+  el.setAttribute(attr, value);
+};
+
+// Usa el mismo data.title / data.desc que ya tienes
+setMeta('meta[property="og:title"]', "content", data.title);
+setMeta('meta[property="og:description"]', "content", data.desc);
+setMeta('meta[property="og:url"]', "content", canonicalUrl);
+
+// Twitter
+setMeta('meta[name="twitter:title"]', "content", data.title);
+setMeta('meta[name="twitter:description"]', "content", data.desc);
+
       let meta = document.querySelector(
         'meta[name="description"]'
       ) as HTMLMetaElement | null;
