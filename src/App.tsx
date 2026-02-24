@@ -1,5 +1,6 @@
+import "./index.css";
 import { content } from "./content";
-import { useState, useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Routes, Route, Link, NavLink, useLocation } from "react-router-dom";
 
 import Services from "./pages/Services";
@@ -45,68 +46,202 @@ function App() {
   const isHome = location.pathname === "/";
   const navSolid = !isHome || isScrolled;
 
+  // Header scroll
   useEffect(() => {
-    const handleScroll = () => {
-      setIsScrolled(window.scrollY > 100);
-    };
+    const handleScroll = () => setIsScrolled(window.scrollY > 100);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // ✅ UN SOLO observer, estable (evita secciones en blanco)
+  /**
+   * ✅ AUTO-REVEAL SYSTEM (Global, works for Home + all pages)
+   * - Does NOT rely on your existing .reveal/.animate CSS.
+   * - Adds inline CSS (scoped by classes) and uses IntersectionObserver.
+   * - Targets common content elements inside <main> only.
+   * - Adds stagger delays per "section-like" container.
+   * - Opt-out by adding data-no-reveal="true" on any element.
+   */
+  const prefersReducedMotion = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false;
+  }, []);
+
   useEffect(() => {
-  const selector =
-    ".reveal, .reveal-fade-up, .reveal-slide-left, .reveal-slide-right, .reveal-scale";
+    if (prefersReducedMotion) return;
 
-  const observer = new IntersectionObserver(
-    (entries, obs) => {
-      entries.forEach((entry) => {
-        if (entry.isIntersecting) {
+    const main = document.querySelector("main");
+    if (!main) return;
+
+    const AUTO_CLASS = "auto-reveal";
+    const VISIBLE_CLASS = "auto-reveal-visible";
+
+    // What to animate (tuned for marketing sites)
+    const TARGET_SELECTOR = [
+      // headings / text
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "p",
+      "li",
+      // media
+      "img",
+      "picture",
+      "video",
+      // common blocks/cards
+      "article",
+      "section",
+      // interactive (optional, but looks nice)
+      "button",
+      // "a" can be too much sometimes; keep it minimal:
+      // "a",
+      // common layout containers that often represent cards
+      "[class*='card']",
+      "[class*='Card']",
+      "[class*='shadow']",
+      "[class*='rounded']",
+      "[class*='grid'] > *",
+      "[class*='flex'] > *",
+    ].join(",");
+
+    // Exclude things we should never animate
+    const shouldSkip = (el: Element) => {
+      if (!(el instanceof HTMLElement)) return true;
+
+      // Explicit opt-out
+      if (el.dataset.noReveal === "true") return true;
+
+      // Never animate the global nav/footer/dialog overlays
+      if (el.closest("nav")) return true;
+      if (el.closest("footer")) return true;
+      if (el.closest("[role='dialog']")) return true;
+
+      // Avoid animating invisible/empty wrappers
+      const rect = el.getBoundingClientRect();
+      if (rect.width < 8 || rect.height < 8) return true;
+
+      // Skip if it's basically empty text container
+      const text = (el.textContent ?? "").trim();
+      const hasMedia = el.querySelector("img, picture, video");
+      if (!hasMedia && text.length === 0) return true;
+
+      return false;
+    };
+
+    // Gather targets
+    const raw = Array.from(main.querySelectorAll(TARGET_SELECTOR));
+    const targets = raw.filter((el) => !shouldSkip(el));
+
+    if (targets.length === 0) return;
+
+    // Helper: group by nearest "section-like" container for stagger
+    const groupKey = (el: Element) => {
+      const section =
+        el.closest("section") ||
+        el.closest("article") ||
+        el.closest("[class*='grid']") ||
+        el.closest("[class*='flex']") ||
+        main;
+      return section as Element;
+    };
+
+    const groupCounters = new Map<Element, number>();
+    const nextIndexInGroup = (el: Element) => {
+      const key = groupKey(el);
+      const n = groupCounters.get(key) ?? 0;
+      groupCounters.set(key, n + 1);
+      return n;
+    };
+
+    // Reset + apply initial hidden state (via classes)
+    for (const el of targets) {
+      const h = el as HTMLElement;
+
+      // Mark once to avoid infinite toggling across reruns
+      // But we DO want to re-run on route change, so we reset classes anyway.
+      h.classList.remove(VISIBLE_CLASS);
+      h.classList.add(AUTO_CLASS);
+
+      // Apply stagger delay per group
+      const idx = nextIndexInGroup(h);
+      const delay = Math.min(idx * 60, 420); // cap
+      h.style.setProperty("--reveal-delay", `${delay}ms`);
+    }
+
+    let cancelled = false;
+
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting) continue;
           const el = entry.target as HTMLElement;
-          el.classList.add("reveal-visible");
-          el.classList.remove("animate");
-          obs.unobserve(el);
+
+          el.classList.add(VISIBLE_CLASS);
+          io.unobserve(el);
         }
+      },
+      {
+        threshold: 0.12,
+        rootMargin: "0px 0px -10% 0px",
+      }
+    );
+
+    // Observe after paint to avoid "instant" on first render
+    let raf1 = 0;
+    let raf2 = 0;
+
+    raf1 = requestAnimationFrame(() => {
+      raf2 = requestAnimationFrame(() => {
+        if (cancelled) return;
+        for (const el of targets) io.observe(el);
       });
-    },
-    { threshold: 0.15, rootMargin: "-50px 0px" }
-  );
+    });
 
-  const elements = Array.from(document.querySelectorAll<HTMLElement>(selector));
+    // MutationObserver: catch stuff that renders later (Home frequently does)
+    const mo = new MutationObserver(() => {
+      if (cancelled) return;
 
-  // 1) Preparar estado inicial animado (pero SIN forzar visible)
-  elements.forEach((el) => {
-    el.classList.add("reveal"); // normaliza base
-    el.classList.remove("reveal-visible");
-    el.classList.add("animate");
-  });
+      // Re-scan quickly, but only add new ones not already tagged
+      const fresh = Array.from(main.querySelectorAll(TARGET_SELECTOR)).filter(
+        (el) => !shouldSkip(el)
+      );
 
-  // 2) IMPORTANTE: observar en el próximo frame para que el navegador
-  // pinte primero el estado "animate" (si no, en Home se ve instantáneo)
-  const raf = requestAnimationFrame(() => {
-    elements.forEach((el) => observer.observe(el));
-  });
+      for (const el of fresh) {
+        const h = el as HTMLElement;
+        if (h.classList.contains(AUTO_CLASS)) continue;
 
-  // 3) Fallback SAFE: SOLO liberar lo que esté actualmente en viewport.
-  // (Esto evita que todo Home quede visible antes de hacer scroll)
-  const fallback = window.setTimeout(() => {
-    elements.forEach((el) => {
-      if (!el.classList.contains("animate")) return; // ya animó
-      const r = el.getBoundingClientRect();
-      const inViewport = r.top < window.innerHeight && r.bottom > 0;
-      if (inViewport) {
-        el.classList.add("reveal-visible");
-        el.classList.remove("animate");
+        h.classList.remove(VISIBLE_CLASS);
+        h.classList.add(AUTO_CLASS);
+
+        const idx = nextIndexInGroup(h);
+        const delay = Math.min(idx * 60, 420);
+        h.style.setProperty("--reveal-delay", `${delay}ms`);
+
+        io.observe(h);
       }
     });
-  }, 1200);
 
-  return () => {
-    cancelAnimationFrame(raf);
-    window.clearTimeout(fallback);
-    observer.disconnect();
-  };
-}, [location.pathname]);
+    mo.observe(main, { childList: true, subtree: true });
+
+    // SAFE fallback: never keep content hidden
+    const fallback = window.setTimeout(() => {
+      if (cancelled) return;
+      for (const el of targets) {
+        const h = el as HTMLElement;
+        h.classList.add(VISIBLE_CLASS);
+        io.unobserve(h);
+      }
+    }, 3500);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+      window.clearTimeout(fallback);
+      mo.disconnect();
+      io.disconnect();
+    };
+  }, [location.pathname, prefersReducedMotion]);
 
   const navLinks = [
     { name: "Home", to: "/" },
@@ -137,6 +272,30 @@ function App() {
 
   return (
     <div className="min-h-screen bg-white">
+      {/* Inline CSS for auto reveal (does NOT depend on index.css) */}
+      <style>
+        {`
+          .auto-reveal {
+            opacity: 0;
+            transform: translate3d(0, 18px, 0);
+            transition: opacity 700ms ease, transform 700ms ease;
+            transition-delay: var(--reveal-delay, 0ms);
+            will-change: opacity, transform;
+          }
+          .auto-reveal-visible {
+            opacity: 1;
+            transform: translate3d(0, 0, 0);
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .auto-reveal, .auto-reveal-visible {
+              opacity: 1 !important;
+              transform: none !important;
+              transition: none !important;
+            }
+          }
+        `}
+      </style>
+
       {/* Navigation */}
       <nav
         className={`fixed top-0 left-0 right-0 z-50 transition-all duration-500 ${
@@ -182,7 +341,7 @@ function App() {
               </div>
             </a>
 
-            {/* Desktop Navigation (con underline animado) */}
+            {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-8">
               {navLinks.map((link) => (
                 <NavLink
@@ -235,11 +394,7 @@ function App() {
                 isScrolled ? "text-slate-900" : "text-white"
               }`}
             >
-              {isMobileMenuOpen ? (
-                <X className="w-6 h-6" />
-              ) : (
-                <Menu className="w-6 h-6" />
-              )}
+              {isMobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
           </div>
 
@@ -272,7 +427,7 @@ function App() {
         </div>
       </nav>
 
-      {/* ✅ Una sola zona de rutas (App limpio) */}
+      {/* Routes */}
       <main className={isHome ? "" : "pt-28"}>
         <Routes>
           <Route path="/" element={<HomeRoute />} />
@@ -284,7 +439,7 @@ function App() {
         </Routes>
       </main>
 
-      {/* Footer (global) */}
+      {/* Footer */}
       <footer className="bg-slate-900 text-white py-16">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
@@ -349,10 +504,7 @@ function App() {
               <ul className="space-y-3 text-slate-400">
                 <li className="flex items-center gap-2">
                   <Phone className="w-4 h-4 text-amber-500" />
-                  <a
-                    className="hover:text-white transition-colors"
-                    href="tel:8019289520"
-                  >
+                  <a className="hover:text-white transition-colors" href="tel:8019289520">
                     (801) 928-9520
                   </a>
                 </li>
@@ -379,15 +531,14 @@ function App() {
 
           <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
             <p className="text-slate-500 text-sm">
-              &copy; {new Date().getFullYear()} Tauro Painting LLC. All rights
-              reserved.
+              &copy; {new Date().getFullYear()} Tauro Painting LLC. All rights reserved.
             </p>
             <p className="text-slate-500 text-sm">License S270 • UVHBA Member</p>
           </div>
         </div>
       </footer>
 
-      {/* Quote Dialog (global) */}
+      {/* Quote Dialog */}
       <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -395,8 +546,7 @@ function App() {
               Request Sent!
             </DialogTitle>
             <DialogDescription className="text-slate-600">
-              Thank you for contacting Tauro Painting. We'll get back to you
-              within 24 hours to discuss your project.
+              Thank you for contacting Tauro Painting. We'll get back to you within 24 hours to discuss your project.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4">
