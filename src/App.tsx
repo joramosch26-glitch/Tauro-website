@@ -46,6 +46,57 @@ function App() {
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
 
   const location = useLocation();
+    useEffect(() => {
+    const metaByPath: Record<string, { title: string; desc: string }> = {
+      "/": {
+        title: "Tauro Painting | Professional House Painters in Utah",
+        desc:
+          "Tauro Painting provides professional interior and exterior painting in Utah. Reliable house painters for homes and businesses. Free estimates.",
+      },
+      "/services": {
+        title: "Painting Services | Tauro Painting",
+        desc:
+          "Explore Tauro Painting services: interior painting, exterior painting, cabinets, and detailed prep. Free estimates in Utah.",
+      },
+      "/projects": {
+        title: "Projects Gallery | Tauro Painting",
+        desc:
+          "View recent residential and commercial painting projects by Tauro Painting across Utah. Premium finishes and meticulous prep.",
+      },
+      "/about": {
+        title: "About Tauro Painting",
+        desc:
+          "Learn about Tauro Painting—craftsmanship, premium materials, and a process built for luxury finishes across Utah.",
+      },
+      "/contact": {
+        title: "Contact Tauro Painting | Free Estimate",
+        desc:
+          "Request a free estimate from Tauro Painting. Fast scheduling for interior and exterior painting across Utah.",
+      },
+    };
+
+    const fallback = metaByPath["/"];
+    const data = metaByPath[location.pathname] ?? fallback;
+
+    // Run after other effects to "win" if something else sets title/desc
+    const t = window.setTimeout(() => {
+      document.title = data.title;
+
+      let meta = document.querySelector(
+        'meta[name="description"]'
+      ) as HTMLMetaElement | null;
+
+      if (!meta) {
+        meta = document.createElement("meta");
+        meta.name = "description";
+        document.head.appendChild(meta);
+      }
+
+      meta.content = data.desc;
+    }, 0);
+
+    return () => window.clearTimeout(t);
+  }, [location.pathname]);
   const isHome = location.pathname === "/";
   const navSolid = !isHome || isScrolled;
 
