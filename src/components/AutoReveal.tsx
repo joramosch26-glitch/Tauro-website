@@ -28,6 +28,7 @@ export default function AutoReveal() {
 
     const AUTO_CLASS = "auto-reveal";
     const VISIBLE_CLASS = "auto-reveal-visible";
+    const SEEN_DATASET_KEY = "autoreveal"; // data-autoreveal="1"
 
     const TARGET_SELECTOR = [
       // headings / text
@@ -96,29 +97,31 @@ export default function AutoReveal() {
       return n;
     };
 
+    // Only initialize once per element lifetime (even across route navigations)
+    const markSeen = (h: HTMLElement) => {
+      h.dataset[SEEN_DATASET_KEY] = "1";
+    };
+    const wasSeen = (h: HTMLElement) => h.dataset[SEEN_DATASET_KEY] === "1";
+
     const initElement = (h: HTMLElement) => {
+      // dedupe: do not re-init an element we've already processed
+      if (wasSeen(h)) return;
+
+      // reset visibility state for animation
       h.classList.remove(VISIBLE_CLASS);
       h.classList.add(AUTO_CLASS);
 
       const idx = nextIndexInGroup(h);
       const delay = Math.min(idx * 60, 420);
       h.style.setProperty("--reveal-delay", `${delay}ms`);
+
+      markSeen(h);
     };
 
     const scanTargets = () => {
       const raw = Array.from(main.querySelectorAll(TARGET_SELECTOR));
       return raw.filter((el) => !shouldSkip(el)) as HTMLElement[];
     };
-
-    const targets = scanTargets();
-    if (targets.length === 0) return;
-
-    // reset group counters for a fresh, consistent stagger each route
-    groupCounters.clear();
-
-    for (const h of targets) {
-      initElement(h);
-    }
 
     let cancelled = false;
 
@@ -137,36 +140,54 @@ export default function AutoReveal() {
       }
     );
 
-    // Observe after paint
+    const observeAll = () => {
+      if (cancelled) return;
+
+      // reset group counters for a fresh, consistent stagger each route scan
+      groupCounters.clear();
+
+      const targets = scanTargets();
+      if (targets.length === 0) return;
+
+      for (const h of targets) {
+        // init only once; but we still want to observe it if not visible yet
+        const alreadyInit = wasSeen(h);
+        if (!alreadyInit) initElement(h);
+
+        // If it isn't visible yet, observe it (safe even if already visible; IO will unobserve on intersect)
+        if (!h.classList.contains(VISIBLE_CLASS)) {
+          io.observe(h);
+        }
+      }
+    };
+
+    // Initial scan now + after a tick (helps late mounts right after route change)
+    observeAll();
+
     let raf1 = 0;
     let raf2 = 0;
-
     raf1 = requestAnimationFrame(() => {
       raf2 = requestAnimationFrame(() => {
-        if (cancelled) return;
-        for (const h of targets) io.observe(h);
+        observeAll();
       });
     });
 
     // Catch late nodes in <main>
     const mo = new MutationObserver(() => {
-      if (cancelled) return;
-
-      const fresh = scanTargets();
-      for (const h of fresh) {
-        if (h.classList.contains(AUTO_CLASS)) continue;
-        initElement(h);
-        io.observe(h);
-      }
+      observeAll();
     });
-
     mo.observe(main, { childList: true, subtree: true });
 
-    // Safety fallback
+    // Safety fallback (only reveal things we've already initialized or match targets)
     const fallback = window.setTimeout(() => {
       if (cancelled) return;
       const all = scanTargets();
       for (const h of all) {
+        // If it was never initialized (e.g. it appeared late), init it first so it has consistent base class.
+        if (!wasSeen(h)) {
+          groupCounters.clear();
+          initElement(h);
+        }
         h.classList.add(VISIBLE_CLASS);
         io.unobserve(h);
       }
