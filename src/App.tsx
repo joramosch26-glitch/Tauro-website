@@ -1,7 +1,14 @@
 import "./index.css";
 import { content } from "./content";
 import { useState, useEffect } from "react";
-import { Routes, Route, Link, NavLink, useLocation } from "react-router-dom";
+import {
+  Routes,
+  Route,
+  Link,
+  NavLink,
+  useLocation,
+  useNavigate,
+} from "react-router-dom";
 
 import Services from "./pages/Services";
 import Projects from "./pages/Projects";
@@ -46,7 +53,24 @@ function App() {
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
 
   const location = useLocation();
-    useEffect(() => {
+  const navigate = useNavigate();
+
+  // ✅ Normalize trailing slashes: "/services/" -> "/services"
+  useEffect(() => {
+    const { pathname, search, hash } = location;
+
+    if (pathname.length > 1 && pathname.endsWith("/")) {
+      const normalized = pathname.replace(/\/+$/, "");
+      navigate(`${normalized}${search}${hash}`, { replace: true });
+    }
+  }, [location.pathname, location.search, location.hash, navigate]);
+
+  useEffect(() => {
+    const normalizedPath =
+      location.pathname.length > 1
+        ? location.pathname.replace(/\/+$/, "")
+        : location.pathname;
+
     const metaByPath: Record<string, { title: string; desc: string }> = {
       "/": {
         title: "Tauro Painting | Professional House Painters in Utah",
@@ -76,15 +100,15 @@ function App() {
     };
 
     const fallback = metaByPath["/"];
-    const data = metaByPath[location.pathname] ?? fallback;
+    const data = metaByPath[normalizedPath] ?? fallback;
 
     // Run after other effects to "win" if something else sets title/desc
     const t = window.setTimeout(() => {
       document.title = data.title;
 
-            // Canonical dinámico por ruta
+      // Canonical dinámico por ruta (usando path normalizado)
       const origin = window.location.origin;
-      const canonicalUrl = `${origin}${location.pathname}`;
+      const canonicalUrl = `${origin}${normalizedPath}`;
 
       let canonical = document.querySelector(
         'link[rel="canonical"]'
@@ -98,7 +122,7 @@ function App() {
 
       canonical.href = canonicalUrl;
 
-            // OG/Twitter dinámico por ruta (previews sociales)
+      // OG/Twitter dinámico por ruta (previews sociales)
       const upsertMeta = (
         selector: string,
         attrName: "property" | "name",
@@ -116,10 +140,20 @@ function App() {
 
       // Asegurar tags base (constantes)
       upsertMeta('meta[property="og:type"]', "property", "og:type", "website");
-      upsertMeta('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
+      upsertMeta(
+        'meta[name="twitter:card"]',
+        "name",
+        "twitter:card",
+        "summary_large_image"
+      );
 
       // Open Graph
-      upsertMeta('meta[property="og:title"]', "property", "og:title", data.title);
+      upsertMeta(
+        'meta[property="og:title"]',
+        "property",
+        "og:title",
+        data.title
+      );
       upsertMeta(
         'meta[property="og:description"]',
         "property",
@@ -129,7 +163,12 @@ function App() {
       upsertMeta('meta[property="og:url"]', "property", "og:url", canonicalUrl);
 
       // Twitter
-      upsertMeta('meta[name="twitter:title"]', "name", "twitter:title", data.title);
+      upsertMeta(
+        'meta[name="twitter:title"]',
+        "name",
+        "twitter:title",
+        data.title
+      );
       upsertMeta(
         'meta[name="twitter:description"]',
         "name",
@@ -138,9 +177,9 @@ function App() {
       );
 
       // Imagen social (site-wide)
-const ogImage = `${window.location.origin}/og.jpg`;
-upsertMeta('meta[property="og:image"]', "property", "og:image", ogImage);
-upsertMeta('meta[name="twitter:image"]', "name", "twitter:image", ogImage);
+      const ogImage = `${window.location.origin}/og.jpg`;
+      upsertMeta('meta[property="og:image"]', "property", "og:image", ogImage);
+      upsertMeta('meta[name="twitter:image"]', "name", "twitter:image", ogImage);
 
       let meta = document.querySelector(
         'meta[name="description"]'
@@ -157,6 +196,7 @@ upsertMeta('meta[name="twitter:image"]', "name", "twitter:image", ogImage);
 
     return () => window.clearTimeout(t);
   }, [location.pathname]);
+
   const isHome = location.pathname === "/";
   const navSolid = !isHome || isScrolled;
 
