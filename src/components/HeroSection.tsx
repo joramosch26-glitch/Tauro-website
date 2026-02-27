@@ -35,7 +35,7 @@ export default function HeroSection() {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 backdrop-blur-sm border border-white/10 mb-8">
             <Star className="w-4 h-4 text-amber-400 fill-amber-400" />
             <span className="text-white/80 text-sm font-medium tracking-wide">
-              The painters of Utah&apos;s most luxurious homes
+             Utah painting, executed at the highest standard
             </span>
           </div>
 
