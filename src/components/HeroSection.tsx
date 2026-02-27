@@ -59,7 +59,7 @@ export default function HeroSection() {
               to="/contact"
               className="inline-flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-8 py-3 text-base rounded-md transition-colors"
             >
-              Get a Quote
+              Request an Estimate
               <ArrowRight className="w-5 h-5 ml-2" />
             </Link>
 
@@ -67,7 +67,7 @@ export default function HeroSection() {
               to="/projects"
               className="inline-flex items-center justify-center border border-white/30 text-white hover:bg-white/10 bg-transparent px-8 py-3 text-base rounded-md transition-colors"
             >
-              View Projects
+              View Our Work
             </Link>
           </div>
 
