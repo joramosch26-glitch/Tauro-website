@@ -49,8 +49,8 @@ export default function HeroSection() {
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-white/70 mb-10 leading-relaxed max-w-xl">
-            Specialists in custom home and luxury residence painting.
-            Impeccable finishes that elevate the value and beauty of your property.
+           Interior and exterior painting executed at the highest standard.
+           Meticulous preparation. Flawless results. No compromise.
           </p>
 
           {/* CTA Buttons */}
