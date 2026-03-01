@@ -41,16 +41,15 @@ export default function HeroSection() {
 
           {/* Headline */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6">
-            We Transform
+            Execution Defines
             <span className="block text-amber-400">
-              Homes Into Art
+              The Finish
             </span>
           </h1>
 
           {/* Subheadline */}
           <p className="text-lg sm:text-xl text-white/70 mb-10 leading-relaxed max-w-xl">
-           Interior and exterior painting executed at the highest standard.
-           Meticulous preparation. Flawless results. No compromise.
+           Interior and exterior painting executed with disciplined preparation, technical expertise, and a strategic approach to every surface.
           </p>
 
           {/* CTA Buttons */}

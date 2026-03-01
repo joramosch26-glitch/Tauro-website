@@ -24,6 +24,7 @@ import CTASection from "./components/CTASection";
 import ProcessSection from "./components/ProcessSection";
 import HeroSection from "./components/HeroSection";
 import ServicesSection from "./components/ServicesSection";
+import StandardSection from "./components/StandardSection";
 
 import AutoReveal from "./components/AutoReveal";
 
@@ -220,18 +221,6 @@ function App() {
     setIsMobileMenuOpen(false);
   };
 
-  const HomeRoute = () => (
-    <>
-      <HeroSection />
-      <ServicesSection />
-      <ProjectsSection />
-      <AboutSection />
-      <ProcessSection />
-      <TestimonialsSection />
-      <CTASection />
-      <ContactSection />
-    </>
-  );
 
   return (
     <div className="min-h-screen bg-white">
