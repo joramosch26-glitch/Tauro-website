@@ -188,7 +188,7 @@ function App() {
 const ldId = "ld-json-localbusiness";
 const business = {
   "@context": "https://schema.org",
-  "@type": "PaintingContractor",
+  "@type": "LocalBusiness",
   name: content.brand.name,
   url: window.location.origin,
   image: `${window.location.origin}/og.jpg`,
