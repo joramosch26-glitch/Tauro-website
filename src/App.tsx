@@ -183,6 +183,45 @@ function App() {
       }
 
       meta.content = data.desc;
+
+      // ✅ LocalBusiness / PaintingContractor structured data (JSON-LD)
+const ldId = "ld-json-localbusiness";
+const business = {
+  "@context": "https://schema.org",
+  "@type": "PaintingContractor",
+  name: content.brand.name,
+  url: window.location.origin,
+  image: `${window.location.origin}/og.jpg`,
+  logo: `${window.location.origin}/og.jpg`,
+  telephone: "+18019289520",
+  address: {
+    "@type": "PostalAddress",
+    streetAddress: "1144 N Main St",
+    addressLocality: "Orem",
+    addressRegion: "UT",
+    postalCode: "84057",
+    addressCountry: "US",
+  },
+  areaServed: [
+    { "@type": "AdministrativeArea", name: "Utah" },
+  ],
+  sameAs: [
+    "https://www.instagram.com/tauropainting",
+    "https://www.facebook.com/tauropainting",
+  ],
+  // Optional but helpful for service businesses
+  serviceType: ["Interior Painting", "Exterior Painting", "Cabinet Painting"],
+};
+
+let ld = document.getElementById(ldId) as HTMLScriptElement | null;
+if (!ld) {
+  ld = document.createElement("script");
+  ld.id = ldId;
+  ld.type = "application/ld+json";
+  document.head.appendChild(ld);
+}
+ld.text = JSON.stringify(business);
+
     }, 0);
 
     return () => window.clearTimeout(t);
