@@ -16,16 +16,6 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import HomeRoute from "./pages/HomeRoute";
 
-import ProjectsSection from "./components/ProjectsSection";
-import AboutSection from "./components/AboutSection";
-import ContactSection from "./components/ContactSection";
-import TestimonialsSection from "./components/TestimonialsSection";
-import CTASection from "./components/CTASection";
-import ProcessSection from "./components/ProcessSection";
-import HeroSection from "./components/HeroSection";
-import ServicesSection from "./components/ServicesSection";
-import StandardSection from "./components/StandardSection";
-
 import AutoReveal from "./components/AutoReveal";
 
 import {
@@ -215,12 +205,24 @@ function App() {
     { name: "Contact", to: "/contact" },
   ];
 
+  // ✅ SPA-safe: from any route -> navigate home -> then scroll to section
   const scrollToSection = (href: string) => {
-    const element = document.querySelector(href);
-    if (element) element.scrollIntoView({ behavior: "smooth" });
-    setIsMobileMenuOpen(false);
-  };
+    const doScroll = () => {
+      const element = document.querySelector(href);
+      if (element) element.scrollIntoView({ behavior: "smooth", block: "start" });
+    };
 
+    // Always close mobile menu
+    setIsMobileMenuOpen(false);
+
+    if (isHome) {
+      doScroll();
+      return;
+    }
+
+    navigate("/");
+    window.setTimeout(doScroll, 50);
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -242,8 +244,7 @@ function App() {
               href="#home"
               onClick={(e) => {
                 e.preventDefault();
-                if (isHome) scrollToSection("#home");
-                else window.location.href = "/";
+                scrollToSection("#home");
               }}
               className="flex items-center gap-3 group"
             >
@@ -322,8 +323,8 @@ function App() {
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={`lg:hidden p-2 rounded-lg transition-colors ${
-                isScrolled ? "text-slate-900" : "text-white"
-              }`}
+              navSolid ? "text-slate-900" : "text-white"
+             }`}
             >
               {isMobileMenuOpen ? (
                 <X className="w-6 h-6" />
