@@ -209,8 +209,6 @@ const business = {
     "https://www.instagram.com/tauropainting",
     "https://www.facebook.com/tauropainting",
   ],
-  // Optional but helpful for service businesses
-  serviceType: ["Interior Painting", "Exterior Painting", "Cabinet Painting"],
 };
 
 let ld = document.getElementById(ldId) as HTMLScriptElement | null;
