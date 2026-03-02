@@ -41,9 +41,9 @@ export default function HeroSection() {
 
           {/* Headline */}
           <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold text-white leading-[1.1] mb-6">
-            Execution Defines
+            House Painting Excellence
             <span className="block text-amber-400">
-              The Finish
+              Across Utah County
             </span>
           </h1>
 

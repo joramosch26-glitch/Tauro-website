@@ -15,6 +15,7 @@ import Projects from "./pages/Projects";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
 import HomeRoute from "./pages/HomeRoute";
+import Orem from "./pages/Orem";
 
 import AutoReveal from "./components/AutoReveal";
 
@@ -87,6 +88,11 @@ function App() {
     title: "Contact Tauro Painting | Free Estimate",
     desc:
       "Request a free estimate from Tauro Painting. Interior and exterior painting across Utah County. Fast response and scheduling.",
+  },
+  "/locations/orem": {
+  title: "House Painters in Orem, UT | Tauro Painting",
+  desc:
+    "Professional interior and exterior house painters in Orem, Utah. Premium finishes, detailed preparation, and free estimates.",
   },
 };
 
@@ -409,6 +415,7 @@ ld.text = JSON.stringify(business);
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
           <Route path="*" element={<HomeRoute />} />
+          <Route path="/locations/orem" element={<Orem />} />
         </Routes>
       </main>
 
