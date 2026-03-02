@@ -19,9 +19,7 @@ export default function Services() {
             Professional House Painters in Utah County
           </h1>
           <p className="text-slate-600 text-lg leading-relaxed">
-            We offer complete painting solutions for luxury homes, using premium
-            materials and specialized techniques that guarantee exceptional
-            results.
+            We provide premium interior and exterior painting with meticulous prep and clean, durable finishes. Proudly serving Utah County—including Orem, Provo, Lehi, American Fork, Pleasant Grove, Alpine, Highland, Saratoga Springs, Eagle Mountain, Mapleton, and Springville—with fast scheduling and free estimates.
           </p>
         </div>
 
