@@ -16,7 +16,7 @@ export default function Services() {
             Our Services
           </span>
           <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
-            Excellence in Every Finish
+            Professional House Painters in Utah County
           </h1>
           <p className="text-slate-600 text-lg leading-relaxed">
             We offer complete painting solutions for luxury homes, using premium
