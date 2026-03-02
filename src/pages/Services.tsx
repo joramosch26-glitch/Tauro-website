@@ -1,5 +1,6 @@
 import { content } from "../content";
 import { Sparkles, CheckCircle2 } from "lucide-react";
+import { Link } from "react-router-dom";
 
 type Service = (typeof content.services)[number];
 
@@ -18,15 +19,18 @@ export default function Services() {
           <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
             Professional House Painters in Utah County
           </h1>
+          
           <p className="text-slate-600 text-lg leading-relaxed">
             We provide premium interior and exterior painting with meticulous prep and clean, durable finishes. Proudly serving Utah County—including Orem, Provo, Lehi, American Fork, Pleasant Grove, Alpine, Highland, Saratoga Springs, Eagle Mountain, Mapleton, and Springville—with fast scheduling and free estimates.
           </p>
-          <p className="mt-8 text-slate-600">
-            Serving homeowners across Utah County, including 
-          <a href="/locations/orem" className="text-amber-600 font-semibold ml-1">
-            Orem
-          </a>, Provo, and Lehi.
-          </p>
+          <p className="mt-4">
+           <Link
+            to="/locations"
+           className="text-amber-600 font-semibold hover:text-amber-700 transition-colors"
+           >
+            View all areas we serve →
+          </Link>
+       </p>
         </div>
 
         {/* Services Grid */}
