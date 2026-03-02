@@ -63,32 +63,32 @@ function App() {
         : location.pathname;
 
     const metaByPath: Record<string, { title: string; desc: string }> = {
-      "/": {
-        title: "Tauro Painting | Professional House Painters in Utah",
-        desc:
-          "Tauro Painting provides professional interior and exterior painting in Utah. Reliable house painters for homes and businesses. Free estimates.",
-      },
-      "/services": {
-        title: "Painting Services | Tauro Painting",
-        desc:
-          "Explore Tauro Painting services: interior painting, exterior painting, cabinets, and detailed prep. Free estimates in Utah.",
-      },
-      "/projects": {
-        title: "Projects Gallery | Tauro Painting",
-        desc:
-          "View recent residential and commercial painting projects by Tauro Painting across Utah. Premium finishes and meticulous prep.",
-      },
-      "/about": {
-        title: "About Tauro Painting",
-        desc:
-          "Learn about Tauro Painting—craftsmanship, premium materials, and a process built for luxury finishes across Utah.",
-      },
-      "/contact": {
-        title: "Contact Tauro Painting | Free Estimate",
-        desc:
-          "Request a free estimate from Tauro Painting. Fast scheduling for interior and exterior painting across Utah.",
-      },
-    };
+  "/": {
+    title: "House Painters in Utah County | Tauro Painting",
+    desc:
+      "Premium interior and exterior house painters in Utah County. Serving Orem, Provo, Lehi, and surrounding areas. Free estimates.",
+  },
+  "/services": {
+    title: "Painting Services in Utah County | Tauro Painting",
+    desc:
+      "Interior painting, exterior painting, cabinet refinishing, and detailed prep across Utah County. Fast scheduling and free estimates.",
+  },
+  "/projects": {
+    title: "Painting Projects in Utah County | Tauro Painting",
+    desc:
+      "Explore recent residential and commercial painting projects completed across Utah County with premium finishes and meticulous prep.",
+  },
+  "/about": {
+    title: "About Tauro Painting | Utah County",
+    desc:
+      "Learn about Tauro Painting—craftsmanship, premium materials, and a refined process built for premium finishes across Utah County.",
+  },
+  "/contact": {
+    title: "Contact Tauro Painting | Free Estimate",
+    desc:
+      "Request a free estimate from Tauro Painting. Interior and exterior painting across Utah County. Fast response and scheduling.",
+  },
+};
 
     const fallback = metaByPath["/"];
     const data = metaByPath[normalizedPath] ?? fallback;
