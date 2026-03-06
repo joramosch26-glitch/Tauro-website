@@ -36,20 +36,23 @@ export default function Locations() {
             </div>
           </Link>
 
-          {/* Coming soon (no link yet) */}
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm opacity-70">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900">
-                  Provo, UT
-                </h2>
-                <p className="text-slate-600 mt-2 leading-relaxed">
-                  Location page coming soon.
-                </p>
-              </div>
-              <span className="text-slate-500 font-semibold">Soon</span>
-            </div>
-          </div>
+          {/* ✅ Existing location page */}
+          <Link
+  to="/locations/provo"
+  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
+>
+  <div className="flex items-start justify-between gap-4">
+    <div>
+      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+        Provo, UT
+      </h2>
+      <p className="text-slate-600 mt-2 leading-relaxed">
+        House painters in Provo with disciplined prep and premium finishes.
+      </p>
+    </div>
+    <span className="text-amber-600 font-semibold">View →</span>
+  </div>
+</Link>
 
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm opacity-70">
             <div className="flex items-start justify-between gap-4">
