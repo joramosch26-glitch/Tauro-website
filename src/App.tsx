@@ -108,7 +108,7 @@ function App() {
   desc:
     "Tauro Painting provides interior and exterior house painting in Provo, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
 },
-"/locations/Alpine": {
+"/locations/alpine": {
   title: "House Painting in Alpine, UT | Tauro Painting",
   desc:
     "Tauro Painting provides interior and exterior house painting in Alpine, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
