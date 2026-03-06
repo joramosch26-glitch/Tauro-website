@@ -19,6 +19,13 @@ import Orem from "./pages/Orem";
 import Provo from "./pages/Provo"
 import Alpine from "./pages/Alpine"
 import Highland from "./pages/Highland"
+import Mapleton from "./pages/Mapleton"
+import Lehi from "./pages/Lehi"
+import AmericanFork from "./pages/American-Fork"
+import PleasantGrove from "./pages/Pleasant-Grove"
+import CedarHills from "./pages/Cedar-Hills"
+import WoodlandHills from "./pages/Woodland-Hills"
+import ElkRidge from "./pages/Elk-Ridge"
 import Locations from "./pages/Locations";
 
 
@@ -118,6 +125,41 @@ function App() {
   title: "House Painting in Highland, UT | Tauro Painting",
   desc:
     "Tauro Painting provides interior and exterior house painting in Highland, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
+},
+"/locations/mapleton": {
+  title: "House Painting in Mapleton, UT | Tauro Painting",
+  desc:
+    "Tauro Painting provides interior and exterior house painting in Mapleton, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
+},
+"/locations/lehi": {
+  title: "House Painting in Lehi, UT | Tauro Painting",
+  desc:
+    "Tauro Painting provides interior and exterior house painting in Lehi, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
+},
+"/locations/american-fork": {
+  title: "House Painting in American Fork, UT | Tauro Painting",
+  desc:
+    "Tauro Painting provides interior and exterior house painting in American Fork, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
+},
+"/locations/pleasant-grove": {
+  title: "House Painting in Pleasant Grove, UT | Tauro Painting",
+  desc:
+    "Tauro Painting provides interior and exterior house painting in Pleasant Grove, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
+},
+"/locations/cedar-hills": {
+  title: "House Painting in Cedar Hills, UT | Tauro Painting",
+  desc:
+    "Tauro Painting provides interior and exterior house painting in Cedar Hills, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
+},
+"/locations/woodland-hills": {
+  title: "House Painting in Woodland Hills, UT | Tauro Painting",
+  desc:
+    "Tauro Painting provides interior and exterior house painting in Woodland Hills, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
+},
+"/locations/elk-ridge": {
+  title: "House Painting in Elk Ridge, UT | Tauro Painting",
+  desc:
+    "Tauro Painting provides interior and exterior house painting in Elk Ridge, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
 },
 };
 
@@ -445,6 +487,13 @@ ld.text = JSON.stringify(business);
           <Route path="/locations/provo" element={<Provo />} />
           <Route path="/locations/alpine" element={<Alpine />} />
           <Route path="/locations/highland" element={<Highland />} />
+          <Route path="/locations/mapleton" element={<Mapleton />} />
+          <Route path="/locations/lehi" element={<Lehi />} />
+          <Route path="/locations/american-fork" element={<AmericanFork />} />
+          <Route path="/locations/pleasant-grove" element={<PleasantGrove />} />
+          <Route path="/locations/cedar-hills" element={<CedarHills />} />
+          <Route path="/locations/woodland-hills" element={<WoodlandHills />} />
+          <Route path="/locations/elk-ridge" element={<ElkRidge />} />
           <Route path="/locations" element={<Locations />} />
         </Routes>
       </main>

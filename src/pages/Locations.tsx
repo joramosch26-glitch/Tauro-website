@@ -104,11 +104,114 @@ export default function Locations() {
     <span className="text-amber-600 font-semibold">View →</span>
   </div>
 </Link>
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm opacity-70">
+
+<Link
+  to="/locations/lehi"
+  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
+>
+  <div className="flex items-start justify-between gap-4">
+    <div>
+      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+        Lehi, UT
+      </h2>
+      <p className="text-slate-600 mt-2 leading-relaxed">
+        House painters in Lehi with disciplined prep and premium finishes.
+      </p>
+    </div>
+    <span className="text-amber-600 font-semibold">View →</span>
+  </div>
+</Link>
+
+<Link
+  to="/locations/american-fork"
+  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
+>
+  <div className="flex items-start justify-between gap-4">
+    <div>
+      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+        American Fork, UT
+      </h2>
+      <p className="text-slate-600 mt-2 leading-relaxed">
+        House painters in American Fork with disciplined prep and premium finishes.
+      </p>
+    </div>
+    <span className="text-amber-600 font-semibold">View →</span>
+  </div>
+</Link>
+
+<Link
+  to="/locations/pleasant-grove"
+  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
+>
+  <div className="flex items-start justify-between gap-4">
+    <div>
+      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+        Pleasant Grove, UT
+      </h2>
+      <p className="text-slate-600 mt-2 leading-relaxed">
+        House painters in Pleasant Grove with disciplined prep and premium finishes.
+      </p>
+    </div>
+    <span className="text-amber-600 font-semibold">View →</span>
+  </div>
+</Link>
+
+<Link
+  to="/locations/cedar-hills"
+  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
+>
+  <div className="flex items-start justify-between gap-4">
+    <div>
+      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+        Cedar Hills, UT
+      </h2>
+      <p className="text-slate-600 mt-2 leading-relaxed">
+        House painters in Cedar Hills with disciplined prep and premium finishes.
+      </p>
+    </div>
+    <span className="text-amber-600 font-semibold">View →</span>
+  </div>
+</Link>
+
+<Link
+  to="/locations/woodland-hills"
+  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
+>
+  <div className="flex items-start justify-between gap-4">
+    <div>
+      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+        Woodland Hills, UT
+      </h2>
+      <p className="text-slate-600 mt-2 leading-relaxed">
+        House painters in Woodland Hills with disciplined prep and premium finishes.
+      </p>
+    </div>
+    <span className="text-amber-600 font-semibold">View →</span>
+  </div>
+</Link>
+
+<Link
+  to="/locations/elk-ridge"
+  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
+>
+  <div className="flex items-start justify-between gap-4">
+    <div>
+      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+        Elk Ridge, UT
+      </h2>
+      <p className="text-slate-600 mt-2 leading-relaxed">
+        House painters in Elk Ridge with disciplined prep and premium finishes.
+      </p>
+    </div>
+    <span className="text-amber-600 font-semibold">View →</span>
+  </div>
+</Link>
+
+        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm opacity-70">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <h2 className="text-xl font-semibold text-slate-900">
-                  Lehi, UT
+                  Other cities, UT
                 </h2>
                 <p className="text-slate-600 mt-2 leading-relaxed">
                   Location page coming soon.
