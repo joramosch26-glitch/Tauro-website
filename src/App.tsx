@@ -16,7 +16,9 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import HomeRoute from "./pages/HomeRoute";
 import Orem from "./pages/Orem";
+import Provo from "./pages/Provo"
 import Locations from "./pages/Locations";
+
 
 import AutoReveal from "./components/AutoReveal";
 
@@ -60,9 +62,9 @@ function App() {
 
   useEffect(() => {
     const normalizedPath =
-      location.pathname.length > 1
-        ? location.pathname.replace(/\/+$/, "")
-        : location.pathname;
+  location.pathname.length > 1
+    ? location.pathname.replace(/\/+$/, "").toLowerCase()
+    : location.pathname.toLowerCase();
 
     const metaByPath: Record<string, { title: string; desc: string }> = {
   "/": {
@@ -100,9 +102,14 @@ function App() {
   desc:
     "Professional interior and exterior house painters in Orem, Utah. Premium finishes, detailed preparation, and free estimates.",
 },
-
+"/locations/provo": {
+  title: "House Painting in Provo, UT | Tauro Painting",
+  desc:
+    "Tauro Painting provides interior and exterior house painting in Provo, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
+},
 
 };
+
 
     const fallback = metaByPath["/"];
     const data = metaByPath[normalizedPath] ?? fallback;
@@ -424,6 +431,7 @@ ld.text = JSON.stringify(business);
           <Route path="/contact" element={<Contact />} />
           <Route path="*" element={<HomeRoute />} />
           <Route path="/locations/orem" element={<Orem />} />
+          <Route path="/locations/provo" element={<Provo />} />
           <Route path="/locations" element={<Locations />} />
         </Routes>
       </main>
