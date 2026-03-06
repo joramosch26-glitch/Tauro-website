@@ -17,6 +17,7 @@ import Contact from "./pages/Contact";
 import HomeRoute from "./pages/HomeRoute";
 import Orem from "./pages/Orem";
 import Provo from "./pages/Provo"
+import Alpine from "./pages/Alpine"
 import Locations from "./pages/Locations";
 
 
@@ -107,7 +108,11 @@ function App() {
   desc:
     "Tauro Painting provides interior and exterior house painting in Provo, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
 },
-
+"/locations/Alpine": {
+  title: "House Painting in Alpine, UT | Tauro Painting",
+  desc:
+    "Tauro Painting provides interior and exterior house painting in Alpine, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
+},
 };
 
 
@@ -432,6 +437,7 @@ ld.text = JSON.stringify(business);
           <Route path="*" element={<HomeRoute />} />
           <Route path="/locations/orem" element={<Orem />} />
           <Route path="/locations/provo" element={<Provo />} />
+          <Route path="/locations/alpine" element={<Alpine />} />
           <Route path="/locations" element={<Locations />} />
         </Routes>
       </main>
