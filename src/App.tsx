@@ -277,8 +277,19 @@ const business = {
     addressCountry: "US",
   },
   areaServed: [
-    { "@type": "AdministrativeArea", name: "Utah" },
-  ],
+  { "@type": "City", "name": "Orem" },
+  { "@type": "City", "name": "Provo" },
+  { "@type": "City", "name": "Alpine" },
+  { "@type": "City", "name": "Highland" },
+  { "@type": "City", "name": "Mapleton" },
+  { "@type": "City", "name": "Lehi" },
+  { "@type": "City", "name": "American Fork" },
+  { "@type": "City", "name": "Pleasant Grove" },
+  { "@type": "City", "name": "Springville" },
+  { "@type": "City", "name": "Cedar Hills" },
+  { "@type": "City", "name": "Woodland Hills" },
+  { "@type": "City", "name": "Elk Ridge" }
+],
   sameAs: [
     "https://www.instagram.com/tauropainting",
     "https://www.facebook.com/tauropainting",
