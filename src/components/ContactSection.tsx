@@ -24,11 +24,33 @@ export default function ContactSection() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
 
+  const [lastSubmittedSignature, setLastSubmittedSignature] = useState("");
+const [lastSubmittedAt, setLastSubmittedAt] = useState(0);
+
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  if (isSubmitting) return;
+
+  e.preventDefault();
+  const submissionSignature = JSON.stringify({
+  name: name.trim(),
+  phone: phone.trim(),
+  email: email.trim(),
+  projectType,
+  message: message.trim(),
+});
+
+const now = Date.now();
+const isDuplicateRecentSubmission =
+  submissionSignature === lastSubmittedSignature &&
+  now - lastSubmittedAt < 60000;
+
+if (isDuplicateRecentSubmission) {
+  setSubmitError("This request was already sent. Please wait a minute before sending the same message again.");
+  return;
+}
     setIsSubmitting(true);
-setShowQuoteDialog(false);
-setSubmitError("");
+    setShowQuoteDialog(false);
+    setSubmitError("");
 
     try {
       const response = await fetch("https://formsubmit.co/ajax/tauropaintingutah@gmail.com", {
@@ -52,11 +74,13 @@ setSubmitError("");
       }
 
       setShowQuoteDialog(true);
-      setName("");
-      setPhone("");
-      setEmail("");
-      setProjectType("");
-      setMessage("");
+setLastSubmittedSignature(submissionSignature);
+setLastSubmittedAt(now);
+setName("");
+setPhone("");
+setEmail("");
+setProjectType("");
+setMessage("");
     } catch (error) {
       console.error("Contact form error:", error);
 setSubmitError("There was a problem sending your request. Please try again.");
