@@ -22,11 +22,13 @@ export default function ContactSection() {
   const [projectType, setProjectType] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
     const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSubmitting(true);
-    setShowQuoteDialog(false);
+setShowQuoteDialog(false);
+setSubmitError("");
 
     try {
       const response = await fetch("https://formsubmit.co/ajax/tauropaintingutah@gmail.com", {
@@ -57,7 +59,7 @@ export default function ContactSection() {
       setMessage("");
     } catch (error) {
       console.error("Contact form error:", error);
-      alert("There was a problem sending your request. Please try again.");
+setSubmitError("There was a problem sending your request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
@@ -157,10 +159,16 @@ export default function ContactSection() {
               </p>
 
               {showQuoteDialog ? (
-                <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-slate-700">
-                  ✅ Request received! We&apos;ll reach out shortly.
-                </div>
-              ) : null}
+  <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-slate-700">
+    ✅ Request received successfully. We&apos;ll reach out shortly.
+  </div>
+) : null}
+
+{submitError ? (
+  <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+    {submitError}
+  </div>
+) : null}
 
               <form className="space-y-5" onSubmit={handleSubmit}>
 
