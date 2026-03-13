@@ -32,7 +32,7 @@ const [lastSubmittedAt, setLastSubmittedAt] = useState(0);
   if (isSubmitting) return;
 
   e.preventDefault();
-  
+
   if (website) {
   return;
 }
@@ -59,20 +59,23 @@ if (isDuplicateRecentSubmission) {
 
     try {
       const response = await fetch("https://formsubmit.co/ajax/tauropaintingutah@gmail.com", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        body: JSON.stringify({
-          name,
-          phone,
-          email,
-          projectType,
-          message,
-          _subject: "New Tauro Painting quote request",
-        }),
-      });
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    Accept: "application/json",
+  },
+  body: JSON.stringify({
+    name,
+    phone,
+    email,
+    projectType,
+    message,
+    submittedFrom: `${window.location.origin}${window.location.pathname}`,
+    _subject: `New Tauro Painting lead — ${name || "Website Form"}`,
+    _replyto: email,
+    _template: "table",
+  }),
+});
 
       if (!response.ok) {
         throw new Error("Form submission failed");
