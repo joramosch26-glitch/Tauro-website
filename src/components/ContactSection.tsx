@@ -23,6 +23,7 @@ export default function ContactSection() {
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
+  const [website, setWebsite] = useState("");
 
   const [lastSubmittedSignature, setLastSubmittedSignature] = useState("");
 const [lastSubmittedAt, setLastSubmittedAt] = useState(0);
@@ -31,6 +32,10 @@ const [lastSubmittedAt, setLastSubmittedAt] = useState(0);
   if (isSubmitting) return;
 
   e.preventDefault();
+  
+  if (website) {
+  return;
+}
   const submissionSignature = JSON.stringify({
   name: name.trim(),
   phone: phone.trim(),
@@ -195,6 +200,15 @@ setSubmitError("There was a problem sending your request. Please try again.");
 ) : null}
 
               <form className="space-y-5" onSubmit={handleSubmit}>
+                <div style={{ display: "none" }}>
+  <label>Website</label>
+  <input
+    type="text"
+    value={website}
+    onChange={(e) => setWebsite(e.target.value)}
+    autoComplete="off"
+  />
+</div>
 
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
