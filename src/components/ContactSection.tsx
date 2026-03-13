@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 import {
   Phone,
   Mail,
@@ -15,6 +15,53 @@ import { Textarea } from "@/components/ui/textarea";
 
 export default function ContactSection() {
   const [showQuoteDialog, setShowQuoteDialog] = useState(false);
+
+    const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [projectType, setProjectType] = useState("");
+  const [message, setMessage] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+    const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setShowQuoteDialog(false);
+
+    try {
+      const response = await fetch("https://formsubmit.co/ajax/tauropaintingutah@gmail.com", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        body: JSON.stringify({
+          name,
+          phone,
+          email,
+          projectType,
+          message,
+          _subject: "New Tauro Painting quote request",
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Form submission failed");
+      }
+
+      setShowQuoteDialog(true);
+      setName("");
+      setPhone("");
+      setEmail("");
+      setProjectType("");
+      setMessage("");
+    } catch (error) {
+      console.error("Contact form error:", error);
+      alert("There was a problem sending your request. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <section id="contact" className="py-24 lg:py-32 bg-slate-50">
@@ -115,25 +162,34 @@ export default function ContactSection() {
                 </div>
               ) : null}
 
-              <form
-                className="space-y-5"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  setShowQuoteDialog(true);
-                }}
-              >
+              <form className="space-y-5" onSubmit={handleSubmit}>
+
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Name
                     </label>
-                    <Input placeholder="Your name" className="border-slate-200 h-12" />
+                    <Input
+  name="name"
+  value={name}
+  onChange={(e) => setName(e.target.value)}
+  placeholder="Your name"
+  className="border-slate-200 h-12"
+  required
+/>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-2">
                       Phone
                     </label>
-                    <Input placeholder="(801) 000-0000" className="border-slate-200 h-12" />
+                    <Input
+  name="phone"
+  value={phone}
+  onChange={(e) => setPhone(e.target.value)}
+  placeholder="(801) 000-0000"
+  className="border-slate-200 h-12"
+  required
+/>
                   </div>
                 </div>
 
@@ -142,17 +198,28 @@ export default function ContactSection() {
                     Email
                   </label>
                   <Input
-                    type="email"
-                    placeholder="you@email.com"
-                    className="border-slate-200 h-12"
-                  />
+  name="email"
+  type="email"
+  value={email}
+  onChange={(e) => setEmail(e.target.value)}
+  placeholder="you@email.com"
+  className="border-slate-200 h-12"
+  required
+/>
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Project Type
                   </label>
-                  <select className="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500">
+                  
+                  <select
+  name="projectType"
+  value={projectType}
+  onChange={(e) => setProjectType(e.target.value)}
+  className="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
+  required
+>
                     <option value="">Select a type</option>
                     <option value="interior">Interior Painting</option>
                     <option value="exterior">Exterior Painting</option>
@@ -166,19 +233,27 @@ export default function ContactSection() {
                   <label className="block text-sm font-medium text-slate-700 mb-2">
                     Message
                   </label>
+                  
                   <Textarea
-                    placeholder="Tell us about your project..."
-                    className="border-slate-200 min-h-[120px]"
-                  />
+  name="message"
+  value={message}
+  onChange={(e) => setMessage(e.target.value)}
+  placeholder="Tell us about your project..."
+  className="border-slate-200 min-h-[120px]"
+  required
+/>
+
                 </div>
 
                 <Button
-                  type="submit"
-                  className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold h-12"
-                >
-                  Submit Request
-                  <ArrowUpRight className="w-5 h-5 ml-2" />
-                </Button>
+  type="submit"
+  disabled={isSubmitting}
+  className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold h-12"
+>
+  {isSubmitting ? "Sending..." : "Submit Request"}
+  <ArrowUpRight className="w-5 h-5 ml-2" />
+</Button>
+
               </form>
             </div>
           </div>
