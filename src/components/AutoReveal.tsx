@@ -1,207 +1,95 @@
-import React, { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
 
 /**
- * AutoReveal
- * Global auto-reveal animations inside <main>.
+ * A small, progressive-enhancement reveal for page-level content groups.
  *
- * - Does NOT rely on legacy .reveal / .animate classes.
- * - Uses IntersectionObserver + MutationObserver to catch late-rendered nodes.
- * - Scoped to <main> only (never touches nav/footer/dialog).
- * - Opt-out: add data-no-reveal="true" on any element.
+ * Content is visible by default. JavaScript only prepares sections that start
+ * below the initial viewport, so a missing observer (or an interrupted script)
+ * never leaves a page hidden.
  */
 export default function AutoReveal() {
   const location = useLocation();
 
-  const prefersReducedMotion = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return (
-      window.matchMedia?.("(prefers-reduced-motion: reduce)")?.matches ?? false
-    );
-  }, []);
-
   useEffect(() => {
-    if (prefersReducedMotion) return;
+    if (
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ||
+      !("IntersectionObserver" in window)
+    ) {
+      return;
+    }
 
     const main = document.querySelector("main");
     if (!main) return;
 
     const AUTO_CLASS = "auto-reveal";
     const VISIBLE_CLASS = "auto-reveal-visible";
-    const SEEN_DATASET_KEY = "autoreveal"; // data-autoreveal="1"
-
     const TARGET_SELECTOR = [
-      // headings / text
-      "h1",
-      "h2",
-      "h3",
-      "h4",
-      "p",
-      "li",
-      // media
-      "img",
-      "picture",
-      "video",
-      // common blocks/cards
-      "article",
-      "section",
-      // interactive
-      "button",
-      // card-ish containers / common layout patterns
-      "[class*='card']",
-      "[class*='Card']",
-      "[class*='shadow']",
-      "[class*='rounded']",
-      "[class*='grid'] > *",
-      "[class*='flex'] > *",
+      ":scope > section",
+      ":scope > article",
+      ":scope > div > section",
+      ":scope > div > article",
+      "[data-reveal='true']",
     ].join(",");
 
-    const shouldSkip = (el: Element) => {
-      if (!(el instanceof HTMLElement)) return true;
+    const isEligible = (element: Element) => {
+      if (!(element instanceof HTMLElement)) return false;
+      if (element.dataset.noReveal === "true") return false;
+      if (element.closest("nav, footer, [role='dialog']")) return false;
 
-      // opt-out
-      if (el.dataset.noReveal === "true") return true;
-
-      // exclude global wrappers
-      if (el.closest("nav")) return true;
-      if (el.closest("footer")) return true;
-      if (el.closest("[role='dialog']")) return true;
-
-      // avoid tiny/invisible
-      const rect = el.getBoundingClientRect();
-      if (rect.width < 8 || rect.height < 8) return true;
-
-      // avoid empty
-      const text = (el.textContent ?? "").trim();
-      const hasMedia = el.querySelector("img, picture, video");
-      if (!hasMedia && text.length === 0) return true;
-
-      return false;
+      const { width, height } = element.getBoundingClientRect();
+      return width >= 8 && height >= 8;
     };
 
-    const groupKey = (el: Element) => {
-      const section =
-        el.closest("section") ||
-        el.closest("article") ||
-        el.closest("[class*='grid']") ||
-        el.closest("[class*='flex']") ||
-        main;
-      return section as Element;
-    };
-
-    const groupCounters = new Map<Element, number>();
-    const nextIndexInGroup = (el: Element) => {
-      const key = groupKey(el);
-      const n = groupCounters.get(key) ?? 0;
-      groupCounters.set(key, n + 1);
-      return n;
-    };
-
-    // Only initialize once per element lifetime (even across route navigations)
-    const markSeen = (h: HTMLElement) => {
-      h.dataset[SEEN_DATASET_KEY] = "1";
-    };
-    const wasSeen = (h: HTMLElement) => h.dataset[SEEN_DATASET_KEY] === "1";
-
-    const initElement = (h: HTMLElement) => {
-      // dedupe: do not re-init an element we've already processed
-      if (wasSeen(h)) return;
-
-      // reset visibility state for animation
-      h.classList.remove(VISIBLE_CLASS);
-      h.classList.add(AUTO_CLASS);
-
-      const idx = nextIndexInGroup(h);
-      const delay = Math.min(idx * 60, 420);
-      h.style.setProperty("--reveal-delay", `${delay}ms`);
-
-      markSeen(h);
-    };
-
-    const scanTargets = () => {
-      const raw = Array.from(main.querySelectorAll(TARGET_SELECTOR));
-      return raw.filter((el) => !shouldSkip(el)) as HTMLElement[];
-    };
-
-    let cancelled = false;
-
-    const io = new IntersectionObserver(
+    const pending = new Set<HTMLElement>();
+    const observer = new IntersectionObserver(
       (entries) => {
         for (const entry of entries) {
-          if (!entry.isIntersecting) continue;
-          const h = entry.target as HTMLElement;
-          h.classList.add(VISIBLE_CLASS);
-          io.unobserve(h);
+          if (entry.isIntersecting) reveal(entry.target as HTMLElement);
         }
       },
-      {
-        threshold: 0.12,
-        rootMargin: "0px 0px -10% 0px",
-      }
+      { threshold: 0.08, rootMargin: "0px 0px -8% 0px" },
     );
 
-    const observeAll = () => {
-      if (cancelled) return;
-
-      // reset group counters for a fresh, consistent stagger each route scan
-      groupCounters.clear();
-
-      const targets = scanTargets();
-      if (targets.length === 0) return;
-
-      for (const h of targets) {
-        // init only once; but we still want to observe it if not visible yet
-        const alreadyInit = wasSeen(h);
-        if (!alreadyInit) initElement(h);
-
-        // If it isn't visible yet, observe it (safe even if already visible; IO will unobserve on intersect)
-        if (!h.classList.contains(VISIBLE_CLASS)) {
-          io.observe(h);
-        }
-      }
+    const reveal = (element: HTMLElement) => {
+      element.classList.add(VISIBLE_CLASS);
+      pending.delete(element);
+      observer.unobserve(element);
     };
 
-    // Initial scan now + after a tick (helps late mounts right after route change)
-    observeAll();
+    // One post-render scan per route: no mutation observer and no recursive
+    // descendant targeting. This caps work at the handful of page sections.
+    const scanFrame = window.requestAnimationFrame(() => {
+      const candidates = Array.from(main.querySelectorAll(TARGET_SELECTOR)).filter(isEligible) as HTMLElement[];
+      const targets = candidates.filter(
+        (element) => !candidates.some((candidate) => candidate !== element && candidate.contains(element)),
+      );
 
-    let raf1 = 0;
-    let raf2 = 0;
-    raf1 = requestAnimationFrame(() => {
-      raf2 = requestAnimationFrame(() => {
-        observeAll();
-      });
-    });
+      for (const element of targets) {
+        const { top } = element.getBoundingClientRect();
 
-    // Catch late nodes in <main>
-    const mo = new MutationObserver(() => {
-      observeAll();
-    });
-    mo.observe(main, { childList: true, subtree: true });
+        // Keep the hero and content already entering the viewport immediate.
+        if (top < window.innerHeight + 96) continue;
 
-    // Safety fallback (only reveal things we've already initialized or match targets)
-    const fallback = window.setTimeout(() => {
-      if (cancelled) return;
-      const all = scanTargets();
-      for (const h of all) {
-        // If it was never initialized (e.g. it appeared late), init it first so it has consistent base class.
-        if (!wasSeen(h)) {
-          groupCounters.clear();
-          initElement(h);
-        }
-        h.classList.add(VISIBLE_CLASS);
-        io.unobserve(h);
+        element.classList.add(AUTO_CLASS);
+        pending.add(element);
+        observer.observe(element);
       }
-    }, 3500);
+    });
+
+    // A brief fail-safe: hidden enhancement state can never persist if an
+    // observer callback is delayed after initialization.
+    const fallback = window.setTimeout(() => {
+      for (const element of [...pending]) reveal(element);
+    }, 900);
 
     return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
+      window.cancelAnimationFrame(scanFrame);
       window.clearTimeout(fallback);
-      mo.disconnect();
-      io.disconnect();
+      for (const element of pending) element.classList.add(VISIBLE_CLASS);
+      observer.disconnect();
     };
-  }, [location.pathname, prefersReducedMotion]);
+  }, [location.pathname]);
 
   // Inline CSS for auto reveal (scoped classes)
   return (
@@ -209,10 +97,8 @@ export default function AutoReveal() {
       {`
         .auto-reveal {
           opacity: 0;
-          transform: translate3d(0, 18px, 0);
-          transition: opacity 700ms ease, transform 700ms ease;
-          transition-delay: var(--reveal-delay, 0ms);
-          will-change: opacity, transform;
+          transform: translate3d(0, 12px, 0);
+          transition: opacity 420ms ease-out, transform 420ms ease-out;
         }
         .auto-reveal-visible {
           opacity: 1;
