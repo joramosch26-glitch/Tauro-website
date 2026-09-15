@@ -138,6 +138,13 @@ const routes = [
       "Reliable interior and exterior house painters serving Elk Ridge, Utah. Tauro Painting offers premium residential painting with clean execution and lasting results.",
     canonical: "https://tauropainting.com/locations/elk-ridge",
   },
+  {
+    route: "/locations/midway",
+    title: "Custom Home Painting & Wood Finishes in Midway, UT | Tauro Painting",
+    description:
+      "Custom home painting, cabinetry, stain, wood finishes, and detailed interior and exterior work for Midway, Utah homes.",
+    canonical: "https://tauropainting.com/locations/midway",
+  },
 ];
 
 function escapeAttr(value) {
@@ -163,6 +170,54 @@ function removeExistingSeoTags(html) {
 function injectSeoHead(html, meta) {
   const cleanHtml = removeExistingSeoTags(html);
 
+  const schemaBlock = meta.route === "/locations/midway"
+    ? `<script type="application/ld+json">${JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "HousePainter",
+            "@id": "https://tauropainting.com/#business",
+            name: "Tauro Painting",
+            url: "https://tauropainting.com/",
+            telephone: "+18019289520",
+            image: "https://tauropainting.com/og.jpg",
+            logo: "https://tauropainting.com/tauro/logo-tauro.png",
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: "1144 N Main St",
+              addressLocality: "Orem",
+              addressRegion: "UT",
+              postalCode: "84057",
+              addressCountry: "US",
+            },
+            areaServed: {
+              "@type": "City",
+              name: "Midway",
+              containedInPlace: { "@type": "State", name: "Utah" },
+            },
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://tauropainting.com/locations/midway#webpage",
+            url: "https://tauropainting.com/locations/midway",
+            name: "Custom Home Painting & Wood Finishes in Midway, UT | Tauro Painting",
+            description: "Custom home painting, cabinetry, stain, wood finishes, and detailed interior and exterior work for Midway, Utah homes.",
+            about: { "@id": "https://tauropainting.com/#business" },
+            breadcrumb: { "@id": "https://tauropainting.com/locations/midway#breadcrumb" },
+          },
+          {
+            "@type": "BreadcrumbList",
+            "@id": "https://tauropainting.com/locations/midway#breadcrumb",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://tauropainting.com/" },
+              { "@type": "ListItem", position: 2, name: "Where Tauro Works", item: "https://tauropainting.com/locations" },
+              { "@type": "ListItem", position: 3, name: "Midway, Utah", item: "https://tauropainting.com/locations/midway" },
+            ],
+          },
+        ],
+      }).replace(/</g, "\\u003c")}</script>`
+    : "";
+
   const seoBlock = `
     <title>${escapeAttr(meta.title)}</title>
     <meta name="description" content="${escapeAttr(meta.description)}" />
@@ -178,7 +233,7 @@ function injectSeoHead(html, meta) {
     <meta name="twitter:description" content="${escapeAttr(meta.description)}" />
   `;
 
-  return cleanHtml.replace("</head>", `${seoBlock}\n</head>`);
+  return cleanHtml.replace("</head>", `${seoBlock}\n${schemaBlock}\n</head>`);
 }
 
 for (const meta of routes) {

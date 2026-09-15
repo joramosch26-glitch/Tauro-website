@@ -1,254 +1,74 @@
+import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
+
+const markets = [
+  { name: "Midway", slug: "midway", note: "Custom-home finishing in the Heber Valley" },
+  { name: "Alpine", slug: "alpine" },
+  { name: "Highland", slug: "highland" },
+  { name: "Mapleton", slug: "mapleton" },
+  { name: "Springville", slug: "springville" },
+  { name: "Orem", slug: "orem" },
+  { name: "American Fork", slug: "american-fork" },
+  { name: "Pleasant Grove", slug: "pleasant-grove" },
+  { name: "Cedar Hills", slug: "cedar-hills" },
+  { name: "Lehi", slug: "lehi" },
+  { name: "Provo", slug: "provo" },
+  { name: "Woodland Hills", slug: "woodland-hills" },
+  { name: "Elk Ridge", slug: "elk-ridge" },
+];
+
+const eyebrow = "text-xs font-semibold uppercase tracking-[0.24em]";
 
 export default function Locations() {
   return (
-    <main className="pt-28 pb-20 bg-slate-50">
-      <div className="max-w-5xl mx-auto px-6">
-        <span className="inline-flex items-center gap-2 text-amber-600 font-semibold text-sm uppercase tracking-wider mb-4">
-          Areas We Serve
-        </span>
-
-        <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
-          Utah County Locations
-        </h1>
-
-        <p className="text-lg text-slate-600 leading-relaxed mb-10">
-          We serve homeowners across Utah County with premium interior and exterior
-          painting. Choose a location to explore local service details.
-        </p>
-
-        <div className="grid sm:grid-cols-2 gap-6">
-          {/* ✅ Existing location page */}
-          <Link
-            to="/locations/orem"
-            className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
-          >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-                  Orem, UT
-                </h2>
-                <p className="text-slate-600 mt-2 leading-relaxed">
-                  House painters in Orem with disciplined prep and premium finishes.
-                </p>
-              </div>
-              <span className="text-amber-600 font-semibold">View →</span>
-            </div>
-          </Link>
-
-          {/* ✅ Existing location page */}
-          <Link
-  to="/locations/provo"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
     <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        Provo, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        House painters in Provo with disciplined prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
+      <section aria-labelledby="locations-heading" className="bg-slate-950 text-white">
+        <div className="mx-auto grid max-w-7xl gap-10 px-6 py-16 lg:grid-cols-12 lg:items-end lg:gap-16 lg:px-8 lg:py-24">
+          <div className="lg:col-span-8">
+            <p className={`${eyebrow} mb-7 flex items-center gap-3 text-[#c5a374]`}><span aria-hidden="true" className="h-px w-8 bg-[#a64036]" />Service areas</p>
+            <h1 id="locations-heading" className="max-w-4xl text-5xl font-semibold leading-[0.98] tracking-[-0.045em] sm:text-7xl lg:text-[5.5rem]">Where Tauro<br />works.</h1>
+          </div>
+          <p className="max-w-md text-lg leading-8 text-white/75 lg:col-span-4">Custom-home painting and finishing for Utah projects where the architecture, material, and sequence deserve close attention.</p>
+        </div>
+      </section>
 
-<Link
-  to="/locations/alpine"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        Alpine, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        House painters in Alpine with disciplined prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
-
-<Link
-  to="/locations/highland"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        Highland, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        House painters in Highland with disciplined prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
-
-<Link
-  to="/locations/mapleton"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        Mapleton, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        House painters in Mapleton with disciplined prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
-
-<Link
-  to="/locations/lehi"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        Lehi, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        House painters in Lehi with disciplined prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
-
-<Link
-  to="/locations/american-fork"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        American Fork, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        House painters in American Fork with disciplined prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
-
-<Link
-  to="/locations/pleasant-grove"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        Pleasant Grove, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        House painters in Pleasant Grove with disciplined prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
-
-
-<Link
-  to="/locations/springville"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        Springville, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        Custom home and residential painting in Springville with detailed prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
-
-<Link
-  to="/locations/cedar-hills"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        Cedar Hills, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        House painters in Cedar Hills with disciplined prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
-
-<Link
-  to="/locations/woodland-hills"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        Woodland Hills, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        House painters in Woodland Hills with disciplined prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
-
-<Link
-  to="/locations/elk-ridge"
-  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
->
-  <div className="flex items-start justify-between gap-4">
-    <div>
-      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
-        Elk Ridge, UT
-      </h2>
-      <p className="text-slate-600 mt-2 leading-relaxed">
-        House painters in Elk Ridge with disciplined prep and premium finishes.
-      </p>
-    </div>
-    <span className="text-amber-600 font-semibold">View →</span>
-  </div>
-</Link>
-
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm opacity-70">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h2 className="text-xl font-semibold text-slate-900">
-                  Other cities, UT
-                </h2>
-                <p className="text-slate-600 mt-2 leading-relaxed">
-                  Location page coming soon.
-                </p>
-              </div>
-              <span className="text-slate-500 font-semibold">Soon</span>
-            </div>
+      <section aria-labelledby="featured-market-heading" className="bg-[#f5f3ee] py-20 lg:py-28">
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8">
+          <figure className="lg:col-span-7"><img src="/tauro/exterior-custom-home.webp" alt="Custom home exterior finished by Tauro Painting" className="aspect-[5/4] w-full object-cover" fetchPriority="high" /></figure>
+          <div className="lg:col-span-5">
+            <p className={`${eyebrow} mb-6 text-[#9a6a25]`}>Featured market · Midway, Utah</p>
+            <h2 id="featured-market-heading" className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 sm:text-5xl">A finish process that meets the setting.</h2>
+            <p className="mt-7 leading-8 text-slate-600">Tauro has real custom-home work in the Midway area. Explore how we approach interiors, exteriors, cabinetry, stain, wood finishes, and final punch for premium residential projects.</p>
+            <Link to="/locations/midway" className="mt-8 inline-flex min-h-14 items-center gap-5 bg-slate-950 px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#9a6a25]">Explore Midway <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link>
           </div>
         </div>
+      </section>
 
-        <div className="mt-12">
-          <Link
-            to="/contact"
-            className="inline-flex items-center justify-center bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-8 py-3 rounded-lg transition"
-          >
-            Request a Free Estimate
-          </Link>
+      <section aria-labelledby="markets-heading" className="bg-white py-20 lg:py-28">
+        <div className="mx-auto max-w-7xl px-6 lg:px-8">
+          <div className="grid gap-8 lg:grid-cols-12 lg:items-end">
+            <div className="lg:col-span-7"><p className={`${eyebrow} mb-6 text-[#9a6a25]`}>Utah markets</p><h2 id="markets-heading" className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 sm:text-5xl">Regional coverage.<br />A single standard.</h2></div>
+            <p className="leading-8 text-slate-600 lg:col-span-4 lg:col-start-9">Our base is in Orem. We work throughout Utah County and take on select custom-home finishing work in surrounding mountain and resort communities.</p>
+          </div>
+          <ul className="mt-14 grid border-t border-slate-300 sm:grid-cols-2 lg:grid-cols-3">
+            {markets.map((market) => (
+              <li key={market.slug} className="border-b border-slate-200 sm:[&:not(:nth-child(2n))]:border-r lg:[&:nth-child(2n)]:border-r-0 lg:[&:not(:nth-child(3n))]:border-r">
+                <Link to={`/locations/${market.slug}`} className="group flex min-h-32 flex-col justify-between p-6 transition-colors hover:bg-[#f5f3ee]">
+                  <span className="text-2xl font-semibold tracking-[-0.03em] text-slate-950">{market.name}, UT</span>
+                  <span className="mt-5 flex items-end justify-between gap-4 text-sm leading-6 text-slate-600"><span>{market.note ?? "Explore Tauro service coverage"}</span><ArrowUpRight aria-hidden="true" className="h-4 w-4 shrink-0 text-[#9a6a25]" /></span>
+                </Link>
+              </li>
+            ))}
+          </ul>
         </div>
-      </div>
-    </main>
+      </section>
+
+      <section className="bg-slate-950 py-20 text-white lg:py-24">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-8 px-6 lg:flex-row lg:items-end lg:px-8">
+          <div><p className={`${eyebrow} mb-5 text-[#c5a374]`}>A project in mind?</p><h2 className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl">Let&apos;s walk the project.</h2></div>
+          <Link to="/contact" className="inline-flex min-h-14 w-full items-center justify-center gap-5 bg-white px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-slate-950 transition-colors hover:bg-[#c5a374] lg:w-auto">Request a walkthrough <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link>
+        </div>
+      </section>
+    </div>
   );
 }

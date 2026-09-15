@@ -27,6 +27,7 @@ import CedarHills from "./pages/Cedar-Hills"
 import WoodlandHills from "./pages/Woodland-Hills"
 import ElkRidge from "./pages/Elk-Ridge"
 import Springville from "./pages/Springville"
+import Midway from "./pages/Midway"
 import Locations from "./pages/Locations";
 
 
@@ -165,6 +166,11 @@ function App() {
   desc:
     "Tauro Painting provides interior and exterior house painting in Elk Ridge, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
 },
+"/locations/midway": {
+  title: "Custom Home Painting & Wood Finishes in Midway, UT | Tauro Painting",
+  desc:
+    "Custom home painting, cabinetry, stain, wood finishes, and detailed interior and exterior work for Midway, Utah homes.",
+},
 };
 
 
@@ -267,6 +273,7 @@ const ldId = "ld-json-localbusiness";
 const business = {
   "@context": "https://schema.org",
   "@type": "HousePainter",
+  "@id": "https://tauropainting.com/#business",
   name: content.brand.name,
   url: window.location.origin,
   image: `${window.location.origin}/og.jpg`,
@@ -292,7 +299,8 @@ const business = {
   { "@type": "City", "name": "Springville" },
   { "@type": "City", "name": "Cedar Hills" },
   { "@type": "City", "name": "Woodland Hills" },
-  { "@type": "City", "name": "Elk Ridge" }
+  { "@type": "City", "name": "Elk Ridge" },
+  { "@type": "City", "name": "Midway" },
 ],
   sameAs: [
     "https://www.instagram.com/tauropainting",
@@ -498,6 +506,7 @@ ld.text = JSON.stringify(business);
           <Route path="/locations/cedar-hills" element={<CedarHills />} />
           <Route path="/locations/woodland-hills" element={<WoodlandHills />} />
           <Route path="/locations/elk-ridge" element={<ElkRidge />} />
+          <Route path="/locations/midway" element={<Midway />} />
           <Route path="/locations" element={<Locations />} />
         </Routes>
       </main>
