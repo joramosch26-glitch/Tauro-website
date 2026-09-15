@@ -3,6 +3,7 @@ import path from "path";
 
 const distDir = path.resolve("dist");
 const baseHtmlPath = path.join(distDir, "index.html");
+const seoPath = path.resolve("src", "seo.json");
 
 if (!fs.existsSync(baseHtmlPath)) {
   console.error("postbuild-prerender: dist/index.html not found");
@@ -10,296 +11,95 @@ if (!fs.existsSync(baseHtmlPath)) {
 }
 
 const baseHtml = fs.readFileSync(baseHtmlPath, "utf8");
-
-const routes = [
-  {
-    route: "/",
-    title: "High-End House Painters in Utah County | Tauro Painting",
-    description:
-      "Tauro Painting specializes in high-end custom home painting, cabinetry, wood finishes, and exterior painting across Utah County, Park City, and surrounding areas.",
-    canonical: "https://tauropainting.com/",
-  },
-  {
-    route: "/services",
-    title: "Custom Home Painting Services in Utah | Tauro Painting",
-    description:
-      "Interior painting, exterior systems, cabinetry, stain, clear finishes, and detailed prep for custom homes and premium residential construction in Utah.",
-    canonical: "https://tauropainting.com/services",
-  },
-  {
-    route: "/projects",
-    title: "Custom Home Painting Portfolio | Tauro Painting Utah",
-    description:
-      "Explore real Tauro Painting work across custom home interiors, exteriors, cabinetry, doors, stain, and architectural wood finishes in Utah.",
-    canonical: "https://tauropainting.com/projects",
-  },
-  {
-    route: "/about",
-    title: "About Tauro Painting | Utah County",
-    description:
-      "Learn more about Tauro Painting, our standards, and our approach to premium interior and exterior painting in Utah County.",
-    canonical: "https://tauropainting.com/about",
-  },
-  {
-    route: "/contact",
-    title: "Contact Tauro Painting | Free Estimate",
-    description:
-      "Request a free painting estimate from Tauro Painting. Interior and exterior house painters serving Utah County.",
-    canonical: "https://tauropainting.com/contact",
-  },
-  {
-    route: "/locations",
-    title: "Painting Service Areas in Utah County | Tauro Painting",
-    description:
-      "Explore the Utah County cities Tauro Painting serves, including Orem, Provo, Alpine, Highland, Mapleton, Lehi, American Fork, Pleasant Grove, and Springville.",
-    canonical: "https://tauropainting.com/locations",
-  },
-  {
-    route: "/locations/orem",
-    title: "House Painters in Orem, UT | Tauro Painting",
-    description:
-      "Tauro Painting provides professional interior and exterior house painting in Orem, Utah. Reliable painters, clean finishes, and free estimates.",
-    canonical: "https://tauropainting.com/locations/orem",
-  },
-  {
-    route: "/locations/provo",
-    title: "House Painters in Provo, UT | Tauro Painting",
-    description:
-      "Professional house painters in Provo, Utah. Interior and exterior painting with premium finishes and reliable scheduling.",
-    canonical: "https://tauropainting.com/locations/provo",
-  },
-  {
-    route: "/locations/alpine",
-    title: "House Painters in Alpine, UT | Tauro Painting",
-    description:
-      "Interior and exterior house painters serving Alpine, Utah. Premium finishes and reliable painting services by Tauro Painting.",
-    canonical: "https://tauropainting.com/locations/alpine",
-  },
-  {
-    route: "/locations/highland",
-    title: "House Painters in Highland, UT | Tauro Painting",
-    description:
-      "Tauro Painting offers interior and exterior painting services in Highland, Utah. Professional results and detailed prep work.",
-    canonical: "https://tauropainting.com/locations/highland",
-  },
-  {
-    route: "/locations/mapleton",
-    title: "House Painters in Mapleton, UT | Tauro Painting",
-    description:
-      "Experienced house painters serving Mapleton, Utah. Interior and exterior painting with careful preparation and premium materials.",
-    canonical: "https://tauropainting.com/locations/mapleton",
-  },
-  {
-    route: "/locations/lehi",
-    title: "House Painters in Lehi, UT | Tauro Painting",
-    description:
-      "Reliable interior and exterior house painters in Lehi, Utah. Tauro Painting delivers clean finishes and dependable service.",
-    canonical: "https://tauropainting.com/locations/lehi",
-  },
-  {
-    route: "/locations/american-fork",
-    title: "House Painters in American Fork, UT | Tauro Painting",
-    description:
-      "Interior and exterior painting services in American Fork, Utah. Tauro Painting provides premium residential painting.",
-    canonical: "https://tauropainting.com/locations/american-fork",
-  },
-  {
-    route: "/locations/pleasant-grove",
-    title: "House Painters in Pleasant Grove, UT | Tauro Painting",
-    description:
-      "Professional house painters serving Pleasant Grove, Utah. Interior and exterior painting with reliable scheduling.",
-    canonical: "https://tauropainting.com/locations/pleasant-grove",
-  },
-  {
-    route: "/locations/springville",
-    title: "House Painters in Springville, UT | Tauro Painting",
-    description:
-      "Interior and exterior painting services in Springville, Utah. Tauro Painting provides premium finishes and detailed prep.",
-    canonical: "https://tauropainting.com/locations/springville",
-  },
-    {
-    route: "/locations/cedar-hills",
-    title: "House Painters in Cedar Hills, UT | Tauro Painting",
-    description:
-      "Professional interior and exterior house painters serving Cedar Hills, Utah. Tauro Painting delivers premium finishes, detailed prep, and reliable service.",
-    canonical: "https://tauropainting.com/locations/cedar-hills",
-  },
-  {
-    route: "/locations/woodland-hills",
-    title: "House Painters in Woodland Hills, UT | Tauro Painting",
-    description:
-      "Interior and exterior house painters in Woodland Hills, Utah. Tauro Painting provides careful preparation, premium materials, and refined finishes.",
-    canonical: "https://tauropainting.com/locations/woodland-hills",
-  },
-  {
-    route: "/locations/elk-ridge",
-    title: "House Painters in Elk Ridge, UT | Tauro Painting",
-    description:
-      "Reliable interior and exterior house painters serving Elk Ridge, Utah. Tauro Painting offers premium residential painting with clean execution and lasting results.",
-    canonical: "https://tauropainting.com/locations/elk-ridge",
-  },
-  {
-    route: "/locations/midway",
-    title: "Custom Home Painting & Wood Finishes in Midway, UT | Tauro Painting",
-    description:
-      "Custom home painting, cabinetry, stain, wood finishes, and detailed interior and exterior work for Midway, Utah homes.",
-    canonical: "https://tauropainting.com/locations/midway",
-  },
-  {
-    route: "/locations/park-city-deer-valley",
-    title: "Custom Home Painting in Park City & Deer Valley | Tauro Painting",
-    description:
-      "High-end residential painting, cabinetry, stain, wood finishes, and interior and exterior finishing for Park City and Deer Valley homes.",
-    canonical: "https://tauropainting.com/locations/park-city-deer-valley",
-  },
-];
+const seo = JSON.parse(fs.readFileSync(seoPath, "utf8"));
+const routes = [...seo.routes, seo.notFound];
 
 function escapeAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
 }
 
-function removeExistingSeoTags(html) {
+function removeExistingSeo(html) {
   return html
     .replace(/<title>.*?<\/title>\s*/is, "")
     .replace(/<meta\s+name="description"[^>]*>\s*/gi, "")
+    .replace(/<meta\s+name="robots"[^>]*>\s*/gi, "")
     .replace(/<link\s+rel="canonical"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+property="og:type"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+property="og:title"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+property="og:description"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+property="og:url"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+property="og:image"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+name="twitter:image"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+name="twitter:card"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+name="twitter:title"[^>]*>\s*/gi, "")
-    .replace(/<meta\s+name="twitter:description"[^>]*>\s*/gi, "");
+    .replace(/<meta\s+property="og:[^"]+"[^>]*>\s*/gi, "")
+    .replace(/<meta\s+name="twitter:[^"]+"[^>]*>\s*/gi, "")
+    .replace(/<script\s+id="ld-json-localbusiness"[^>]*>.*?<\/script>\s*/gis, "")
+    .replace(/<script\s+id="ld-json-page"[^>]*>.*?<\/script>\s*/gis, "");
+}
+
+function buildPageSchema(meta) {
+  const breadcrumbs = seo.pageSchemas[meta.route];
+  if (!breadcrumbs) return "";
+
+  const webpageId = `${meta.canonical}#webpage`;
+  const breadcrumbId = `${meta.canonical}#breadcrumb`;
+  const schema = {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "WebPage",
+        "@id": webpageId,
+        url: meta.canonical,
+        name: meta.title,
+        description: meta.description,
+        about: { "@id": seo.business["@id"] },
+        breadcrumb: { "@id": breadcrumbId },
+      },
+      {
+        "@type": "BreadcrumbList",
+        "@id": breadcrumbId,
+        itemListElement: breadcrumbs.map((item, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: item.name,
+          item: item.item,
+        })),
+      },
+    ],
+  };
+
+  return `<script id="ld-json-page" type="application/ld+json">${JSON.stringify(schema).replace(/</g, "\\u003c")}</script>`;
 }
 
 function injectSeoHead(html, meta) {
-  const cleanHtml = removeExistingSeoTags(html);
-
-  const schemaBlock = meta.route === "/locations/midway"
-    ? `<script type="application/ld+json">${JSON.stringify({
-        "@context": "https://schema.org",
-        "@graph": [
-          {
-            "@type": "HousePainter",
-            "@id": "https://tauropainting.com/#business",
-            name: "Tauro Painting",
-            url: "https://tauropainting.com/",
-            telephone: "+18019289520",
-            image: "https://tauropainting.com/og.jpg",
-            logo: "https://tauropainting.com/tauro/logo-tauro.png",
-            address: {
-              "@type": "PostalAddress",
-              streetAddress: "1144 N Main St",
-              addressLocality: "Orem",
-              addressRegion: "UT",
-              postalCode: "84057",
-              addressCountry: "US",
-            },
-            areaServed: {
-              "@type": "City",
-              name: "Midway",
-              containedInPlace: { "@type": "State", name: "Utah" },
-            },
-          },
-          {
-            "@type": "WebPage",
-            "@id": "https://tauropainting.com/locations/midway#webpage",
-            url: "https://tauropainting.com/locations/midway",
-            name: "Custom Home Painting & Wood Finishes in Midway, UT | Tauro Painting",
-            description: "Custom home painting, cabinetry, stain, wood finishes, and detailed interior and exterior work for Midway, Utah homes.",
-            about: { "@id": "https://tauropainting.com/#business" },
-            breadcrumb: { "@id": "https://tauropainting.com/locations/midway#breadcrumb" },
-          },
-          {
-            "@type": "BreadcrumbList",
-            "@id": "https://tauropainting.com/locations/midway#breadcrumb",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://tauropainting.com/" },
-              { "@type": "ListItem", position: 2, name: "Where Tauro Works", item: "https://tauropainting.com/locations" },
-              { "@type": "ListItem", position: 3, name: "Midway, Utah", item: "https://tauropainting.com/locations/midway" },
-            ],
-          },
-        ],
-      }).replace(/</g, "\\u003c")}</script>`
-    : "";
-
-  const parkCitySchemaBlock = meta.route === "/locations/park-city-deer-valley"
-    ? `<script type="application/ld+json">${JSON.stringify({
-        "@context": "https://schema.org",
-        "@graph": [
-          {
-            "@type": "HousePainter",
-            "@id": "https://tauropainting.com/#business",
-            name: "Tauro Painting",
-            url: "https://tauropainting.com/",
-            telephone: "+18019289520",
-            image: "https://tauropainting.com/og.jpg",
-            logo: "https://tauropainting.com/tauro/logo-tauro.png",
-            address: {
-              "@type": "PostalAddress",
-              streetAddress: "1144 N Main St",
-              addressLocality: "Orem",
-              addressRegion: "UT",
-              postalCode: "84057",
-              addressCountry: "US",
-            },
-            areaServed: [
-              { "@type": "City", name: "Park City", containedInPlace: { "@type": "State", name: "Utah" } },
-              { "@type": "Place", name: "Deer Valley", containedInPlace: { "@type": "City", name: "Park City" } },
-            ],
-          },
-          {
-            "@type": "WebPage",
-            "@id": "https://tauropainting.com/locations/park-city-deer-valley#webpage",
-            url: "https://tauropainting.com/locations/park-city-deer-valley",
-            name: "Custom Home Painting in Park City & Deer Valley | Tauro Painting",
-            description: "High-end residential painting, cabinetry, stain, wood finishes, and interior and exterior finishing for Park City and Deer Valley homes.",
-            about: { "@id": "https://tauropainting.com/#business" },
-            breadcrumb: { "@id": "https://tauropainting.com/locations/park-city-deer-valley#breadcrumb" },
-          },
-          {
-            "@type": "BreadcrumbList",
-            "@id": "https://tauropainting.com/locations/park-city-deer-valley#breadcrumb",
-            itemListElement: [
-              { "@type": "ListItem", position: 1, name: "Home", item: "https://tauropainting.com/" },
-              { "@type": "ListItem", position: 2, name: "Where Tauro Works", item: "https://tauropainting.com/locations" },
-              { "@type": "ListItem", position: 3, name: "Park City / Deer Valley, Utah", item: "https://tauropainting.com/locations/park-city-deer-valley" },
-            ],
-          },
-        ],
-      }).replace(/</g, "\\u003c")}</script>`
-    : "";
-
+  const cleanHtml = removeExistingSeo(html);
+  const robots = meta.robots ?? "index,follow";
+  const businessSchema = `<script id="ld-json-localbusiness" type="application/ld+json">${JSON.stringify(seo.business).replace(/</g, "\\u003c")}</script>`;
+  const pageSchema = buildPageSchema(meta);
   const seoBlock = `
     <title>${escapeAttr(meta.title)}</title>
     <meta name="description" content="${escapeAttr(meta.description)}" />
+    <meta name="robots" content="${escapeAttr(robots)}" />
     <link rel="canonical" href="${escapeAttr(meta.canonical)}" />
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="${escapeAttr(seo.siteName)}" />
     <meta property="og:title" content="${escapeAttr(meta.title)}" />
     <meta property="og:description" content="${escapeAttr(meta.description)}" />
     <meta property="og:url" content="${escapeAttr(meta.canonical)}" />
-    <meta property="og:image" content="https://tauropainting.com/og.jpg" />
-    <meta name="twitter:image" content="https://tauropainting.com/og.jpg" />
+    <meta property="og:image" content="${escapeAttr(seo.socialImage.url)}" />
+    <meta property="og:image:width" content="${seo.socialImage.width}" />
+    <meta property="og:image:height" content="${seo.socialImage.height}" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="${escapeAttr(meta.title)}" />
     <meta name="twitter:description" content="${escapeAttr(meta.description)}" />
+    <meta name="twitter:image" content="${escapeAttr(seo.socialImage.url)}" />
   `;
 
-  return cleanHtml.replace("</head>", `${seoBlock}\n${schemaBlock}\n${parkCitySchemaBlock}\n</head>`);
+  return cleanHtml.replace("</head>", `${seoBlock}\n${businessSchema}\n${pageSchema}\n</head>`);
 }
 
 for (const meta of routes) {
   const finalHtml = injectSeoHead(baseHtml, meta);
-
-  const outputPath =
-    meta.route === "/"
-      ? path.join(distDir, "index.html")
+  const outputPath = meta.route === "/"
+    ? path.join(distDir, "index.html")
+    : meta.route === "/404"
+      ? path.join(distDir, "404.html")
       : path.join(distDir, meta.route.slice(1), "index.html");
 
   fs.mkdirSync(path.dirname(outputPath), { recursive: true });
   fs.writeFileSync(outputPath, finalHtml, "utf8");
-
   console.log(`Generated: ${outputPath}`);
 }

@@ -1,6 +1,6 @@
 import "./index.css";
-import { content } from "./content";
-import { useState, useEffect } from "react";
+import seo from "./seo.json";
+import { useState, useEffect, useRef } from "react";
 import {
   Routes,
   Route,
@@ -30,6 +30,7 @@ import Springville from "./pages/Springville"
 import Midway from "./pages/Midway"
 import ParkCityDeerValley from "./pages/ParkCityDeerValley"
 import Locations from "./pages/Locations";
+import NotFound from "./pages/NotFound";
 
 
 import AutoReveal from "./components/AutoReveal";
@@ -44,10 +45,14 @@ import {
   X,
 } from "lucide-react";
 
+const routeMetadata = new Map(seo.routes.map((route) => [route.route, route]));
+const pageSchemas = seo.pageSchemas as Record<string, Array<{ name: string; item: string }>>;
 
 function App() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const mobileMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const mobileMenuRef = useRef<HTMLDivElement>(null);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -72,262 +77,103 @@ function App() {
 
   useEffect(() => {
     const normalizedPath =
-  location.pathname.length > 1
-    ? location.pathname.replace(/\/+$/, "").toLowerCase()
-    : location.pathname.toLowerCase();
+      location.pathname.length > 1
+        ? location.pathname.replace(/\/+$/, "").toLowerCase()
+        : location.pathname.toLowerCase();
+    const routeMeta = routeMetadata.get(normalizedPath);
+    const data = routeMeta ?? {
+      ...seo.notFound,
+      canonical: `${seo.productionOrigin}${normalizedPath}`,
+    };
+    const robots = routeMeta ? "index,follow" : seo.notFound.robots;
 
-    const metaByPath: Record<string, { title: string; desc: string }> = {
-  "/": {
-    title: "High-End House Painters in Utah County | Tauro Painting",
-    desc:
-      "Tauro Painting specializes in high-end custom home painting, cabinetry, wood finishes, and exterior painting across Utah County, Park City, and surrounding areas.",
-  },
-  "/services": {
-    title: "Custom Home Painting Services in Utah | Tauro Painting",
-    desc:
-      "Interior painting, exterior systems, cabinetry, stain, clear finishes, and detailed prep for custom homes and premium residential construction in Utah.",
-  },
-  "/projects": {
-    title: "Custom Home Painting Portfolio | Tauro Painting Utah",
-    desc:
-      "Explore real Tauro Painting work across custom home interiors, exteriors, cabinetry, doors, stain, and architectural wood finishes in Utah.",
-  },
-  "/about": {
-    title: "About Tauro Painting | Utah County",
-    desc:
-      "Learn about Tauro Painting—craftsmanship, premium materials, and a refined process built for premium finishes across Utah County.",
-  },
-  "/contact": {
-    title: "Contact Tauro Painting | Free Estimate",
-    desc:
-      "Request a free estimate from Tauro Painting. Interior and exterior painting across Utah County. Fast response and scheduling.",
-  },
-  "/locations": {
-  title: "Utah County Locations | Tauro Painting",
-  desc:
-    "Explore the Utah County areas we serve—starting with Orem. Premium interior and exterior painting with disciplined prep and refined finishes.",
-},
-"/locations/orem": {
-  title: "House Painters in Orem, UT | Tauro Painting",
-  desc:
-    "Professional interior and exterior house painters in Orem, Utah. Premium finishes, detailed preparation, and free estimates.",
-},
-"/locations/provo": {
-  title: "House Painting in Provo, UT | Tauro Painting",
-  desc:
-    "Tauro Painting provides interior and exterior house painting in Provo, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
-},
-"/locations/alpine": {
-  title: "House Painting in Alpine, UT | Tauro Painting",
-  desc:
-    "Tauro Painting provides interior and exterior house painting in Alpine, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
-},
-"/locations/highland": {
-  title: "House Painting in Highland, UT | Tauro Painting",
-  desc:
-    "Tauro Painting provides interior and exterior house painting in Highland, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
-},
-"/locations/mapleton": {
-  title: "House Painting in Mapleton, UT | Tauro Painting",
-  desc:
-    "Tauro Painting provides interior and exterior house painting in Mapleton, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
-},
-"/locations/lehi": {
-  title: "House Painting in Lehi, UT | Tauro Painting",
-  desc:
-    "Tauro Painting provides interior and exterior house painting in Lehi, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
-},
-"/locations/american-fork": {
-  title: "House Painting in American Fork, UT | Tauro Painting",
-  desc:
-    "Tauro Painting provides interior and exterior house painting in American Fork, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
-},
-"/locations/pleasant-grove": {
-  title: "House Painting in Pleasant Grove, UT | Tauro Painting",
-  desc:
-    "Tauro Painting provides interior and exterior house painting in Pleasant Grove, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
-},
-"/locations/springville": {
-  title: "House Painters in Springville, UT | Tauro Painting",
-  desc:
-    "High-end interior and exterior house painting in Springville, Utah, including custom homes, cabinetry, wood finishes, and detailed preparation.",
-},
-"/locations/cedar-hills": {
-  title: "House Painting in Cedar Hills, UT | Tauro Painting",
-  desc:
-    "Tauro Painting provides interior and exterior house painting in Cedar Hills, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
-},
-"/locations/woodland-hills": {
-  title: "House Painting in Woodland Hills, UT | Tauro Painting",
-  desc:
-    "Tauro Painting provides interior and exterior house painting in Woodland Hills, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
-},
-"/locations/elk-ridge": {
-  title: "House Painting in Elk Ridge, UT | Tauro Painting",
-  desc:
-    "Tauro Painting provides interior and exterior house painting in Elk Ridge, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
-},
-"/locations/midway": {
-  title: "Custom Home Painting & Wood Finishes in Midway, UT | Tauro Painting",
-  desc:
-    "Custom home painting, cabinetry, stain, wood finishes, and detailed interior and exterior work for Midway, Utah homes.",
-},
-"/locations/park-city-deer-valley": {
-  title: "Custom Home Painting in Park City & Deer Valley | Tauro Painting",
-  desc:
-    "High-end residential painting, cabinetry, stain, wood finishes, and interior and exterior finishing for Park City and Deer Valley homes.",
-},
-};
-
-
-    const fallback = metaByPath["/"];
-    const data = metaByPath[normalizedPath] ?? fallback;
-
-    // Run after other effects to "win" if something else sets title/desc
-    const t = window.setTimeout(() => {
-      document.title = data.title;
-
-      // Canonical dinámico por ruta (usando path normalizado)
-      const origin = window.location.origin;
-      const canonicalUrl = `${origin}${normalizedPath}`;
-
-      let canonical = document.querySelector(
-        'link[rel="canonical"]'
-      ) as HTMLLinkElement | null;
-
-      if (!canonical) {
-        canonical = document.createElement("link");
-        canonical.rel = "canonical";
-        document.head.appendChild(canonical);
+    const upsertMeta = (
+      selector: string,
+      attrName: "property" | "name",
+      attrValue: string,
+      contentValue: string,
+    ) => {
+      let element = document.querySelector(selector) as HTMLMetaElement | null;
+      if (!element) {
+        element = document.createElement("meta");
+        element.setAttribute(attrName, attrValue);
+        document.head.appendChild(element);
       }
+      element.setAttribute("content", contentValue);
+    };
 
-      canonical.href = canonicalUrl;
+    document.title = data.title;
 
-      // OG/Twitter dinámico por ruta (previews sociales)
-      const upsertMeta = (
-        selector: string,
-        attrName: "property" | "name",
-        attrValue: string,
-        contentValue: string
-      ) => {
-        let el = document.querySelector(selector) as HTMLMetaElement | null;
-        if (!el) {
-          el = document.createElement("meta");
-          el.setAttribute(attrName, attrValue);
-          document.head.appendChild(el);
-        }
-        el.setAttribute("content", contentValue);
-      };
+    let canonical = document.querySelector('link[rel="canonical"]') as HTMLLinkElement | null;
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    canonical.href = data.canonical;
 
-      // Asegurar tags base (constantes)
-      upsertMeta('meta[property="og:type"]', "property", "og:type", "website");
-      upsertMeta(
-        'meta[name="twitter:card"]',
-        "name",
-        "twitter:card",
-        "summary_large_image"
-      );
+    upsertMeta('meta[name="description"]', "name", "description", data.description);
+    upsertMeta('meta[name="robots"]', "name", "robots", robots);
+    upsertMeta('meta[property="og:type"]', "property", "og:type", "website");
+    upsertMeta('meta[property="og:site_name"]', "property", "og:site_name", seo.siteName);
+    upsertMeta('meta[property="og:title"]', "property", "og:title", data.title);
+    upsertMeta('meta[property="og:description"]', "property", "og:description", data.description);
+    upsertMeta('meta[property="og:url"]', "property", "og:url", data.canonical);
+    upsertMeta('meta[property="og:image"]', "property", "og:image", seo.socialImage.url);
+    upsertMeta('meta[property="og:image:width"]', "property", "og:image:width", String(seo.socialImage.width));
+    upsertMeta('meta[property="og:image:height"]', "property", "og:image:height", String(seo.socialImage.height));
+    upsertMeta('meta[name="twitter:card"]', "name", "twitter:card", "summary_large_image");
+    upsertMeta('meta[name="twitter:title"]', "name", "twitter:title", data.title);
+    upsertMeta('meta[name="twitter:description"]', "name", "twitter:description", data.description);
+    upsertMeta('meta[name="twitter:image"]', "name", "twitter:image", seo.socialImage.url);
 
-      // Open Graph
-      upsertMeta(
-        'meta[property="og:title"]',
-        "property",
-        "og:title",
-        data.title
-      );
-      upsertMeta(
-        'meta[property="og:description"]',
-        "property",
-        "og:description",
-        data.desc
-      );
-      upsertMeta('meta[property="og:url"]', "property", "og:url", canonicalUrl);
+    let businessScript = document.getElementById("ld-json-localbusiness") as HTMLScriptElement | null;
+    if (!businessScript) {
+      businessScript = document.createElement("script");
+      businessScript.id = "ld-json-localbusiness";
+      businessScript.type = "application/ld+json";
+      document.head.appendChild(businessScript);
+    }
+    businessScript.text = JSON.stringify(seo.business);
 
-      // Twitter
-      upsertMeta(
-        'meta[name="twitter:title"]',
-        "name",
-        "twitter:title",
-        data.title
-      );
-      upsertMeta(
-        'meta[name="twitter:description"]',
-        "name",
-        "twitter:description",
-        data.desc
-      );
-
-      // Imagen social (site-wide)
-      const ogImage = `${window.location.origin}/og.jpg`;
-      upsertMeta('meta[property="og:image"]', "property", "og:image", ogImage);
-      upsertMeta('meta[name="twitter:image"]', "name", "twitter:image", ogImage);
-
-      let meta = document.querySelector(
-        'meta[name="description"]'
-      ) as HTMLMetaElement | null;
-
-      if (!meta) {
-        meta = document.createElement("meta");
-        meta.name = "description";
-        document.head.appendChild(meta);
+    const breadcrumbs = pageSchemas[normalizedPath];
+    let pageScript = document.getElementById("ld-json-page") as HTMLScriptElement | null;
+    if (breadcrumbs && routeMeta) {
+      if (!pageScript) {
+        pageScript = document.createElement("script");
+        pageScript.id = "ld-json-page";
+        pageScript.type = "application/ld+json";
+        document.head.appendChild(pageScript);
       }
-
-      meta.content = data.desc;
-
-      // ✅ LocalBusiness / PaintingContractor structured data (JSON-LD)
-const ldId = "ld-json-localbusiness";
-const business = {
-  "@context": "https://schema.org",
-  "@type": "HousePainter",
-  "@id": "https://tauropainting.com/#business",
-  name: content.brand.name,
-  url: window.location.origin,
-  image: `${window.location.origin}/og.jpg`,
-  logo: `${window.location.origin}/tauro/logo-tauro.png`,
-  telephone: "+18019289520",
-  address: {
-    "@type": "PostalAddress",
-    streetAddress: "1144 N Main St",
-    addressLocality: "Orem",
-    addressRegion: "UT",
-    postalCode: "84057",
-    addressCountry: "US",
-  },
-  areaServed: [
-  { "@type": "City", "name": "Orem" },
-  { "@type": "City", "name": "Provo" },
-  { "@type": "City", "name": "Alpine" },
-  { "@type": "City", "name": "Highland" },
-  { "@type": "City", "name": "Mapleton" },
-  { "@type": "City", "name": "Lehi" },
-  { "@type": "City", "name": "American Fork" },
-  { "@type": "City", "name": "Pleasant Grove" },
-  { "@type": "City", "name": "Springville" },
-  { "@type": "City", "name": "Cedar Hills" },
-  { "@type": "City", "name": "Woodland Hills" },
-  { "@type": "City", "name": "Elk Ridge" },
-  { "@type": "City", "name": "Midway" },
-  { "@type": "City", "name": "Park City" },
-  { "@type": "Place", "name": "Deer Valley" },
-],
-  sameAs: [
-    "https://www.instagram.com/tauropainting",
-    "https://www.facebook.com/tauropainting",
-  ],
-};
-
-let ld = document.getElementById(ldId) as HTMLScriptElement | null;
-if (!ld) {
-  ld = document.createElement("script");
-  ld.id = ldId;
-  ld.type = "application/ld+json";
-  document.head.appendChild(ld);
-}
-ld.text = JSON.stringify(business);
-
-    }, 0);
-
-    return () => window.clearTimeout(t);
+      const webpageId = `${routeMeta.canonical}#webpage`;
+      const breadcrumbId = `${routeMeta.canonical}#breadcrumb`;
+      pageScript.text = JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebPage",
+            "@id": webpageId,
+            url: routeMeta.canonical,
+            name: routeMeta.title,
+            description: routeMeta.description,
+            about: { "@id": seo.business["@id"] },
+            breadcrumb: { "@id": breadcrumbId },
+          },
+          {
+            "@type": "BreadcrumbList",
+            "@id": breadcrumbId,
+            itemListElement: breadcrumbs.map((item, index) => ({
+              "@type": "ListItem",
+              position: index + 1,
+              name: item.name,
+              item: item.item,
+            })),
+          },
+        ],
+      });
+    } else {
+      pageScript?.remove();
+    }
   }, [location.pathname]);
 
   const isHome = location.pathname === "/";
@@ -338,6 +184,25 @@ ld.text = JSON.stringify(business);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
+
+  useEffect(() => {
+    if (!isMobileMenuOpen) return;
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      mobileMenuRef.current?.querySelector<HTMLElement>("a")?.focus();
+    });
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      setIsMobileMenuOpen(false);
+      mobileMenuButtonRef.current?.focus();
+    };
+
+    document.addEventListener("keydown", closeOnEscape);
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [isMobileMenuOpen]);
 
   const navLinks = [
     { name: "Home", to: "/" },
@@ -368,6 +233,9 @@ ld.text = JSON.stringify(business);
 
   return (
     <div className="min-h-screen bg-white">
+      <a href="#main-content" className="fixed left-4 top-4 z-[100] -translate-y-24 bg-white px-4 py-3 text-sm font-semibold text-slate-950 shadow-lg transition-transform focus:translate-y-0">
+        Skip to main content
+      </a>
       {/* Auto-reveal styles + behavior (scoped to <main>) */}
       <AutoReveal />
 
@@ -449,6 +317,7 @@ ld.text = JSON.stringify(business);
 
             {/* Mobile Menu Button */}
             <button
+              ref={mobileMenuButtonRef}
               type="button"
               aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
               aria-expanded={isMobileMenuOpen}
@@ -468,7 +337,7 @@ ld.text = JSON.stringify(business);
 
           {/* Mobile Menu */}
           {isMobileMenuOpen && (
-            <div id="mobile-navigation" className="lg:hidden mt-4 pb-4 border-t border-white/10 pt-4 bg-white/95 backdrop-blur-md rounded-xl mt-2 p-4">
+            <div ref={mobileMenuRef} id="mobile-navigation" className="lg:hidden mt-4 pb-4 border-t border-white/10 pt-4 bg-white/95 backdrop-blur-md rounded-xl mt-2 p-4">
               <div className="flex flex-col gap-3">
                 {navLinks.map((link) => (
                   <Link
@@ -494,14 +363,14 @@ ld.text = JSON.stringify(business);
       </nav>
 
       {/* Routes */}
-      <main className={isHome ? "" : "pt-28"}>
+      <main id="main-content" tabIndex={-1} className={isHome ? "" : "pt-28"}>
         <Routes>
           <Route path="/" element={<HomeRoute />} />
           <Route path="/services" element={<Services />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
-          <Route path="*" element={<HomeRoute />} />
+          <Route path="*" element={<NotFound />} />
           <Route path="/locations/orem" element={<Orem />} />
           <Route path="/locations/provo" element={<Provo />} />
           <Route path="/locations/alpine" element={<Alpine />} />
