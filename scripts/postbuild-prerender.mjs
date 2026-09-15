@@ -145,6 +145,13 @@ const routes = [
       "Custom home painting, cabinetry, stain, wood finishes, and detailed interior and exterior work for Midway, Utah homes.",
     canonical: "https://tauropainting.com/locations/midway",
   },
+  {
+    route: "/locations/park-city-deer-valley",
+    title: "Custom Home Painting in Park City & Deer Valley | Tauro Painting",
+    description:
+      "High-end residential painting, cabinetry, stain, wood finishes, and interior and exterior finishing for Park City and Deer Valley homes.",
+    canonical: "https://tauropainting.com/locations/park-city-deer-valley",
+  },
 ];
 
 function escapeAttr(value) {
@@ -218,6 +225,53 @@ function injectSeoHead(html, meta) {
       }).replace(/</g, "\\u003c")}</script>`
     : "";
 
+  const parkCitySchemaBlock = meta.route === "/locations/park-city-deer-valley"
+    ? `<script type="application/ld+json">${JSON.stringify({
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "HousePainter",
+            "@id": "https://tauropainting.com/#business",
+            name: "Tauro Painting",
+            url: "https://tauropainting.com/",
+            telephone: "+18019289520",
+            image: "https://tauropainting.com/og.jpg",
+            logo: "https://tauropainting.com/tauro/logo-tauro.png",
+            address: {
+              "@type": "PostalAddress",
+              streetAddress: "1144 N Main St",
+              addressLocality: "Orem",
+              addressRegion: "UT",
+              postalCode: "84057",
+              addressCountry: "US",
+            },
+            areaServed: [
+              { "@type": "City", name: "Park City", containedInPlace: { "@type": "State", name: "Utah" } },
+              { "@type": "Place", name: "Deer Valley", containedInPlace: { "@type": "City", name: "Park City" } },
+            ],
+          },
+          {
+            "@type": "WebPage",
+            "@id": "https://tauropainting.com/locations/park-city-deer-valley#webpage",
+            url: "https://tauropainting.com/locations/park-city-deer-valley",
+            name: "Custom Home Painting in Park City & Deer Valley | Tauro Painting",
+            description: "High-end residential painting, cabinetry, stain, wood finishes, and interior and exterior finishing for Park City and Deer Valley homes.",
+            about: { "@id": "https://tauropainting.com/#business" },
+            breadcrumb: { "@id": "https://tauropainting.com/locations/park-city-deer-valley#breadcrumb" },
+          },
+          {
+            "@type": "BreadcrumbList",
+            "@id": "https://tauropainting.com/locations/park-city-deer-valley#breadcrumb",
+            itemListElement: [
+              { "@type": "ListItem", position: 1, name: "Home", item: "https://tauropainting.com/" },
+              { "@type": "ListItem", position: 2, name: "Where Tauro Works", item: "https://tauropainting.com/locations" },
+              { "@type": "ListItem", position: 3, name: "Park City / Deer Valley, Utah", item: "https://tauropainting.com/locations/park-city-deer-valley" },
+            ],
+          },
+        ],
+      }).replace(/</g, "\\u003c")}</script>`
+    : "";
+
   const seoBlock = `
     <title>${escapeAttr(meta.title)}</title>
     <meta name="description" content="${escapeAttr(meta.description)}" />
@@ -233,7 +287,7 @@ function injectSeoHead(html, meta) {
     <meta name="twitter:description" content="${escapeAttr(meta.description)}" />
   `;
 
-  return cleanHtml.replace("</head>", `${seoBlock}\n${schemaBlock}\n</head>`);
+  return cleanHtml.replace("</head>", `${seoBlock}\n${schemaBlock}\n${parkCitySchemaBlock}\n</head>`);
 }
 
 for (const meta of routes) {

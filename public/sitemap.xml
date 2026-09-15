@@ -44,6 +44,12 @@
   </url>
 
   <url>
+    <loc>https://tauropainting.com/locations/park-city-deer-valley</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
     <loc>https://tauropainting.com/locations/orem</loc>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>

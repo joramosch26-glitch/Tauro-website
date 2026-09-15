@@ -2,6 +2,7 @@ import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const markets = [
+  { name: "Park City / Deer Valley", slug: "park-city-deer-valley", note: "Luxury residential finishing in Summit County" },
   { name: "Midway", slug: "midway", note: "Custom-home finishing in the Heber Valley" },
   { name: "Alpine", slug: "alpine" },
   { name: "Highland", slug: "highland" },

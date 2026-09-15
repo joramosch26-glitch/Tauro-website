@@ -30,7 +30,7 @@ export default function Midway() {
         </div>
         <figure>
           <img src="/tauro/interior-great-room.webp" alt="Tauro Painting interior finish work in a custom home great room" fetchPriority="high" className="h-[360px] w-full object-cover object-center sm:h-[480px] lg:h-[600px]" />
-          <figcaption className="mx-auto flex max-w-7xl flex-wrap justify-between gap-3 px-6 py-5 text-[10px] uppercase tracking-[0.2em] text-white/60 lg:px-8"><span>Real Tauro work · custom home finishes</span><span>Midway area</span></figcaption>
+          <figcaption className="mx-auto max-w-7xl px-6 py-5 text-[10px] uppercase tracking-[0.2em] text-white/60 lg:px-8">Real Tauro work · custom home finishes</figcaption>
         </figure>
       </section>
 

@@ -28,6 +28,7 @@ import WoodlandHills from "./pages/Woodland-Hills"
 import ElkRidge from "./pages/Elk-Ridge"
 import Springville from "./pages/Springville"
 import Midway from "./pages/Midway"
+import ParkCityDeerValley from "./pages/ParkCityDeerValley"
 import Locations from "./pages/Locations";
 
 
@@ -171,6 +172,11 @@ function App() {
   desc:
     "Custom home painting, cabinetry, stain, wood finishes, and detailed interior and exterior work for Midway, Utah homes.",
 },
+"/locations/park-city-deer-valley": {
+  title: "Custom Home Painting in Park City & Deer Valley | Tauro Painting",
+  desc:
+    "High-end residential painting, cabinetry, stain, wood finishes, and interior and exterior finishing for Park City and Deer Valley homes.",
+},
 };
 
 
@@ -301,6 +307,8 @@ const business = {
   { "@type": "City", "name": "Woodland Hills" },
   { "@type": "City", "name": "Elk Ridge" },
   { "@type": "City", "name": "Midway" },
+  { "@type": "City", "name": "Park City" },
+  { "@type": "Place", "name": "Deer Valley" },
 ],
   sameAs: [
     "https://www.instagram.com/tauropainting",
@@ -507,6 +515,7 @@ ld.text = JSON.stringify(business);
           <Route path="/locations/woodland-hills" element={<WoodlandHills />} />
           <Route path="/locations/elk-ridge" element={<ElkRidge />} />
           <Route path="/locations/midway" element={<Midway />} />
+          <Route path="/locations/park-city-deer-valley" element={<ParkCityDeerValley />} />
           <Route path="/locations" element={<Locations />} />
         </Routes>
       </main>
