@@ -41,8 +41,8 @@ export default function ProcessSection() {
             </div>
 
             <h2 className="mt-6 text-4xl lg:text-5xl font-bold text-slate-900 leading-[1.05]">
-              A calm workflow.
-              <span className="block text-amber-600">A premium result.</span>
+              A controlled process.
+              <span className="block text-amber-700">A finish you can trust.</span>
             </h2>
 
             <p className="mt-5 text-lg text-slate-600 leading-relaxed">
@@ -72,8 +72,8 @@ export default function ProcessSection() {
             <div className="relative h-[420px] lg:h-full min-h-[520px] overflow-hidden rounded-3xl border border-slate-200 shadow-sm">
               {/* Image (put in /public/process.jpg) */}
               <img
-                src="/process.jpg"
-                alt="Tauro Painting process"
+                src="/tauro/entry-door.webp"
+                alt="Custom stained entry door finish by Tauro Painting"
                 className="absolute inset-0 h-full w-full object-cover"
                 loading="lazy"
               />

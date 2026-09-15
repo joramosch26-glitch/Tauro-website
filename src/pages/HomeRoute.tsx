@@ -1,7 +1,6 @@
 import HeroSection from "../components/HeroSection";
 import ServicesSection from "../components/ServicesSection";
 import ProjectsSection from "../components/ProjectsSection";
-import TestimonialsSection from "../components/TestimonialsSection";
 import AboutSection from "../components/AboutSection";
 import ContactSection from "../components/ContactSection";
 import ProcessSection from "../components/ProcessSection";
@@ -16,7 +15,6 @@ export default function HomeRoute() {
       <ProjectsSection />
       <StandardSection />
       <ProcessSection />
-      <TestimonialsSection />
       <AboutSection />
       <CTASection />
       <ContactSection />

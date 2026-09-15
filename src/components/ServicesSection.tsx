@@ -1,105 +1,84 @@
-import { CheckCircle2, Sparkles, Home as HomeIcon, Building2, Palette, Sparkles as SparklesIcon } from "lucide-react";
+import { ArrowUpRight } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const services = [
   {
-    icon: <HomeIcon className="w-8 h-8" />,
-    title: "Interior Painting",
-    subtitle: "Interiors",
+    eyebrow: "01 · Interior",
+    title: "Custom Home Interiors",
     description:
-      "We transform interior spaces with impeccable finishes that elevate your home's aesthetics.",
-    features: ["Walls & ceilings", "Trim & moldings", "Specialty finishes", "Custom colors"],
-    image: "/interior-luxury-1.jpg",
+      "Walls, ceilings, trim, doors, and architectural details finished with the consistency high-end construction demands.",
+    image: "/tauro/interior-open-plan.webp",
+    alt: "Open-plan custom home interior painted by Tauro Painting",
   },
   {
-    icon: <Building2 className="w-8 h-8" />,
-    title: "Exterior Painting",
-    subtitle: "Exteriors",
+    eyebrow: "02 · Woodwork",
+    title: "Cabinetry & Fine Finishes",
     description:
-      "We protect and beautify your property's facade with durable paints.",
-    features: ["Residential facades", "Doors & windows", "Decks & patios", "Siding"],
-    image: "/villa-exterior.jpg",
+      "Factory-smooth enamel, stained wood, clear coats, and detailed millwork finishes built around the design intent.",
+    image: "/tauro/office-woodwork.webp",
+    alt: "Custom woodwork and millwork finish by Tauro Painting",
   },
   {
-    icon: <Palette className="w-8 h-8" />,
-    title: "Cabinets & Woodwork",
-    subtitle: "Cabinetry",
-    description: "We refinish your cabinets with factory-quality finishes.",
-    features: ["Kitchen cabinets", "Bathroom vanities", "Interior doors", "Moldings"],
-    image: "/kitchen-luxury.jpg",
-  },
-  {
-    icon: <SparklesIcon className="w-8 h-8" />,
-    title: "Custom Homes",
-    subtitle: "Luxury",
-    description: "Specialists in luxury custom homes with premium finishes.",
-    features: ["New construction", "Remodeling", "Premium finishes", "Attention to detail"],
-    image: "/interior-luxury-2.jpg",
+    eyebrow: "03 · Exterior",
+    title: "Exterior Systems",
+    description:
+      "Careful preparation and durable coating systems for custom residences exposed to Utah's demanding climate.",
+    image: "/tauro/exterior-custom-home.webp",
+    alt: "Modern custom home exterior finished by Tauro Painting",
   },
 ];
 
 export default function ServicesSection() {
   return (
-    <section id="services" className="py-24 lg:py-32 bg-slate-50">
-      <div className="max-w-7xl mx-auto px-6 lg:px-8">
-        {/* Section Header */}
-        <div className="max-w-3xl mb-16">
-          <span className="inline-flex items-center gap-2 text-amber-600 font-semibold text-sm uppercase tracking-wider mb-4">
-            <Sparkles className="w-4 h-4" />
-            Our Services
-          </span>
-          <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
-            Excellence in Every Finish
-          </h2>
-          <p className="text-slate-600 text-lg leading-relaxed">
-            We offer complete painting solutions for luxury homes, using premium materials and specialized techniques
-            that guarantee exceptional results.
-          </p>
+    <section id="services" className="bg-[#f5f3ee] py-24 lg:py-32">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        <div className="mb-14 grid gap-8 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-7">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-[#9a6a25]">
+              What we do
+            </p>
+            <h2 className="max-w-4xl text-4xl font-semibold tracking-[-0.035em] text-slate-950 sm:text-5xl lg:text-6xl">
+              Built for the level of detail custom homes require.
+            </h2>
+          </div>
+          <div className="lg:col-span-4 lg:col-start-9">
+            <p className="text-base leading-7 text-slate-600">
+              We coordinate with builders, designers, and homeowners from early prep through final punch,
+              protecting the schedule while holding the finish to a higher standard.
+            </p>
+          </div>
         </div>
 
-        {/* Services Grid */}
-        <div className="grid lg:grid-cols-2 gap-8">
-          {services.map((service, index) => (
-            <div
-              key={index}
-              className={`group relative bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl transition-all duration-500 ${
-                index === 0 || index === 3 ? "lg:col-span-2" : ""
-              }`}
-            >
-              <div className={`grid ${index === 0 || index === 3 ? "lg:grid-cols-2" : ""} gap-0`}>
-                {/* Image */}
-                <div className={`relative overflow-hidden ${index === 1 || index === 2 ? "h-48" : "h-64 lg:h-full"}`}>
-                  <img
-                    src={service.image}
-                    alt={service.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/60 via-transparent to-transparent" />
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-white/90 backdrop-blur-sm rounded-full text-xs font-semibold text-slate-700 uppercase tracking-wider">
-                      {service.subtitle}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Content */}
-                <div className="p-8 lg:p-10">
-                  <div className="w-14 h-14 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600 mb-6 group-hover:bg-amber-500 group-hover:text-white transition-colors duration-300">
-                    {service.icon}
-                  </div>
-                  <h3 className="text-2xl font-bold text-slate-900 mb-4">{service.title}</h3>
-                  <p className="text-slate-600 mb-6 leading-relaxed">{service.description}</p>
-                  <ul className="grid grid-cols-2 gap-3">
-                    {service.features.map((feature, fIndex) => (
-                      <li key={fIndex} className="flex items-center gap-2 text-sm text-slate-600">
-                        <CheckCircle2 className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+        <div className="grid gap-5 lg:grid-cols-3">
+          {services.map((service) => (
+            <article key={service.title} className="group overflow-hidden bg-white">
+              <div className="relative aspect-[4/5] overflow-hidden bg-slate-200">
+                <img
+                  src={service.image}
+                  alt={service.alt}
+                  loading="lazy"
+                  className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.035]"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950/55 via-transparent to-transparent" />
+                <p className="absolute left-6 top-6 text-xs font-semibold uppercase tracking-[0.22em] text-white/80">
+                  {service.eyebrow}
+                </p>
               </div>
-            </div>
+              <div className="p-7 lg:p-8">
+                <h3 className="text-2xl font-semibold tracking-[-0.025em] text-slate-950">{service.title}</h3>
+                <p className="mt-3 leading-7 text-slate-600">{service.description}</p>
+              </div>
+            </article>
           ))}
+        </div>
+
+        <div className="mt-10 flex justify-end">
+          <Link
+            to="/services"
+            className="inline-flex items-center gap-2 border-b border-slate-900 pb-1 text-sm font-semibold uppercase tracking-[0.14em] text-slate-900"
+          >
+            View all services <ArrowUpRight className="h-4 w-4" />
+          </Link>
         </div>
       </div>
     </section>

@@ -14,23 +14,23 @@ const baseHtml = fs.readFileSync(baseHtmlPath, "utf8");
 const routes = [
   {
     route: "/",
-    title: "House Painters in Utah County | Tauro Painting",
+    title: "High-End House Painters in Utah County | Tauro Painting",
     description:
-      "Premium interior and exterior house painters in Utah County. Serving Orem, Provo, Lehi, and surrounding areas. Free estimates.",
+      "Tauro Painting specializes in high-end custom home painting, cabinetry, wood finishes, and exterior painting across Utah County, Park City, and surrounding areas.",
     canonical: "https://tauropainting.com/",
   },
   {
     route: "/services",
-    title: "Painting Services in Utah County | Tauro Painting",
+    title: "Custom Home Painting Services in Utah | Tauro Painting",
     description:
-      "Interior painting, exterior painting, cabinet refinishing, and detailed prep across Utah County. Fast scheduling and free estimates.",
+      "Interior painting, exterior systems, cabinetry, stain, clear finishes, and detailed prep for custom homes and premium residential construction in Utah.",
     canonical: "https://tauropainting.com/services",
   },
   {
     route: "/projects",
-    title: "Painting Projects in Utah County | Tauro Painting",
+    title: "Custom Home Painting Portfolio | Tauro Painting Utah",
     description:
-      "Explore recent residential and commercial painting projects completed across Utah County with premium finishes and meticulous prep.",
+      "Explore real Tauro Painting work across custom home interiors, exteriors, cabinetry, doors, stain, and architectural wood finishes in Utah.",
     canonical: "https://tauropainting.com/projects",
   },
   {

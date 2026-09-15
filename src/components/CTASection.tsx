@@ -3,38 +3,35 @@ import { Link } from "react-router-dom";
 
 export default function CTASection() {
   return (
-    <section className="py-24 lg:py-32 bg-amber-500 relative overflow-hidden">
-      {/* Decorative Elements */}
-      <div className="absolute top-0 right-0 w-96 h-96 bg-amber-400 rounded-full blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2" />
-      <div className="absolute bottom-0 left-0 w-96 h-96 bg-amber-600 rounded-full blur-3xl opacity-30 translate-y-1/2 -translate-x-1/2" />
-
-      <div className="max-w-4xl mx-auto px-6 lg:px-8 text-center relative z-10">
-        <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
-          Ready to Transform Your Space?
+    <section className="relative overflow-hidden bg-slate-950 py-24 text-white lg:py-32">
+      <img
+        src="/tauro/exterior-custom-home.webp"
+        alt=""
+        aria-hidden="true"
+        loading="lazy"
+        className="absolute inset-0 h-full w-full object-cover opacity-25"
+      />
+      <div className="absolute inset-0 bg-slate-950/65" />
+      <div className="relative z-10 mx-auto max-w-5xl px-6 text-center lg:px-8">
+        <p className="mb-5 text-xs font-semibold uppercase tracking-[0.3em] text-amber-300">Start the conversation</p>
+        <h2 className="text-4xl font-semibold tracking-[-0.04em] sm:text-5xl lg:text-6xl">
+          Building something that deserves a better finish?
         </h2>
-
-        <p className="text-slate-800 text-lg mb-10 max-w-2xl mx-auto">
-          Contact us today for a free consultation. Discover why we are the
-          preferred painters for Utah's most luxurious homes.
+        <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-white/70">
+          Send us the plans, schedule a walkthrough, or call us to talk through your next custom home or residential project.
         </p>
-
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          {/* Link to Contact Page */}
+        <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
           <Link
             to="/contact"
-            className="inline-flex items-center justify-center bg-slate-900 hover:bg-slate-800 text-white font-semibold px-8 py-3 text-base rounded-md transition-colors"
+            className="inline-flex items-center justify-center gap-2 bg-white px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-slate-950 transition hover:bg-amber-400"
           >
-            Request a Quote
-            <ArrowRight className="w-5 h-5 ml-2" />
+            Request a walkthrough <ArrowRight className="h-4 w-4" />
           </Link>
-
-          {/* Phone Button */}
           <a
             href="tel:8019289520"
-            className="inline-flex items-center justify-center border border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white px-8 py-3 text-base rounded-md transition-colors"
+            className="inline-flex items-center justify-center gap-2 border border-white/35 px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-white hover:text-slate-950"
           >
-            <Phone className="w-5 h-5 mr-2" />
-            (801) 928-9520
+            <Phone className="h-4 w-4" /> (801) 928-9520
           </a>
         </div>
       </div>

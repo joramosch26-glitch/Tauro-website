@@ -26,13 +26,13 @@ import PleasantGrove from "./pages/Pleasant-Grove"
 import CedarHills from "./pages/Cedar-Hills"
 import WoodlandHills from "./pages/Woodland-Hills"
 import ElkRidge from "./pages/Elk-Ridge"
+import Springville from "./pages/Springville"
 import Locations from "./pages/Locations";
 
 
 import AutoReveal from "./components/AutoReveal";
 
 import {
-  Paintbrush,
   Phone,
   Mail,
   MapPin,
@@ -42,22 +42,21 @@ import {
   X,
 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
 
 function App() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [showQuoteDialog, setShowQuoteDialog] = useState(false);
 
   const location = useLocation();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (location.hash) {
+      document.getElementById(location.hash.slice(1))?.scrollIntoView();
+    } else {
+      window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    }
+  }, [location.pathname, location.hash]);
 
   // ✅ Normalize trailing slashes: "/services/" -> "/services"
   useEffect(() => {
@@ -77,19 +76,19 @@ function App() {
 
     const metaByPath: Record<string, { title: string; desc: string }> = {
   "/": {
-    title: "House Painters in Utah County | Tauro Painting",
+    title: "High-End House Painters in Utah County | Tauro Painting",
     desc:
-      "Premium interior and exterior house painters in Utah County. Serving Orem, Provo, Lehi, and surrounding areas. Free estimates.",
+      "Tauro Painting specializes in high-end custom home painting, cabinetry, wood finishes, and exterior painting across Utah County, Park City, and surrounding areas.",
   },
   "/services": {
-    title: "Painting Services in Utah County | Tauro Painting",
+    title: "Custom Home Painting Services in Utah | Tauro Painting",
     desc:
-      "Interior painting, exterior painting, cabinet refinishing, and detailed prep across Utah County. Fast scheduling and free estimates.",
+      "Interior painting, exterior systems, cabinetry, stain, clear finishes, and detailed prep for custom homes and premium residential construction in Utah.",
   },
   "/projects": {
-    title: "Painting Projects in Utah County | Tauro Painting",
+    title: "Custom Home Painting Portfolio | Tauro Painting Utah",
     desc:
-      "Explore recent residential and commercial painting projects completed across Utah County with premium finishes and meticulous prep.",
+      "Explore real Tauro Painting work across custom home interiors, exteriors, cabinetry, doors, stain, and architectural wood finishes in Utah.",
   },
   "/about": {
     title: "About Tauro Painting | Utah County",
@@ -145,6 +144,11 @@ function App() {
   title: "House Painting in Pleasant Grove, UT | Tauro Painting",
   desc:
     "Tauro Painting provides interior and exterior house painting in Pleasant Grove, Utah. Clean work, premium finishes, and reliable service for Utah County homeowners.",
+},
+"/locations/springville": {
+  title: "House Painters in Springville, UT | Tauro Painting",
+  desc:
+    "High-end interior and exterior house painting in Springville, Utah, including custom homes, cabinetry, wood finishes, and detailed preparation.",
 },
 "/locations/cedar-hills": {
   title: "House Painting in Cedar Hills, UT | Tauro Painting",
@@ -262,11 +266,11 @@ function App() {
 const ldId = "ld-json-localbusiness";
 const business = {
   "@context": "https://schema.org",
-  "@type": "LocalBusiness",
+  "@type": "HousePainter",
   name: content.brand.name,
   url: window.location.origin,
   image: `${window.location.origin}/og.jpg`,
-  logo: `${window.location.origin}/og.jpg`,
+  logo: `${window.location.origin}/tauro/logo-tauro.png`,
   telephone: "+18019289520",
   address: {
     "@type": "PostalAddress",
@@ -370,29 +374,11 @@ ld.text = JSON.stringify(business);
               }}
               className="flex items-center gap-3 group"
             >
-              <div
-                className={`p-2.5 rounded-lg transition-all duration-300 ${
-                  navSolid ? "bg-slate-900" : "bg-white/10 backdrop-blur-sm"
-                }`}
-              >
-                <Paintbrush className="w-6 h-6 text-amber-400" />
-              </div>
-              <div className="flex flex-col">
-                <span
-                  className={`text-xl font-bold tracking-tight transition-colors ${
-                    navSolid ? "text-slate-900" : "text-white"
-                  }`}
-                >
-                  {content.brand.name}
-                </span>
-                <span
-                  className={`text-[10px] uppercase tracking-[0.2em] transition-colors ${
-                    navSolid ? "text-slate-500" : "text-white/60"
-                  }`}
-                >
-                  {content.brand.tagline}
-                </span>
-              </div>
+              <img
+                src="/tauro/logo-tauro.png"
+                alt="Tauro Painting"
+                className={`h-11 w-auto object-contain transition ${navSolid ? "" : "brightness-0 invert"}`}
+              />
             </a>
 
             {/* Desktop Navigation (underline animado) */}
@@ -433,16 +419,24 @@ ld.text = JSON.stringify(business);
 
             {/* CTA Button */}
             <div className="hidden lg:block">
-              <Button
-                onClick={() => setShowQuoteDialog(true)}
-                className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-6"
+              <Link
+                to="/contact"
+                className={`inline-flex items-center justify-center px-5 py-3 text-xs font-semibold uppercase tracking-[0.14em] transition ${
+                  navSolid
+                    ? "bg-slate-950 text-white hover:bg-amber-500 hover:text-slate-950"
+                    : "border border-white/35 bg-white/5 text-white backdrop-blur-sm hover:bg-white hover:text-slate-950"
+                }`}
               >
-                Schedule a Walkthrough
-              </Button>
+                Request a walkthrough
+              </Link>
             </div>
 
             {/* Mobile Menu Button */}
             <button
+              type="button"
+              aria-label={isMobileMenuOpen ? "Close menu" : "Open menu"}
+              aria-expanded={isMobileMenuOpen}
+              aria-controls="mobile-navigation"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className={`lg:hidden p-2 rounded-lg transition-colors ${
               navSolid ? "text-slate-900" : "text-white"
@@ -458,7 +452,7 @@ ld.text = JSON.stringify(business);
 
           {/* Mobile Menu */}
           {isMobileMenuOpen && (
-            <div className="lg:hidden mt-4 pb-4 border-t border-white/10 pt-4 bg-white/95 backdrop-blur-md rounded-xl mt-2 p-4">
+            <div id="mobile-navigation" className="lg:hidden mt-4 pb-4 border-t border-white/10 pt-4 bg-white/95 backdrop-blur-md rounded-xl mt-2 p-4">
               <div className="flex flex-col gap-3">
                 {navLinks.map((link) => (
                   <Link
@@ -470,15 +464,13 @@ ld.text = JSON.stringify(business);
                     {link.name}
                   </Link>
                 ))}
-                <Button
-                  onClick={() => {
-                    setShowQuoteDialog(true);
-                    setIsMobileMenuOpen(false);
-                  }}
-                  className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold w-full mt-2"
+                <Link
+                  to="/contact"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="mt-2 inline-flex w-full items-center justify-center bg-slate-950 px-5 py-3 text-sm font-semibold text-white"
                 >
-                  Free Quote
-                </Button>
+                  Request a walkthrough
+                </Link>
               </div>
             </div>
           )}
@@ -502,6 +494,7 @@ ld.text = JSON.stringify(business);
           <Route path="/locations/lehi" element={<Lehi />} />
           <Route path="/locations/american-fork" element={<AmericanFork />} />
           <Route path="/locations/pleasant-grove" element={<PleasantGrove />} />
+          <Route path="/locations/springville" element={<Springville />} />
           <Route path="/locations/cedar-hills" element={<CedarHills />} />
           <Route path="/locations/woodland-hills" element={<WoodlandHills />} />
           <Route path="/locations/elk-ridge" element={<ElkRidge />} />
@@ -515,22 +508,15 @@ ld.text = JSON.stringify(business);
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-12">
             <div className="lg:col-span-2">
               <div className="flex items-center gap-3 mb-6">
-                <div className="p-2.5 rounded-lg bg-amber-500">
-                  <Paintbrush className="w-6 h-6 text-slate-900" />
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-xl font-bold tracking-tight">
-                    {content.brand.name}
-                  </span>
-                  <span className="text-[10px] uppercase tracking-[0.2em] text-slate-400">
-                    {content.brand.tagline}
-                  </span>
-                </div>
+                <img
+                  src="/tauro/logo-tauro.png"
+                  alt="Tauro Painting"
+                  className="h-16 w-auto brightness-0 invert"
+                />
               </div>
 
               <p className="text-slate-400 mb-6 max-w-md leading-relaxed">
-                Specialists in custom home and luxury residence painting in Utah.
-                We transform spaces with impeccable finishes.
+                High-end painting, cabinetry, stain, wood finishes, and exterior systems for custom homes and premium residential construction in Utah.
               </p>
 
               <div className="flex gap-3">
@@ -612,28 +598,6 @@ ld.text = JSON.stringify(business);
         </div>
       </footer>
 
-      {/* Quote Dialog (global) */}
-      <Dialog open={showQuoteDialog} onOpenChange={setShowQuoteDialog}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-xl font-bold text-slate-800">
-              Request Sent!
-            </DialogTitle>
-            <DialogDescription className="text-slate-600">
-              Thank you for contacting Tauro Painting. We'll get back to you
-              within 24 hours to discuss your project.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="mt-4">
-            <Button
-              onClick={() => setShowQuoteDialog(false)}
-              className="w-full bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold"
-            >
-              Got it
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

@@ -1,108 +1,107 @@
 export const content = {
   brand: {
     name: "Tauro Painting",
-    tagline: "Luxury Finishes",
-    cta: "Get a Free Estimate",
+    tagline: "Custom Home Finishes",
+    cta: "Request a Walkthrough",
   },
 
   contact: {
-    phone: "(XXX) XXX-XXXX",
-    email: "info@tauropainting.com",
+    phone: "(801) 928-9520",
+    email: "tauropaintingutah@gmail.com",
     areas: ["Utah County", "Salt Lake County", "Park City"],
   },
 
   hero: {
-    title: "Luxury Residential & Commercial Painting in Utah",
+    title: "High-End House Painting & Custom Home Finishes in Utah",
     subtitle:
-      "High-end craftsmanship, clean lines, and flawless finishes for custom homes and premium builds.",
+      "Precision painting, cabinetry, woodwork, and exterior finishes for custom homes and premium residential construction.",
   },
 
-  // ✅ Ahora services es array de OBJETOS (con image/description/features)
   services: [
     {
       title: "Interior Painting",
-      image: "/services/interior.jpg",
+      image: "/tauro/interior-open-plan.webp",
       description:
-        "We transform interior spaces with impeccable finishes that elevate your home's aesthetics. We use premium low-VOC paints for a healthy environment.",
-      features: ["Walls & ceilings", "Trim & moldings", "Specialty finishes", "Custom colors"],
+        "Walls, ceilings, trim, doors, and architectural details finished with disciplined preparation and consistent coverage.",
+      features: ["Walls & ceilings", "Trim & millwork", "Doors", "New construction"],
     },
     {
       title: "Exterior Painting",
-      image: "/services/exterior.jpg",
+      image: "/tauro/exterior-custom-home.webp",
       description:
-        "We protect and beautify your property's facade with durable paints designed to withstand Utah’s extreme weather conditions.",
-      features: ["Residential facades", "Decks & patios", "Doors & windows", "Siding"],
+        "Exterior coating systems selected and applied for custom residences and Utah's demanding climate.",
+      features: ["Custom homes", "Siding & stucco", "Doors & windows", "Exterior wood"],
     },
     {
       title: "Cabinets & Woodwork",
-      image: "/services/cabinets.jpg",
+      image: "/tauro/office-woodwork.webp",
       description:
-        "We refinish your cabinets with factory-quality finishes that give new life to kitchens and bathrooms.",
-      features: ["Kitchen cabinets", "Bathroom vanities", "Interior doors", "Moldings"],
+        "High-detail enamel, stain, and clear finishes for cabinetry, millwork, doors, and architectural woodwork.",
+      features: ["Cabinetry", "Stain & clear coat", "Interior doors", "Architectural millwork"],
     },
     {
-      title: "Luxury Finishes",
-      image: "/services/luxury.jpg",
+      title: "Custom Homes",
+      image: "/tauro/interior-living.webp",
       description:
-        "Specialized decorative finishes for custom homes and high-end residential projects.",
-      features: ["Venetian plaster", "Metallic finishes", "Textured walls", "Custom detailing"],
+        "Painting systems and project coordination designed for luxury new construction, remodels, and builder-led work.",
+      features: ["Early priming", "Builder coordination", "Premium finish systems", "Punch & closeout"],
     },
   ],
 
- projects: [
-  {
-    id: "mountain-view-residence",
-    image: "/interior-luxury-1.jpg",
-    title: "Mountain View Residence",
-    location: "Park City, UT",
-    category: "Interior",
-    description: "Complete interior painting of 8,000 sq ft home",
-  },
-  {
-    id: "desert-villa",
-    image: "/villa-exterior.jpg",
-    title: "Desert Villa",
-    location: "St. George, UT",
-    category: "Exterior",
-    description: "Exterior painting of Mediterranean villa",
-  },
-  {
-    id: "gourmet-kitchen",
-    image: "/kitchen-luxury.jpg",
-    title: "Gourmet Kitchen",
-    location: "Salt Lake City, UT",
-    category: "Cabinetry",
-    description: "Cabinet refinishing and premium enamel finish",
-  },
-  {
-    id: "executive-dining-room",
-    image: "/Projects/project-4.jpg",
-    title: "Executive Dining Room",
-    location: "Provo, UT",
-    category: "Interior",
-    description: "Interior repaint with refined trim work and crisp line detailing",
-  },
-  {
-    id: "master-spa-suite",
-    image: "/spa-suite.jpg",
-    title: "Master Spa Suite",
-    location: "Lehi, UT",
-    category: "Interior",
-    description: "Luxury bathroom refresh with smooth finishes and durable coatings",
-  },
-  {
-    id: "executive-office",
-    image: "/executive-office.jpg",
-    title: "Executive Office",
-    location: "Orem, UT",
-    category: "Interior",
-    description: "Warm, high-end office transformation with clean modern tones",
-  },
-],
+  projects: [
+    {
+      id: "architectural-interior",
+      image: "/tauro/interior-living.webp",
+      title: "Architectural Interior",
+      location: "Utah",
+      category: "Custom Home",
+      description: "High-detail interior finish across walls, trim, ceilings, and architectural features.",
+    },
+    {
+      id: "custom-entry",
+      image: "/tauro/entry-door.webp",
+      title: "Custom Entry Finish",
+      location: "Utah",
+      category: "Woodwork",
+      description: "Stained entry system with a clean, consistent clear finish.",
+    },
+    {
+      id: "architectural-woodwork",
+      image: "/tauro/woodwork-detail.webp",
+      title: "Architectural Woodwork",
+      location: "Utah",
+      category: "Wood Finish",
+      description: "Detailed wood finish work designed to preserve depth, tone, and material character.",
+    },
+    {
+      id: "custom-exterior",
+      image: "/tauro/exterior-residence.webp",
+      title: "Custom Residence Exterior",
+      location: "Utah",
+      category: "Exterior",
+      description: "Durable exterior coating system with careful masking and surface preparation.",
+    },
+    {
+      id: "custom-cabinetry",
+      image: "/tauro/cabinetry.webp",
+      title: "Custom Cabinetry",
+      location: "Utah",
+      category: "Cabinetry",
+      description: "Smooth cabinetry and millwork finish with refined detail work.",
+    },
+    {
+      id: "great-room",
+      image: "/tauro/interior-great-room.webp",
+      title: "Refined Interior",
+      location: "Utah",
+      category: "Interior",
+      description: "Interior painting and finish work integrated with a high-end residential design.",
+    },
+  ],
 
   seo: {
-    title: "Tauro Painting | Luxury Residential & Commercial Painting in Utah",
+    title: "High-End House Painters in Utah County | Tauro Painting",
     description:
-      "Tauro Painting delivers high-end residential and commercial painting in Utah. Luxury finishes, clean prep, flawless results. Get a free estimate today.",
+      "Tauro Painting specializes in high-end custom home painting, cabinetry, wood finishes, and exterior painting across Utah County, Park City, and surrounding areas.",
   },
 } as const;

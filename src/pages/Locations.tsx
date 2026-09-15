@@ -156,6 +156,24 @@ export default function Locations() {
   </div>
 </Link>
 
+
+<Link
+  to="/locations/springville"
+  className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
+>
+  <div className="flex items-start justify-between gap-4">
+    <div>
+      <h2 className="text-xl font-semibold text-slate-900 group-hover:text-amber-700 transition-colors">
+        Springville, UT
+      </h2>
+      <p className="text-slate-600 mt-2 leading-relaxed">
+        Custom home and residential painting in Springville with detailed prep and premium finishes.
+      </p>
+    </div>
+    <span className="text-amber-600 font-semibold">View →</span>
+  </div>
+</Link>
+
 <Link
   to="/locations/cedar-hills"
   className="group rounded-2xl border border-slate-200 bg-white p-6 shadow-sm hover:shadow-md transition"
