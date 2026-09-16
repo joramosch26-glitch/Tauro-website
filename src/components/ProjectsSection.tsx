@@ -46,16 +46,26 @@ const projects = [
   },
 ];
 
-export default function ProjectsSection() {
+type ProjectsSectionProps = {
+  pageHeading?: boolean;
+  prioritizeFirstImage?: boolean;
+};
+
+export default function ProjectsSection({
+  pageHeading = false,
+  prioritizeFirstImage = false,
+}: ProjectsSectionProps) {
+  const Heading = pageHeading ? "h1" : "h2";
+
   return (
     <section id="projects" className="bg-white py-24 lg:py-32">
       <div className="mx-auto max-w-[1500px] px-6 lg:px-8">
         <div className="mx-auto mb-14 grid max-w-7xl gap-7 lg:grid-cols-12 lg:items-end">
           <div className="lg:col-span-8">
             <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-[#9a6a25]">Selected work</p>
-            <h2 className="text-4xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-6xl">
+            <Heading className="text-4xl font-semibold tracking-[-0.04em] text-slate-950 sm:text-5xl lg:text-6xl">
               The work should speak before we do.
-            </h2>
+            </Heading>
           </div>
           <div className="flex gap-5 lg:col-span-4 lg:justify-end">
             <Link
@@ -76,7 +86,7 @@ export default function ProjectsSection() {
         </div>
 
         <div className="grid gap-4 lg:grid-cols-12 lg:auto-rows-auto">
-          {projects.map((project) => (
+          {projects.map((project, index) => (
             <article
               key={project.title}
               className={`group relative overflow-hidden bg-slate-200 ${project.className} ${project.height}`}
@@ -84,7 +94,8 @@ export default function ProjectsSection() {
               <img
                 src={project.image}
                 alt={`${project.title} by Tauro Painting`}
-                loading="lazy"
+                loading={prioritizeFirstImage && index === 0 ? "eager" : "lazy"}
+                fetchPriority={prioritizeFirstImage && index === 0 ? "high" : undefined}
                 className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/5 to-transparent" />

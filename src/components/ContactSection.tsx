@@ -108,11 +108,10 @@ setSubmitError("There was a problem sending your request. Please try again.");
               Contact Us
             </span>
             <h2 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
-              Start Your Project
+              Start a Conversation
             </h2>
             <p className="text-slate-600 mb-10 leading-relaxed">
-              We&apos;re here to help transform your home. Contact us by phone,
-              email, or fill out the form and we&apos;ll get back to you within 24 hours.
+              Tell us where your project stands, what finishes are involved, and when you need us on site. We&apos;ll follow up to discuss next steps.
             </p>
 
             <div className="space-y-6">
@@ -185,27 +184,28 @@ setSubmitError("There was a problem sending your request. Please try again.");
           {/* Contact Form */}
           <div className="reveal reveal-slide-left" style={{ transitionDelay: "200ms" }}>
             <div className="bg-white rounded-2xl p-8 lg:p-10 shadow-lg">
-              <h3 className="text-2xl font-bold text-slate-900 mb-2">Request a Quote</h3>
+              <h3 className="text-2xl font-bold text-slate-900 mb-2">Request a Walkthrough</h3>
               <p className="text-slate-600 mb-8">
                 Fill out the form and we&apos;ll contact you soon.
               </p>
 
-              {showQuoteDialog ? (
-  <div className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-slate-700">
+{showQuoteDialog ? (
+  <div role="status" aria-live="polite" className="mb-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-slate-700">
     ✅ Request received successfully. We&apos;ll reach out shortly.
   </div>
 ) : null}
 
 {submitError ? (
-  <div className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
+  <div role="alert" className="mb-6 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700">
     {submitError}
   </div>
 ) : null}
 
               <form className="space-y-5" onSubmit={handleSubmit}>
                 <div style={{ display: "none" }}>
-  <label>Website</label>
+  <label htmlFor="home-contact-website">Website</label>
   <input
+    id="home-contact-website"
     type="text"
     value={website}
     onChange={(e) => setWebsite(e.target.value)}
@@ -215,11 +215,12 @@ setSubmitError("There was a problem sending your request. Please try again.");
 
                 <div className="grid sm:grid-cols-2 gap-5">
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="home-contact-name" className="block text-sm font-medium text-slate-700 mb-2">
                       Name
                     </label>
                     <Input
   name="name"
+  id="home-contact-name"
   value={name}
   onChange={(e) => setName(e.target.value)}
   placeholder="Your name"
@@ -228,11 +229,12 @@ setSubmitError("There was a problem sending your request. Please try again.");
 />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                    <label htmlFor="home-contact-phone" className="block text-sm font-medium text-slate-700 mb-2">
                       Phone
                     </label>
                     <Input
   name="phone"
+  id="home-contact-phone"
   value={phone}
   onChange={(e) => setPhone(e.target.value)}
   placeholder="(801) 000-0000"
@@ -243,11 +245,12 @@ setSubmitError("There was a problem sending your request. Please try again.");
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="home-contact-email" className="block text-sm font-medium text-slate-700 mb-2">
                     Email
                   </label>
                   <Input
   name="email"
+  id="home-contact-email"
   type="email"
   value={email}
   onChange={(e) => setEmail(e.target.value)}
@@ -258,12 +261,13 @@ setSubmitError("There was a problem sending your request. Please try again.");
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="home-contact-project-type" className="block text-sm font-medium text-slate-700 mb-2">
                     Project Type
                   </label>
                   
                   <select
   name="projectType"
+  id="home-contact-project-type"
   value={projectType}
   onChange={(e) => setProjectType(e.target.value)}
   className="w-full h-12 px-4 rounded-lg border border-slate-200 bg-white text-slate-700 focus:outline-none focus:ring-2 focus:ring-amber-500"
@@ -279,12 +283,13 @@ setSubmitError("There was a problem sending your request. Please try again.");
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                  <label htmlFor="home-contact-message" className="block text-sm font-medium text-slate-700 mb-2">
                     Message
                   </label>
                   
                   <Textarea
   name="message"
+  id="home-contact-message"
   value={message}
   onChange={(e) => setMessage(e.target.value)}
   placeholder="Tell us about your project..."
