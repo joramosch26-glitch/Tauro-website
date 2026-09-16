@@ -83,6 +83,19 @@ export default function Contact() {
 
       if (!response.ok) throw new Error("Form submission failed");
 
+      try {
+        const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
+        if (typeof gtag === "function") {
+          gtag("event", "generate_lead", {
+            form_location: "contact_page",
+            project_type: projectType,
+            page_path: window.location.pathname,
+          });
+        }
+      } catch {
+        // Analytics must not affect a successful form submission.
+      }
+
       setShowSuccess(true);
       setLastSubmittedSignature(submissionSignature);
       setLastSubmittedAt(now);

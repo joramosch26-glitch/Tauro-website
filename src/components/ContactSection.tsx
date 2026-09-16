@@ -81,6 +81,19 @@ if (isDuplicateRecentSubmission) {
         throw new Error("Form submission failed");
       }
 
+      try {
+        const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
+        if (typeof gtag === "function") {
+          gtag("event", "generate_lead", {
+            form_location: "home",
+            project_type: projectType,
+            page_path: window.location.pathname,
+          });
+        }
+      } catch {
+        // Analytics must not affect a successful form submission.
+      }
+
       setShowQuoteDialog(true);
 setLastSubmittedSignature(submissionSignature);
 setLastSubmittedAt(now);
