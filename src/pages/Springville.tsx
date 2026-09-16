@@ -1,47 +1,25 @@
+import { ArrowUpRight, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
-import { useEffect } from "react";
+
+const eyebrow = "text-xs font-semibold uppercase tracking-[0.24em]";
+const heading = "text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl";
+const textLink = "inline-flex min-h-11 items-center gap-4 border-b border-current py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors hover:text-[#9a6a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4";
 
 export default function Springville() {
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+  return <div>
+    <section aria-labelledby="springville-heading" className="bg-[#f5f3ee] text-slate-950">
+      <div className="mx-auto max-w-7xl px-6 pb-10 pt-8 lg:px-8 lg:pt-10"><nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500"><Link to="/" className="transition-colors hover:text-slate-950">Home</Link><ChevronRight aria-hidden="true" className="h-3 w-3" /><Link to="/locations" className="transition-colors hover:text-slate-950">Where Tauro works</Link><ChevronRight aria-hidden="true" className="h-3 w-3" /><span aria-current="page" className="text-[#9a6a25]">Springville, Utah</span></nav></div>
+      <div className="mx-auto grid max-w-7xl gap-12 px-6 pb-16 lg:grid-cols-12 lg:items-end lg:gap-16 lg:px-8 lg:pb-24"><div className="lg:col-span-8"><p className={`${eyebrow} mb-7 flex items-center gap-3 text-[#9a6a25]`}><span aria-hidden="true" className="h-px w-8 bg-[#a64036]" />Springville, Utah</p><h1 id="springville-heading" className="max-w-4xl text-5xl font-semibold leading-[0.98] tracking-[-0.05em] sm:text-7xl lg:text-[5.8rem]">Finish work belongs<br />in the plan.</h1></div><div className="lg:col-span-4 lg:pb-1"><p className="text-lg leading-8 text-slate-600">Premium custom-home painting and finishing for Springville projects where preparation, timing, and handoff deserve close attention.</p><Link to="/contact" className={`${textLink} mt-7 text-slate-950`}>Request a walkthrough <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div></div>
+    </section>
 
-  return (
-    <main className="bg-[#f5f3ee] pb-24 pt-32">
-      <div className="mx-auto max-w-5xl px-6">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-[0.28em] text-[#9a6a25]">Areas we serve</p>
-        <h1 className="text-4xl font-semibold tracking-[-0.04em] text-slate-950 lg:text-6xl">
-          House Painters in Springville, UT
-        </h1>
-        <p className="mt-7 max-w-3xl text-lg leading-8 text-slate-600">
-          Tauro Painting provides high-end interior and exterior painting for custom homes, remodels,
-          and premium residential projects in Springville, Utah.
-        </p>
+    <section aria-labelledby="springville-intro-heading" className="bg-white py-20 lg:py-28"><div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8"><figure className="lg:col-span-5"><img src="/tauro/interior-living.webp" alt="Tauro Painting premium interior finish work in a custom home" fetchPriority="high" className="aspect-[4/5] w-full object-cover sm:aspect-[5/4]" /><figcaption className="mt-4 text-[10px] uppercase tracking-[0.18em] text-slate-500">Real Tauro work · interior finish detail</figcaption></figure><div className="lg:col-span-6 lg:col-start-7 lg:self-center"><p className={`${eyebrow} mb-6 text-[#9a6a25]`}>Planned early, finished well</p><h2 id="springville-intro-heading" className={`${heading} text-slate-950`}>The last trade should not be the last thought.</h2><p className="mt-7 leading-8 text-slate-600">In custom homes and premium residential projects, finish work performs best when it is considered before the final rush. Tauro helps align detailed preparation, premium interior and exterior painting, protection, and application with the work of builders and other trades.</p></div></div></section>
 
-        <div className="mt-14 grid gap-10 border-t border-slate-300 pt-10 md:grid-cols-2">
-          <div>
-            <h2 className="text-2xl font-semibold text-slate-950">Interior & exterior painting</h2>
-            <p className="mt-4 leading-7 text-slate-600">
-              Our crews handle walls, ceilings, trim, doors, exterior systems, cabinetry, stain, and
-              architectural woodwork with careful preparation and clean project coordination.
-            </p>
-          </div>
-          <div>
-            <h2 className="text-2xl font-semibold text-slate-950">A process built for custom work</h2>
-            <p className="mt-4 leading-7 text-slate-600">
-              From early priming through final punch, we coordinate the finish sequence around the builder's
-              schedule and correct details before they become expensive problems later in the project.
-            </p>
-          </div>
-        </div>
+    <section aria-labelledby="springville-materials-heading" className="bg-slate-950 py-20 text-white lg:py-28"><div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-12 lg:items-center lg:gap-16 lg:px-8"><div className="lg:col-span-5"><p className={`${eyebrow} mb-6 text-[#c5a374]`}>Surfaces with their own demands</p><h2 id="springville-materials-heading" className={`${heading} text-white`}>Each material asks for the right sequence.</h2><p className="mt-7 leading-8 text-white/70">Cabinetry, stain and clear finishes, doors, trim, and architectural woodwork cannot be treated as a single finish category. We work through the preparation, protection, and finish system each surface requires, then keep the details moving toward a clean final punch.</p><Link to="/services" className={`${textLink} mt-8 text-white`}>Explore finishing services <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div><figure className="lg:col-span-7"><img src="/tauro/woodwork-detail.webp" alt="Tauro Painting architectural woodwork and clear finish detail" loading="lazy" className="aspect-[5/4] w-full object-cover lg:aspect-[16/10]" /></figure></div></section>
 
-        <Link
-          to="/contact"
-          className="mt-12 inline-flex bg-slate-950 px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-amber-500 hover:text-slate-950"
-        >
-          Request a walkthrough
-        </Link>
-      </div>
-    </main>
-  );
+    <section aria-labelledby="springville-sequence-heading" className="bg-[#f5f3ee] py-20 lg:py-28"><div className="mx-auto max-w-7xl px-6 lg:px-8"><div className="grid gap-8 lg:grid-cols-12 lg:items-end"><div className="lg:col-span-7"><p className={`${eyebrow} mb-6 text-[#9a6a25]`}>A sequence that protects the work</p><h2 id="springville-sequence-heading" className={`${heading} max-w-3xl text-slate-950 lg:text-6xl`}>From early prep through final handoff.</h2></div><p className="leading-8 text-slate-600 lg:col-span-4 lg:col-start-9">Clear coordination around builder schedules and the other trades gives finish work the room to be corrected, protected, and completed with care.</p></div><div className="mt-14 grid border-t border-slate-300 md:grid-cols-3">{[["01", "Plan ahead"], ["02", "Protect the progress"], ["03", "Close the punch list"]].map(([number, title]) => <div key={number} className="border-b border-slate-300 py-8 md:border-b-0 md:py-10 md:pr-8 md:[&:not(:last-child)]:border-r md:[&:not(:first-child)]:pl-8"><p className="text-[10px] font-semibold tracking-[0.2em] text-[#9a6a25]">{number}</p><h3 className="mt-5 text-2xl font-semibold tracking-[-0.03em] text-slate-950">{title}</h3></div>)}</div></div></section>
+
+    <section aria-labelledby="springville-work-heading" className="bg-white py-20 lg:py-28"><div className="mx-auto grid max-w-7xl items-center gap-10 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8"><div className="lg:col-span-6"><p className={`${eyebrow} mb-6 text-[#9a6a25]`}>See the finish language</p><h2 id="springville-work-heading" className={`${heading} max-w-2xl text-slate-950`}>Real work, without invented labels.</h2><p className="mt-7 max-w-2xl leading-8 text-slate-600">Explore selected Tauro work across custom-home interiors, exteriors, cabinetry, woodwork, stain, and clear finishes. The portfolio shares real work without attaching unverified Springville project names or locations.</p></div><div className="flex flex-col items-start gap-5 lg:col-span-5 lg:items-end"><Link to="/projects" className="inline-flex min-h-14 items-center justify-center gap-5 bg-slate-950 px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#9a6a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4">View selected work <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link><Link to="/locations" className={`${textLink} text-slate-950`}>Where Tauro works <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div></div></section>
+
+    <section aria-labelledby="springville-cta-heading" className="bg-[#f5f3ee] py-20 lg:py-28"><div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-10 px-6 lg:flex-row lg:items-end lg:px-8"><div><p className={`${eyebrow} mb-5 text-[#9a6a25]`}>Bring us in early</p><h2 id="springville-cta-heading" className={`${heading} max-w-2xl text-slate-950`}>Let&apos;s walk the project before the details start to stack up.</h2></div><Link to="/contact" className="inline-flex min-h-14 w-full items-center justify-center gap-5 bg-slate-950 px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#9a6a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 lg:w-auto">Request a walkthrough <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div></section>
+  </div>;
 }
