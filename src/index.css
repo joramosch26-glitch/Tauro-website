@@ -356,7 +356,6 @@ input:focus, textarea:focus, select:focus {
   opacity: 1;
   transform: none;
   transition: opacity 700ms ease, transform 700ms ease;
-  will-change: opacity, transform;
 }
 
 /* Hidden state ONLY when JS adds .is-animating */

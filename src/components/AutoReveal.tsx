@@ -24,12 +24,23 @@ export default function AutoReveal() {
 
     const AUTO_CLASS = "auto-reveal";
     const VISIBLE_CLASS = "auto-reveal-visible";
-    const TARGET_SELECTOR = [
+    const PAGE_TARGET_SELECTOR = [
       ":scope > section",
       ":scope > article",
       ":scope > div > section",
       ":scope > div > article",
+    ].join(",");
+    const EXPLICIT_TARGET_SELECTOR = [
       "[data-reveal='true']",
+      ".reveal",
+      ".reveal-fade-up",
+      ".reveal-slide-left",
+      ".reveal-slide-right",
+      ".reveal-scale",
+      ".fade-up",
+      ".slide-left",
+      ".slide-right",
+      ".scale",
     ].join(",");
 
     const isEligible = (element: Element) => {
@@ -42,14 +53,7 @@ export default function AutoReveal() {
     };
 
     const pending = new Set<HTMLElement>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) reveal(entry.target as HTMLElement);
-        }
-      },
-      { threshold: 0.08, rootMargin: "0px 0px -8% 0px" },
-    );
+    let scrollFrame = 0;
 
     const reveal = (element: HTMLElement) => {
       element.classList.add(VISIBLE_CLASS);
@@ -57,35 +61,81 @@ export default function AutoReveal() {
       observer.unobserve(element);
     };
 
+    // This also protects against a delayed observer callback without revealing
+    // targets the visitor has not approached yet.
+    const revealApproachingTargets = () => {
+      const revealBoundary = window.innerHeight * 0.96;
+
+      for (const element of [...pending]) {
+        const { top, bottom } = element.getBoundingClientRect();
+        if (top < revealBoundary && bottom > 0) reveal(element);
+      }
+    };
+
+    const scheduleProximityCheck = () => {
+      if (scrollFrame) return;
+      scrollFrame = window.requestAnimationFrame(() => {
+        scrollFrame = 0;
+        revealApproachingTargets();
+      });
+    };
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) reveal(entry.target as HTMLElement);
+        }
+      },
+      { threshold: 0.08, rootMargin: "0px 0px -4% 0px" },
+    );
+
     // One post-render scan per route: no mutation observer and no recursive
     // descendant targeting. This caps work at the handful of page sections.
     const scanFrame = window.requestAnimationFrame(() => {
-      const candidates = Array.from(main.querySelectorAll(TARGET_SELECTOR)).filter(isEligible) as HTMLElement[];
-      const targets = candidates.filter(
-        (element) => !candidates.some((candidate) => candidate !== element && candidate.contains(element)),
-      );
+      const pageTargets = Array.from(main.querySelectorAll(PAGE_TARGET_SELECTOR)).filter(isEligible) as HTMLElement[];
+      const explicitTargets = Array.from(main.querySelectorAll(EXPLICIT_TARGET_SELECTOR)).filter(isEligible) as HTMLElement[];
+      const explicitTargetSet = new Set(explicitTargets);
+      const targets = Array.from(new Set([...pageTargets, ...explicitTargets])).filter((element) => {
+        if (explicitTargetSet.has(element)) {
+          return !explicitTargets.some((target) => target !== element && target.contains(element));
+        }
+
+        // Explicit groups are more intentional than their enclosing section.
+        return !explicitTargets.some((target) => element.contains(target));
+      });
 
       for (const element of targets) {
         const { top } = element.getBoundingClientRect();
 
-        // Keep the hero and content already entering the viewport immediate.
-        if (top < window.innerHeight + 96) continue;
+        // Keep the hero and content already in view immediate.
+        if (top < window.innerHeight) continue;
 
+        const variant = element.dataset.revealVariant;
+        if (variant === "slide-left" || element.classList.contains("reveal-slide-left") || element.classList.contains("slide-left")) {
+          element.classList.add("auto-reveal-slide-left");
+        } else if (variant === "slide-right" || element.classList.contains("reveal-slide-right") || element.classList.contains("slide-right")) {
+          element.classList.add("auto-reveal-slide-right");
+        } else if (variant === "scale" || element.classList.contains("reveal-scale") || element.classList.contains("scale")) {
+          element.classList.add("auto-reveal-scale");
+        } else {
+          element.classList.add("auto-reveal-fade-up");
+        }
         element.classList.add(AUTO_CLASS);
         pending.add(element);
         observer.observe(element);
       }
+
+      revealApproachingTargets();
     });
 
-    // A brief fail-safe: hidden enhancement state can never persist if an
-    // observer callback is delayed after initialization.
-    const fallback = window.setTimeout(() => {
-      for (const element of [...pending]) reveal(element);
-    }, 900);
+    window.addEventListener("scroll", scheduleProximityCheck, { passive: true });
+    window.addEventListener("resize", scheduleProximityCheck);
 
     return () => {
       window.cancelAnimationFrame(scanFrame);
-      window.clearTimeout(fallback);
+      window.cancelAnimationFrame(scrollFrame);
+      window.removeEventListener("scroll", scheduleProximityCheck);
+      window.removeEventListener("resize", scheduleProximityCheck);
       for (const element of pending) element.classList.add(VISIBLE_CLASS);
       observer.disconnect();
     };
@@ -97,8 +147,17 @@ export default function AutoReveal() {
       {`
         .auto-reveal {
           opacity: 0;
-          transform: translate3d(0, 12px, 0);
-          transition: opacity 420ms ease-out, transform 420ms ease-out;
+          transform: translate3d(0, 22px, 0);
+          transition: opacity 650ms cubic-bezier(0.16, 1, 0.3, 1), transform 650ms cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .auto-reveal.auto-reveal-slide-left {
+          transform: translate3d(-22px, 0, 0);
+        }
+        .auto-reveal.auto-reveal-slide-right {
+          transform: translate3d(22px, 0, 0);
+        }
+        .auto-reveal.auto-reveal-scale {
+          transform: scale(0.975);
         }
         .auto-reveal-visible {
           opacity: 1;
