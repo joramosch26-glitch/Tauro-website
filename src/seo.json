@@ -13,7 +13,7 @@
     { "route": "/about", "title": "About Tauro Painting | Utah County", "description": "Learn about Tauro Painting—craftsmanship, premium materials, and a refined process built for premium finishes across Utah County.", "canonical": "https://www.tauropainting.com/about" },
     { "route": "/contact", "title": "Request a Walkthrough | Tauro Painting", "description": "Tell Tauro Painting where your project stands, what finishes are involved, and when you need us on site. Start a custom-home project conversation.", "canonical": "https://www.tauropainting.com/contact" },
     { "route": "/locations", "title": "Custom Home Painting Service Areas in Utah | Tauro Painting", "description": "Explore Tauro Painting's premium Utah markets, including Midway and Park City / Deer Valley, plus custom-home finishing coverage across Utah County.", "canonical": "https://www.tauropainting.com/locations" },
-    { "route": "/locations/orem", "title": "House Painters in Orem, UT | Tauro Painting", "description": "Tauro Painting provides professional interior and exterior house painting in Orem, Utah. Reliable painters, clean finishes, and free estimates.", "canonical": "https://www.tauropainting.com/locations/orem" },
+    { "route": "/locations/orem", "title": "Custom Home Painting & Finishing in Orem, UT | Tauro Painting", "description": "Orem-based Tauro Painting delivers custom-home painting, cabinetry, stain, wood finishes, and detailed interior and exterior finishing across Utah County.", "canonical": "https://www.tauropainting.com/locations/orem" },
     { "route": "/locations/provo", "title": "House Painters in Provo, UT | Tauro Painting", "description": "Professional house painters in Provo, Utah. Interior and exterior painting with premium finishes and reliable scheduling.", "canonical": "https://www.tauropainting.com/locations/provo" },
     { "route": "/locations/alpine", "title": "House Painters in Alpine, UT | Tauro Painting", "description": "Interior and exterior house painters serving Alpine, Utah. Premium finishes and reliable painting services by Tauro Painting.", "canonical": "https://www.tauropainting.com/locations/alpine" },
     { "route": "/locations/highland", "title": "House Painters in Highland, UT | Tauro Painting", "description": "Tauro Painting offers interior and exterior painting services in Highland, Utah. Professional results and detailed prep work.", "canonical": "https://www.tauropainting.com/locations/highland" },
@@ -56,6 +56,11 @@
     "sameAs": ["https://www.instagram.com/tauropainting", "https://www.facebook.com/tauropainting"]
   },
   "pageSchemas": {
+    "/locations/orem": [
+      { "name": "Home", "item": "https://www.tauropainting.com/" },
+      { "name": "Where Tauro Works", "item": "https://www.tauropainting.com/locations" },
+      { "name": "Orem, Utah", "item": "https://www.tauropainting.com/locations/orem" }
+    ],
     "/locations/midway": [
       { "name": "Home", "item": "https://www.tauropainting.com/" },
       { "name": "Where Tauro Works", "item": "https://www.tauropainting.com/locations" },
