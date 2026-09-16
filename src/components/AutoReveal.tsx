@@ -195,7 +195,7 @@ export default function AutoReveal() {
           transform: translate3d(0, 0, 0);
         }
         .auto-reveal-motion-ready .auto-reveal {
-          transition: opacity 950ms cubic-bezier(0.16, 1, 0.3, 1), transform 950ms cubic-bezier(0.16, 1, 0.3, 1);
+          transition: opacity 1100ms cubic-bezier(0.16, 1, 0.3, 1), transform 1100ms cubic-bezier(0.16, 1, 0.3, 1);
         }
         @media (prefers-reduced-motion: reduce) {
           .auto-reveal, .auto-reveal-visible {
