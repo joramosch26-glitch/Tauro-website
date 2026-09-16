@@ -37,7 +37,7 @@
   },
   "business": {
     "@context": "https://schema.org",
-    "@type": ["HousePainter", "LocalBusiness"],
+    "@type": ["HousePainter", "Organization"],
     "@id": "https://www.tauropainting.com/#business",
     "name": "Tauro Painting",
     "url": "https://www.tauropainting.com/",
@@ -45,7 +45,6 @@
     "logo": "https://www.tauropainting.com/tauro/logo-tauro.png",
     "telephone": "+18019289520",
     "email": "tauropaintingutah@gmail.com",
-    "address": { "@type": "PostalAddress", "streetAddress": "1144 N Main St", "addressLocality": "Orem", "addressRegion": "UT", "postalCode": "84057", "addressCountry": "US" },
     "openingHoursSpecification": [
       { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "opens": "08:00", "closes": "18:00" },
       { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "14:00" }

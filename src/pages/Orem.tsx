@@ -24,7 +24,7 @@ export default function Orem() {
             <h1 id="orem-heading" className="max-w-4xl text-5xl font-semibold leading-[0.98] tracking-[-0.05em] sm:text-7xl lg:text-[5.8rem]">A clear standard,<br />close to home.</h1>
           </div>
           <div className="lg:col-span-4 lg:pb-1">
-            <p className="text-lg leading-8 text-slate-600">Tauro Painting is based in Orem, serving custom-home builders, designers, and homeowners across Utah County with premium finishing systems.</p>
+            <p className="text-lg leading-8 text-slate-600">Serving Orem and Utah County, Tauro works with custom-home builders, designers, and homeowners on premium finishing systems.</p>
             <Link to="/contact" className={`${textLink} mt-7 text-slate-950`}>Request a walkthrough <ArrowUpRight aria-hidden="true" className="h-4 w-4 shrink-0" /></Link>
           </div>
         </div>
@@ -39,11 +39,10 @@ export default function Orem() {
 
       <section aria-labelledby="orem-base-heading" className="bg-white py-20 lg:py-28">
         <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8">
-          <p className={`${eyebrow} text-[#9a6a25] lg:col-span-3`}>Orem business base</p>
+          <p className={`${eyebrow} text-[#9a6a25] lg:col-span-3`}>Serving Orem &amp; Utah County</p>
           <div className="lg:col-span-8 lg:col-start-5">
             <h2 id="orem-base-heading" className={`${heading} max-w-3xl text-slate-950`}>The right finish starts with a shared understanding.</h2>
-            <p className="mt-7 max-w-3xl text-lg leading-8 text-slate-600">From our Orem business base, Tauro helps bring clarity to the finish work in demanding custom homes: what needs preparation, when each system belongs in the sequence, and how the completed surfaces should come together at final punch.</p>
-            <p className="mt-6 text-sm leading-7 text-slate-500">Tauro Painting · 1144 N Main St, Orem, UT 84057</p>
+            <p className="mt-7 max-w-3xl text-lg leading-8 text-slate-600">Serving Orem and Utah County, Tauro helps bring clarity to the finish work in demanding custom homes: what needs preparation, when each system belongs in the sequence, and how the completed surfaces should come together at final punch.</p>
           </div>
         </div>
       </section>

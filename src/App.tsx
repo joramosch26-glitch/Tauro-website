@@ -38,7 +38,6 @@ import AutoReveal from "./components/AutoReveal";
 import {
   Phone,
   Mail,
-  MapPin,
   Instagram,
   Facebook,
   Menu,
@@ -127,10 +126,10 @@ function App() {
     upsertMeta('meta[name="twitter:description"]', "name", "twitter:description", data.description);
     upsertMeta('meta[name="twitter:image"]', "name", "twitter:image", seo.socialImage.url);
 
-    let businessScript = document.getElementById("ld-json-localbusiness") as HTMLScriptElement | null;
+    let businessScript = document.getElementById("ld-json-business") as HTMLScriptElement | null;
     if (!businessScript) {
       businessScript = document.createElement("script");
-      businessScript.id = "ld-json-localbusiness";
+      businessScript.id = "ld-json-business";
       businessScript.type = "application/ld+json";
       document.head.appendChild(businessScript);
     }
@@ -462,14 +461,6 @@ function App() {
                   >
                     tauropaintingutah@gmail.com
                   </a>
-                </li>
-                <li className="flex items-start gap-2">
-                  <MapPin className="w-4 h-4 text-amber-500 mt-1" />
-                  <span>
-                    1144 N Main St
-                    <br />
-                    Orem, UT 84057
-                  </span>
                 </li>
               </ul>
             </div>

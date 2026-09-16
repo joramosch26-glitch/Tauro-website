@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 const contactDetails = [
   { label: "Phone", value: "(801) 928-9520", href: "tel:8019289520" },
   { label: "Email", value: "tauropaintingutah@gmail.com", href: "mailto:tauropaintingutah@gmail.com" },
-  { label: "Studio", value: "1144 N Main St, Orem, UT 84057" },
+  { label: "Service area", value: "Orem, Utah County & surrounding communities" },
   { label: "Hours", value: "Mon–Fri: 8AM–6PM · Sat: 9AM–2PM" },
 ];
 

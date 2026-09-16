@@ -5,7 +5,7 @@ const eyebrow = "text-xs font-semibold uppercase tracking-[0.24em]";
 const textLink = "inline-flex min-h-11 items-center gap-4 border-b border-current py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors hover:text-[#9a6a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4";
 
 const coverage = [
-  "Orem · Tauro's business base", "Alpine & Highland", "American Fork & Pleasant Grove", "Cedar Hills & Lehi",
+  "Orem & Utah County", "Alpine & Highland", "American Fork & Pleasant Grove", "Cedar Hills & Lehi",
   "Mapleton & Springville", "Provo & Utah County", "Woodland Hills & Elk Ridge", "Heber Valley & surrounding communities",
 ];
 
@@ -47,7 +47,7 @@ export default function Locations() {
       </section>
 
       <section aria-labelledby="base-heading" className="bg-white py-20 lg:py-28">
-        <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8"><div className="lg:col-span-5"><p className={`${eyebrow} mb-6 text-[#9a6a25]`}>Orem, Utah</p><h2 id="base-heading" className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 sm:text-5xl">Our business base. A broader reach.</h2></div><div className="lg:col-span-6 lg:col-start-7"><p className="text-lg leading-8 text-slate-600">Tauro is based in Orem and works throughout Utah County, coordinating with custom-home builders, designers, and homeowners on premium interior and exterior finishing. The goal is consistent work across the surfaces that define a home: walls, millwork, cabinetry, stain, wood finishes, and exterior details.</p><Link to="/contact" className={`${textLink} mt-8 text-slate-950`}>Request a walkthrough <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div></div>
+        <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8"><div className="lg:col-span-5"><p className={`${eyebrow} mb-6 text-[#9a6a25]`}>Orem, Utah</p><h2 id="base-heading" className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 sm:text-5xl">Serving Orem. A broader reach.</h2></div><div className="lg:col-span-6 lg:col-start-7"><p className="text-lg leading-8 text-slate-600">Tauro serves Orem and works throughout Utah County, coordinating with custom-home builders, designers, and homeowners on premium interior and exterior finishing. The goal is consistent work across the surfaces that define a home: walls, millwork, cabinetry, stain, wood finishes, and exterior details.</p><Link to="/contact" className={`${textLink} mt-8 text-slate-950`}>Request a walkthrough <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div></div>
       </section>
 
       <section aria-labelledby="coverage-heading" className="bg-slate-950 py-20 text-white lg:py-28">

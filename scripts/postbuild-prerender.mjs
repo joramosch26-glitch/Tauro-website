@@ -26,7 +26,7 @@ function removeExistingSeo(html) {
     .replace(/<link\s+rel="canonical"[^>]*>\s*/gi, "")
     .replace(/<meta\s+property="og:[^"]+"[^>]*>\s*/gi, "")
     .replace(/<meta\s+name="twitter:[^"]+"[^>]*>\s*/gi, "")
-    .replace(/<script\s+id="ld-json-localbusiness"[^>]*>.*?<\/script>\s*/gis, "")
+    .replace(/<script\s+id="ld-json-business"[^>]*>.*?<\/script>\s*/gis, "")
     .replace(/<script\s+id="ld-json-page"[^>]*>.*?<\/script>\s*/gis, "");
 }
 
@@ -67,7 +67,7 @@ function buildPageSchema(meta) {
 function injectSeoHead(html, meta) {
   const cleanHtml = removeExistingSeo(html);
   const robots = meta.robots ?? "index,follow";
-  const businessSchema = `<script id="ld-json-localbusiness" type="application/ld+json">${JSON.stringify(seo.business).replace(/</g, "\\u003c")}</script>`;
+  const businessSchema = `<script id="ld-json-business" type="application/ld+json">${JSON.stringify(seo.business).replace(/</g, "\\u003c")}</script>`;
   const pageSchema = buildPageSchema(meta);
   const seoBlock = `
     <title>${escapeAttr(meta.title)}</title>

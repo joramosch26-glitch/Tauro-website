@@ -131,8 +131,8 @@ setSubmitError("There was a problem sending your request. Please try again.");
                 },
                 {
                   icon: <MapPin className="w-5 h-5" />,
-                  label: "Address",
-                  value: "1144 N Main St, Orem, UT 84057",
+                  label: "Service area",
+                  value: "Orem, Utah County & surrounding communities",
                   href: "#",
                 },
                 {
