@@ -1,55 +1,24 @@
-import { useEffect } from "react";
+import { ArrowUpRight, ChevronRight } from "lucide-react";
+import { Link } from "react-router-dom";
+
+const eyebrow = "text-xs font-semibold uppercase tracking-[0.24em]";
+const heading = "text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl";
+const textLink = "inline-flex min-h-11 items-center gap-4 border-b border-current py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors hover:text-[#9a6a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4";
 
 export default function AmericanFork() {
-  useEffect(() => {
-    window.scrollTo(0, 0);
-  }, []);
+  return <div>
+    <section aria-labelledby="american-fork-heading" className="bg-white text-slate-950"><div className="mx-auto max-w-7xl px-6 pb-10 pt-8 lg:px-8 lg:pt-10"><nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500"><Link to="/" className="transition-colors hover:text-slate-950">Home</Link><ChevronRight aria-hidden="true" className="h-3 w-3" /><Link to="/locations" className="transition-colors hover:text-slate-950">Where Tauro works</Link><ChevronRight aria-hidden="true" className="h-3 w-3" /><span aria-current="page" className="text-[#9a6a25]">American Fork, Utah</span></nav></div><div className="mx-auto grid max-w-7xl gap-12 px-6 pb-16 lg:grid-cols-12 lg:items-end lg:gap-16 lg:px-8 lg:pb-24"><div className="lg:col-span-7"><p className={`${eyebrow} mb-7 flex items-center gap-3 text-[#9a6a25]`}><span aria-hidden="true" className="h-px w-8 bg-[#a64036]" />American Fork, Utah</p><h1 id="american-fork-heading" className="max-w-4xl text-5xl font-semibold leading-[0.98] tracking-[-0.05em] sm:text-7xl lg:text-[5.8rem]">Where finishes<br />meet, standards show.</h1></div><div className="lg:col-span-4 lg:col-start-9 lg:pb-1"><p className="text-lg leading-8 text-slate-600">Exterior painting and custom-home finishing for American Fork projects where every transition deserves a closer look.</p><Link to="/contact" className={`${textLink} mt-7 text-slate-950`}>Request a walkthrough <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div></div></section>
 
-  return (
-    <main className="pt-28 pb-20 bg-slate-50">
-      <div className="max-w-5xl mx-auto px-6">
-        
-        <h1 className="text-4xl lg:text-5xl font-bold text-slate-900 mb-6">
-          House Painters in American Fork, UT
-        </h1>
+    <section aria-labelledby="american-fork-image-heading" className="bg-slate-950 text-white"><figure className="mx-auto max-w-[1600px]"><img src="/tauro/entry-door.webp" alt="Tauro Painting stained door and clear finish detail" fetchPriority="high" className="h-[360px] w-full object-cover sm:h-[500px] lg:h-[640px]" /><figcaption id="american-fork-image-heading" className="px-6 py-5 text-[10px] uppercase tracking-[0.2em] text-white/60 lg:px-8">Real Tauro work · door and finish transition detail</figcaption></figure></section>
 
-        <p className="text-lg text-slate-600 mb-8 leading-relaxed">
-          Tauro Painting provides premium interior and exterior house painting
-          services in American Fork, Utah. From detailed preparation to flawless
-          finishes, we deliver long-lasting results with clean execution and
-          professional standards.
-        </p>
+    <section aria-labelledby="american-fork-transitions-heading" className="bg-[#f5f3ee] py-20 lg:py-28"><div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8"><p className={`${eyebrow} text-[#9a6a25] lg:col-span-3`}>Details at the transitions</p><div className="lg:col-span-8 lg:col-start-5"><h2 id="american-fork-transitions-heading" className={`${heading} max-w-3xl text-slate-950`}>Finish quality is often visible where one surface meets another.</h2><p className="mt-7 max-w-3xl text-lg leading-8 text-slate-600">Exterior materials, doors, trim, millwork, cabinetry, and architectural woodwork all create transitions that need thoughtful preparation and protection. That attention is what gives premium exterior painting and interior finishes a more resolved result.</p></div></div></section>
 
-        <h2 className="text-2xl font-semibold text-slate-900 mb-4">
-          Interior & Exterior Painting in American Fork
-        </h2>
+    <section aria-labelledby="american-fork-systems-heading" className="bg-white py-20 lg:py-28"><div className="mx-auto grid max-w-7xl items-center gap-10 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8"><figure className="lg:col-span-7"><img src="/tauro/exterior-custom-home.webp" alt="Tauro Painting exterior finish work on a custom home" loading="lazy" className="aspect-[5/4] w-full object-cover" /><figcaption className="mt-4 text-[10px] uppercase tracking-[0.18em] text-slate-500">Custom-home exterior finish work</figcaption></figure><div className="lg:col-span-5"><p className={`${eyebrow} mb-6 text-[#9a6a25]`}>Exterior systems, protected</p><h2 id="american-fork-systems-heading" className={`${heading} text-slate-950`}>Exterior painting is part of the larger finish system.</h2><p className="mt-7 leading-8 text-slate-600">For American Fork exterior painters, the work is not only about coverage. Tauro coordinates detailed preparation, masking, protection of adjacent completed surfaces, and durable exterior finish systems alongside premium interior painting, cabinetry, stain, and clear finishes.</p><Link to="/services" className={`${textLink} mt-8 text-slate-950`}>Explore finishing services <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div></div></section>
 
-        <p className="text-slate-600 mb-6 leading-relaxed">
-          Whether you're updating a modern home near UVU or refreshing a
-          classic property in central American Fork, our team handles every project
-          with precision, protection, and attention to detail.
-        </p>
+    <section aria-labelledby="american-fork-detailing-heading" className="bg-slate-950 py-20 text-white lg:py-28"><div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-12 lg:items-center lg:gap-16 lg:px-8"><div className="lg:col-span-5"><p className={`${eyebrow} mb-6 text-[#c5a374]`}>Coordination through the details</p><h2 id="american-fork-detailing-heading" className={`${heading} text-white`}>Protect the surfaces. Close the details.</h2><p className="mt-7 leading-8 text-white/70">Working with builders and designers, we sequence the finish work around other trades, protect completed materials, and return for final detailing when the project is ready. That discipline keeps the handoff as considered as the first pass.</p><Link to="/contact" className={`${textLink} mt-8 text-white`}>Start a project conversation <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div><figure className="lg:col-span-7"><img src="/tauro/stair-detail.webp" alt="Tauro Painting detailed interior trim and stair finish work" loading="lazy" className="aspect-[5/4] w-full object-cover lg:aspect-[16/10]" /></figure></div></section>
 
-        <h2 className="text-2xl font-semibold text-slate-900 mb-4">
-          Why Homeowners in American Fork Choose Tauro Painting
-        </h2>
+    <section aria-labelledby="american-fork-work-heading" className="bg-[#f5f3ee] py-20 lg:py-28"><div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-12 lg:items-end lg:gap-16 lg:px-8"><div className="lg:col-span-7"><p className={`${eyebrow} mb-6 text-[#9a6a25]`}>See the finish language</p><h2 id="american-fork-work-heading" className={`${heading} max-w-2xl text-slate-950`}>The work speaks without borrowed claims.</h2><p className="mt-7 max-w-2xl leading-8 text-slate-600">Explore selected Tauro work across exteriors, interiors, cabinetry, architectural woodwork, stain, and clear finishes. Each image is presented as real Tauro work without attaching unverified American Fork project names or locations.</p></div><div className="flex flex-col items-start gap-5 lg:col-span-5 lg:items-end"><Link to="/projects" className="inline-flex min-h-14 items-center justify-center gap-5 bg-slate-950 px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#9a6a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4">View selected work <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link><Link to="/locations" className={`${textLink} text-slate-950`}>Where Tauro works <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div></div></section>
 
-        <ul className="list-disc pl-6 text-slate-600 space-y-2 mb-10">
-          <li>Meticulous surface preparation</li>
-          <li>Premium materials and finishes</li>
-          <li>Clean, organized job sites</li>
-          <li>Clear communication and timelines</li>
-          <li>Free detailed estimates</li>
-        </ul>
-
-        <a
-          href="/contact"
-          className="inline-block bg-amber-500 hover:bg-amber-600 text-slate-900 font-semibold px-8 py-3 rounded-lg transition"
-        >
-          Request a Free Estimate
-        </a>
-
-      </div>
-    </main>
-  );
+    <section aria-labelledby="american-fork-cta-heading" className="bg-white py-20 lg:py-28"><div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-10 px-6 lg:flex-row lg:items-end lg:px-8"><div><p className={`${eyebrow} mb-5 text-[#9a6a25]`}>Start with a closer look</p><h2 id="american-fork-cta-heading" className={`${heading} max-w-2xl text-slate-950`}>Let&apos;s walk the project before the final details become the hard part.</h2></div><Link to="/contact" className="inline-flex min-h-14 w-full items-center justify-center gap-5 bg-slate-950 px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#9a6a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 lg:w-auto">Request a walkthrough <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div></section>
+  </div>;
 }

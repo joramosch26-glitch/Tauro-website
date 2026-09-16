@@ -19,7 +19,7 @@
     { "route": "/locations/highland", "title": "House Painters in Highland, UT | Tauro Painting", "description": "Tauro Painting offers interior and exterior painting services in Highland, Utah. Professional results and detailed prep work.", "canonical": "https://www.tauropainting.com/locations/highland" },
     { "route": "/locations/mapleton", "title": "House Painters in Mapleton, UT | Tauro Painting", "description": "Experienced house painters serving Mapleton, Utah. Interior and exterior painting with careful preparation and premium materials.", "canonical": "https://www.tauropainting.com/locations/mapleton" },
     { "route": "/locations/lehi", "title": "House Painters in Lehi, UT | Tauro Painting", "description": "Reliable interior and exterior house painters in Lehi, Utah. Tauro Painting delivers clean finishes and dependable service.", "canonical": "https://www.tauropainting.com/locations/lehi" },
-    { "route": "/locations/american-fork", "title": "House Painters in American Fork, UT | Tauro Painting", "description": "Interior and exterior painting services in American Fork, Utah. Tauro Painting provides premium residential painting.", "canonical": "https://www.tauropainting.com/locations/american-fork" },
+    { "route": "/locations/american-fork", "title": "Exterior Painting & Custom Home Finishing in American Fork, UT | Tauro Painting", "description": "Exterior painting, premium interior finishes, cabinetry, stain, clear finishes, and architectural woodwork for custom homes in American Fork, Utah.", "canonical": "https://www.tauropainting.com/locations/american-fork" },
     { "route": "/locations/pleasant-grove", "title": "House Painters in Pleasant Grove, UT | Tauro Painting", "description": "Professional house painters serving Pleasant Grove, Utah. Interior and exterior painting with reliable scheduling.", "canonical": "https://www.tauropainting.com/locations/pleasant-grove" },
     { "route": "/locations/springville", "title": "Custom Home Painting & Finishing in Springville, UT | Tauro Painting", "description": "Premium interior and exterior painting, cabinetry, stain, clear finishes, and architectural woodwork for custom homes in Springville, Utah.", "canonical": "https://www.tauropainting.com/locations/springville" },
     { "route": "/locations/cedar-hills", "title": "House Painters in Cedar Hills, UT | Tauro Painting", "description": "Professional interior and exterior house painters serving Cedar Hills, Utah. Tauro Painting delivers premium finishes, detailed prep, and reliable service.", "canonical": "https://www.tauropainting.com/locations/cedar-hills" },
@@ -64,6 +64,11 @@
       { "name": "Home", "item": "https://www.tauropainting.com/" },
       { "name": "Where Tauro Works", "item": "https://www.tauropainting.com/locations" },
       { "name": "Provo, Utah", "item": "https://www.tauropainting.com/locations/provo" }
+    ],
+    "/locations/american-fork": [
+      { "name": "Home", "item": "https://www.tauropainting.com/" },
+      { "name": "Where Tauro Works", "item": "https://www.tauropainting.com/locations" },
+      { "name": "American Fork, Utah", "item": "https://www.tauropainting.com/locations/american-fork" }
     ],
     "/locations/springville": [
       { "name": "Home", "item": "https://www.tauropainting.com/" },
