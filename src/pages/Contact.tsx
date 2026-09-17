@@ -286,7 +286,7 @@ export default function Contact() {
       <section aria-labelledby="next-step-heading" className="bg-white py-20 lg:py-28">
         <div className="mx-auto grid max-w-7xl items-center gap-10 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8">
           <figure className="lg:col-span-7">
-            <img src="/tauro/interior-open-plan.webp" alt="Finished custom home interior by Tauro Painting" loading="lazy" className="aspect-[6/5] w-full object-cover" />
+            <img src="/tauro/bedroom-finish.webp" alt="Finished custom home bedroom interior by Tauro Painting" loading="lazy" className="aspect-[6/5] w-full object-cover" />
           </figure>
           <div className="lg:col-span-5">
             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#9a6a25]">What comes next</p>

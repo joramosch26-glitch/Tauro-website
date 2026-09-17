@@ -38,9 +38,10 @@ const projects = [
     height: "min-h-[430px]",
   },
   {
-    image: "/tauro/interior-great-room.webp",
+    image: "/tauro/bunk-room.jpg",
     title: "Refined Interior",
     detail: "Walls · Trim · Architectural details",
+    alt: "Custom built-in bunk room with painted architectural millwork",
     className: "lg:col-span-4",
     height: "min-h-[430px]",
   },
@@ -93,7 +94,7 @@ export default function ProjectsSection({
             >
               <img
                 src={project.image}
-                alt={`${project.title} by Tauro Painting`}
+                alt={project.alt ?? `${project.title} by Tauro Painting`}
                 loading={prioritizeFirstImage && index === 0 ? "eager" : "lazy"}
                 fetchPriority={prioritizeFirstImage && index === 0 ? "high" : undefined}
                 className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.025]"

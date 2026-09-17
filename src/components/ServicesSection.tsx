@@ -15,8 +15,8 @@ const services = [
     title: "Cabinetry & Fine Finishes",
     description:
       "Factory-smooth enamel, stained wood, clear coats, and detailed millwork finishes built around the design intent.",
-    image: "/tauro/office-woodwork.webp",
-    alt: "Custom woodwork and millwork finish by Tauro Painting",
+    image: "/tauro/cabinetry.webp",
+    alt: "Custom cabinetry and millwork finish by Tauro Painting",
   },
   {
     eyebrow: "03 · Exterior",
