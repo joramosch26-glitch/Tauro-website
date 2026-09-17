@@ -36,13 +36,13 @@ export default function ProcessSection() {
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-4 py-2 text-xs tracking-[0.22em] uppercase text-slate-700">
               Our Process
-              <span className="h-1 w-1 rounded-full bg-amber-500" />
+              <span className="h-1 w-1 rounded-full bg-[#9a6a25]" />
               What to expect
             </div>
 
             <h2 className="mt-6 text-4xl lg:text-5xl font-bold text-slate-900 leading-[1.05]">
               A controlled process.
-              <span className="block text-amber-700">A finish you can trust.</span>
+              <span className="block text-[#9a6a25]">A finish you can trust.</span>
             </h2>
 
             <p className="mt-5 text-lg text-slate-600 leading-relaxed">
@@ -80,13 +80,13 @@ export default function ProcessSection() {
 
               {/* Soft overlays for premium look */}
               <div className="absolute inset-0 bg-gradient-to-t from-slate-950/60 via-slate-950/15 to-transparent" />
-              <div className="absolute inset-0 bg-[radial-gradient(900px_400px_at_20%_20%,rgba(245,158,11,0.18),transparent_60%)]" />
+              <div className="absolute inset-0 bg-[radial-gradient(900px_400px_at_20%_20%,rgba(154,106,37,0.18),transparent_60%)]" />
 
               {/* Caption */}
               <div className="absolute bottom-0 left-0 right-0 p-7">
                 <div className="inline-flex items-center gap-2 rounded-full bg-white/10 backdrop-blur-md border border-white/15 px-4 py-2 text-xs tracking-[0.22em] uppercase text-white/80">
                   Built on discipline
-                  <span className="h-1 w-1 rounded-full bg-amber-400" />
+                  <span className="h-1 w-1 rounded-full bg-[#c5a374]" />
                   Finished with precision
                 </div>
 
@@ -110,8 +110,8 @@ export default function ProcessSection() {
                       className="group rounded-2xl border border-slate-200 bg-slate-50/40 p-6 hover:bg-white hover:shadow-sm transition-all"
                     >
                       <div className="flex items-start gap-4">
-                        <div className="h-11 w-11 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                          <Icon className="h-5 w-5 text-amber-600" />
+                        <div className="h-11 w-11 rounded-2xl bg-[#9a6a25]/10 border border-[#9a6a25]/20 flex items-center justify-center">
+                          <Icon className="h-5 w-5 text-[#9a6a25]" />
                         </div>
 
                         <div className="flex-1">
@@ -141,8 +141,8 @@ export default function ProcessSection() {
       Clean work. Clear communication. Zero shortcuts.
     </p>
 
-    <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-      <span className="h-2 w-2 rounded-full bg-amber-500" />
+    <div className="inline-flex items-center gap-2 rounded-full border border-[#c5a374]/55 bg-[#f5f3ee] px-4 py-2 text-sm text-[#9a6a25]">
+      <span className="h-2 w-2 rounded-full bg-[#9a6a25]" />
       Quality is non-negotiable
     </div>
   </div>

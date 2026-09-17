@@ -40,7 +40,7 @@ export default function HeroSection() {
             <div className="mt-9 flex flex-col gap-3 sm:flex-row">
               <Link
                 to="/contact"
-                className="inline-flex items-center justify-center gap-2 bg-white px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-slate-950 transition hover:bg-amber-400"
+                className="inline-flex items-center justify-center gap-2 bg-white px-7 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-slate-950 transition hover:bg-[#c5a374]"
               >
                 Request a walkthrough
                 <ArrowRight className="h-4 w-4" />

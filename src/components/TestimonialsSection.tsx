@@ -30,7 +30,7 @@ export default function TestimonialsSection() {
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16">
-          <span className="inline-flex items-center gap-2 text-amber-600 font-semibold text-sm uppercase tracking-wider mb-4">
+          <span className="inline-flex items-center gap-2 text-[#9a6a25] font-semibold text-sm uppercase tracking-wider mb-4">
             <Quote className="w-4 h-4" />
             Testimonials
           </span>
@@ -51,7 +51,7 @@ export default function TestimonialsSection() {
               style={{ transitionDelay: `${index * 100 + 200}ms` }}
             >
               {/* Quote Icon */}
-              <div className="absolute -top-4 left-8 w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center">
+              <div className="absolute -top-4 left-8 w-8 h-8 bg-[#9a6a25] rounded-full flex items-center justify-center">
                 <Quote className="w-4 h-4 text-slate-900" />
               </div>
 
@@ -60,7 +60,7 @@ export default function TestimonialsSection() {
                 {[...Array(testimonial.rating)].map((_, i) => (
                   <Star
                     key={i}
-                    className="w-5 h-5 text-amber-400 fill-amber-400"
+                    className="w-5 h-5 text-[#c5a374] fill-[#c5a374]"
                   />
                 ))}
               </div>
@@ -71,7 +71,7 @@ export default function TestimonialsSection() {
               </p>
 
               {/* Project Tag */}
-              <div className="inline-block px-3 py-1 bg-amber-100 rounded-full text-xs font-medium text-amber-700 mb-6">
+              <div className="inline-block px-3 py-1 bg-[#f5f3ee] rounded-full text-xs font-medium text-[#9a6a25] mb-6">
                 {testimonial.project}
               </div>
 

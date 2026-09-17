@@ -10,7 +10,7 @@
     --card-foreground: 222 47% 11%;
     --popover: 0 0% 100%;
     --popover-foreground: 222 47% 11%;
-    --primary: 43 96% 56%;
+    --primary: 35 61% 38%;
     --primary-foreground: 222 47% 11%;
     --secondary: 210 40% 96%;
     --secondary-foreground: 222 47% 11%;
@@ -22,7 +22,7 @@
     --destructive-foreground: 0 0% 100%;
     --border: 214 32% 91%;
     --input: 214 32% 91%;
-    --ring: 43 96% 56%;
+    --ring: 35 61% 38%;
     --radius: 0.625rem;
   }
 
@@ -33,7 +33,7 @@
     --card-foreground: 210 40% 98%;
     --popover: 222 47% 11%;
     --popover-foreground: 210 40% 98%;
-    --primary: 43 96% 56%;
+    --primary: 35 61% 38%;
     --primary-foreground: 222 47% 11%;
     --secondary: 217 33% 17%;
     --secondary-foreground: 210 40% 98%;
@@ -45,7 +45,7 @@
     --destructive-foreground: 210 40% 98%;
     --border: 217 33% 17%;
     --input: 217 33% 17%;
-    --ring: 43 96% 56%;
+    --ring: 35 61% 38%;
   }
 }
 
@@ -107,7 +107,7 @@
 
 /* Gradient text */
 .gradient-text {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #9a6a25 0%, #c5a374 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -150,7 +150,7 @@
   content: '';
   position: absolute;
   inset: -2px;
-  background: linear-gradient(135deg, #f59e0b, #d97706, #f59e0b);
+  background: linear-gradient(135deg, #9a6a25, #c5a374, #9a6a25);
   border-radius: inherit;
   opacity: 0;
   transition: opacity 0.3s ease;
@@ -173,7 +173,7 @@
   left: 0;
   width: 0;
   height: 2px;
-  background: #f59e0b;
+  background: #9a6a25;
   transition: width 0.3s ease;
 }
 
@@ -184,23 +184,23 @@
 /* Focus styles */
 input:focus, textarea:focus, select:focus {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.2);
-  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(154, 106, 37, 0.2);
+  border-color: #9a6a25;
 }
 
 /* Selection color */
 ::selection {
-  background: rgba(245, 158, 11, 0.3);
+  background: rgba(154, 106, 37, 0.3);
   color: inherit;
 }
 
 /* Loading animation */
 @keyframes pulse-glow {
   0%, 100% {
-    box-shadow: 0 0 0 0 rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 0 0 rgba(154, 106, 37, 0.4);
   }
   50% {
-    box-shadow: 0 0 20px 10px rgba(245, 158, 11, 0);
+    box-shadow: 0 0 20px 10px rgba(154, 106, 37, 0);
   }
 }
 

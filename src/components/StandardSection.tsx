@@ -23,7 +23,7 @@ export default function StandardSection() {
 
         <div className="flex items-center px-6 py-20 sm:px-10 lg:px-16 xl:px-24">
           <div className="max-w-2xl">
-            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.3em] text-amber-400">The Tauro standard</p>
+            <p className="mb-5 text-xs font-semibold uppercase tracking-[0.3em] text-[#c5a374]">The Tauro standard</p>
             <h2 className="text-4xl font-semibold leading-[1.04] tracking-[-0.04em] sm:text-5xl lg:text-6xl">
               Prep is not a phase we rush through.
             </h2>
@@ -35,8 +35,8 @@ export default function StandardSection() {
             <div className="mt-10 space-y-5 border-t border-white/15 pt-8">
               {standards.map((item) => (
                 <div key={item} className="flex gap-4">
-                  <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-amber-400/45 bg-amber-400/10">
-                    <Check className="h-3.5 w-3.5 text-amber-300" />
+                  <div className="mt-1 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-[#c5a374]/45 bg-[#c5a374]/10">
+                    <Check className="h-3.5 w-3.5 text-[#c5a374]" />
                   </div>
                   <p className="leading-7 text-white/[0.76]">{item}</p>
                 </div>

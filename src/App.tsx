@@ -278,8 +278,8 @@ function App() {
                     } ${
                       isActive
                         ? navSolid
-                          ? "text-amber-600"
-                          : "text-amber-400"
+                          ? "text-[#9a6a25]"
+                          : "text-[#c5a374]"
                         : ""
                     }`
                   }
@@ -288,7 +288,7 @@ function App() {
                     <>
                       {link.name}
                       <span
-                        className={`pointer-events-none absolute left-0 right-0 -bottom-1 h-0.5 bg-amber-500 origin-left transform transition-transform duration-300 ${
+                        className={`pointer-events-none absolute left-0 right-0 -bottom-1 h-0.5 bg-[#9a6a25] origin-left transform transition-transform duration-300 ${
                           isActive
                             ? "scale-x-100"
                             : "scale-x-0 group-hover:scale-x-100"
@@ -306,7 +306,7 @@ function App() {
                 to="/contact"
                 className={`inline-flex items-center justify-center px-5 py-3 text-xs font-semibold uppercase tracking-[0.14em] transition ${
                   navSolid
-                    ? "bg-slate-950 text-white hover:bg-amber-500 hover:text-slate-950"
+                    ? "bg-slate-950 text-white hover:bg-[#9a6a25]"
                     : "border border-white/35 bg-white/5 text-white backdrop-blur-sm hover:bg-white hover:text-slate-950"
                 }`}
               >
@@ -410,7 +410,7 @@ function App() {
                   href="https://www.instagram.com/tauropainting"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-amber-500 hover:text-slate-900 transition-colors"
+                  className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-[#9a6a25] transition-colors"
                 >
                   <Instagram className="w-5 h-5" />
                 </a>
@@ -418,7 +418,7 @@ function App() {
                   href="https://www.facebook.com/tauropainting"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-amber-500 hover:text-slate-900 transition-colors"
+                  className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-[#9a6a25] transition-colors"
                 >
                   <Facebook className="w-5 h-5" />
                 </a>
@@ -445,7 +445,7 @@ function App() {
               <h4 className="font-semibold mb-6 text-white">Contact</h4>
               <ul className="space-y-3 text-slate-400">
                 <li className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-amber-500" />
+                  <Phone className="w-4 h-4 text-[#c5a374]" />
                   <a
                     className="hover:text-white transition-colors"
                     href="tel:8019289520"
@@ -454,7 +454,7 @@ function App() {
                   </a>
                 </li>
                 <li className="flex items-center gap-2">
-                  <Mail className="w-4 h-4 text-amber-500" />
+                  <Mail className="w-4 h-4 text-[#c5a374]" />
                   <a
                     className="hover:text-white transition-colors"
                     href="mailto:tauropaintingutah@gmail.com"
