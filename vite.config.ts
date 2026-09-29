@@ -19,5 +19,11 @@ export default defineConfig({
   // ✅ Extra seguro: mantiene assets en /assets (default, pero lo dejamos explícito)
   build: {
     assetsDir: "assets",
+    rollupOptions: {
+      input: {
+        main: path.resolve(__dirname, "index.html"),
+        "paint-guide": path.resolve(__dirname, "paint-guide.html"),
+      },
+    },
   },
 });

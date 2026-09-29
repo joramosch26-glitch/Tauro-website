@@ -8,5 +8,15 @@
       "destination": "/:path+",
       "permanent": true
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/paint-guide",
+      "destination": "/paint-guide.html"
+    },
+    {
+      "source": "/paint-guide/:path*",
+      "destination": "/paint-guide.html"
+    }
   ]
 }
