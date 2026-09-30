@@ -5,6 +5,7 @@ import { GuideDashboard } from "./pages/GuideDashboard";
 import { GuideOverview } from "./pages/GuideOverview";
 import { NewGuide } from "./pages/NewGuide";
 import { GuideLocations } from "./pages/GuideLocations";
+import { GuideColors } from "./pages/GuideColors";
 
 type PaintGuideScreenProps = {
   title: string;
@@ -91,6 +92,7 @@ export default function PaintGuideApp() {
           }
         />
         <Route path="/paint-guide/g/:guideId/locations" element={<StaffRoute><GuideLocations /></StaffRoute>} />
+        <Route path="/paint-guide/g/:guideId/colors" element={<StaffRoute><GuideColors /></StaffRoute>} />
         <Route
           path="/paint-guide/g/:guideId/preview"
           element={
