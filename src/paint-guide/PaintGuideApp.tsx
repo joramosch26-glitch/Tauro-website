@@ -4,6 +4,7 @@ import { RequireStaffAuth } from "./auth/RequireStaffAuth";
 import { GuideDashboard } from "./pages/GuideDashboard";
 import { GuideOverview } from "./pages/GuideOverview";
 import { NewGuide } from "./pages/NewGuide";
+import { GuideLocations } from "./pages/GuideLocations";
 
 type PaintGuideScreenProps = {
   title: string;
@@ -89,6 +90,7 @@ export default function PaintGuideApp() {
             </StaffRoute>
           }
         />
+        <Route path="/paint-guide/g/:guideId/locations" element={<StaffRoute><GuideLocations /></StaffRoute>} />
         <Route
           path="/paint-guide/g/:guideId/preview"
           element={

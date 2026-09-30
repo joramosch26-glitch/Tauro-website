@@ -2,6 +2,7 @@ import { Link, useParams } from "react-router-dom";
 import { FormEvent, useEffect, useState } from "react";
 import { GuideStatusBadge } from "../components/GuideStatusBadge";
 import { StaffPageShell } from "../components/StaffPageShell";
+import { GuideEditorNav } from "../components/GuideEditorNav";
 import { getPaintGuide, updatePaintGuide } from "../data/guides";
 import type { PaintGuide, PaintGuideStatus } from "../data/types";
 
@@ -103,6 +104,7 @@ export function GuideOverview() {
 
   return (
     <StaffPageShell title={guide?.residence_name ?? "Paint Guide"}>
+      <GuideEditorNav active="overview" />
       <section className="grid gap-10 py-10 sm:py-14 lg:grid-cols-[minmax(0,1fr)_15rem]">
         <form className="border border-[#20211f]/15 bg-white p-6 sm:p-9" onSubmit={(event) => void handleSubmit(event)}>
           <div className="flex flex-wrap items-center justify-between gap-3">
