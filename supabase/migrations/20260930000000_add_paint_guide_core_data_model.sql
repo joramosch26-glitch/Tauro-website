@@ -16,6 +16,8 @@ create table public.guide_locations (
   guide_id uuid not null
     references public.paint_guides (id) on delete cascade,
   parent_id uuid,
+  constraint guide_locations_parent_not_self
+    check (parent_id is null or parent_id <> id),
   location_type text not null
     constraint guide_locations_location_type_check
     check (
@@ -129,7 +131,7 @@ revoke all on table public.paint_record_locations from public, anon, authenticat
 grant select, insert, update, delete on table public.paint_guides to authenticated;
 grant select, insert, update, delete on table public.guide_locations to authenticated;
 grant select, insert, update, delete on table public.paint_records to authenticated;
-grant select, insert, update, delete on table public.paint_record_locations
+grant select, insert, delete on table public.paint_record_locations
 to authenticated;
 
 create policy "Active staff can read paint guides"
