@@ -35,6 +35,6 @@ export async function updateGuideLocation(guideId: string, locationId: string, i
 }
 
 export async function deleteGuideLocation(guideId: string, locationId: string): Promise<void> {
-  const { error } = await client().from("guide_locations").delete().eq("id", locationId).eq("guide_id", guideId);
-  if (error) throw error;
+  const { data, error } = await client().from("guide_locations").delete().eq("id", locationId).eq("guide_id", guideId).select("id");
+  if (error || !data?.length) throw error ?? new Error("Could not delete location.");
 }
