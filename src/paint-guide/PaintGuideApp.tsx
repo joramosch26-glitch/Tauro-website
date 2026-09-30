@@ -1,4 +1,4 @@
-import { Link, Route, Routes } from "react-router-dom";
+import { Link, Outlet, Route, Routes } from "react-router-dom";
 import { useState } from "react";
 import { AuthProvider } from "./auth/AuthProvider";
 import { RequireStaffAuth } from "./auth/RequireStaffAuth";
@@ -49,7 +49,7 @@ function PaintGuideNotFound() {
 }
 
 function StaffDashboard() {
-  const { signOut } = useAuth();
+  const { profile, signOut } = useAuth();
   const [signOutError, setSignOutError] = useState("");
 
   async function handleSignOut() {
@@ -72,6 +72,9 @@ function StaffDashboard() {
           Tauro Paint Guide
         </p>
         <h1 className="font-serif text-4xl leading-tight sm:text-5xl">Staff Dashboard</h1>
+        <p className="mt-4 text-sm font-semibold uppercase tracking-[0.16em] text-[#9b6b36]">
+          Role: {profile?.role.toUpperCase()}
+        </p>
         <button
           className="mt-8 border border-[#20211f] px-5 py-3 text-sm font-semibold uppercase tracking-[0.12em]"
           onClick={() => void handleSignOut()}
@@ -93,10 +96,18 @@ function StaffRoute({ children }: { children: React.ReactNode }) {
   return <RequireStaffAuth>{children}</RequireStaffAuth>;
 }
 
-export default function PaintGuideApp() {
+function StaffAuthLayout() {
   return (
     <AuthProvider>
-      <Routes>
+      <Outlet />
+    </AuthProvider>
+  );
+}
+
+export default function PaintGuideApp() {
+  return (
+    <Routes>
+      <Route element={<StaffAuthLayout />}>
         <Route
           path="/paint-guide"
           element={
@@ -129,9 +140,9 @@ export default function PaintGuideApp() {
             </StaffRoute>
           }
         />
-        <Route path="/paint-guide/p" element={<PaintGuideScreen title="Paint Guide Client" />} />
-        <Route path="/paint-guide/*" element={<PaintGuideNotFound />} />
-      </Routes>
-    </AuthProvider>
+      </Route>
+      <Route path="/paint-guide/p" element={<PaintGuideScreen title="Paint Guide Client" />} />
+      <Route path="/paint-guide/*" element={<PaintGuideNotFound />} />
+    </Routes>
   );
 }
