@@ -137,7 +137,7 @@ export function GuideOverview() {
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9b6b36]">Guide details</p>
           <p className="mt-4 text-sm leading-7 text-[#20211f]/65">Last updated {guide ? formatDate(guide.updated_at) : ""}</p>
           <p className="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-[#20211f]/45">Coming later</p>
-          <ul className="mt-3 space-y-2 text-sm text-[#20211f]/55"><li>Colors</li><li>Locations</li><li>QR</li><li>Preview</li></ul>
+          <ul className="mt-3 space-y-2 text-sm text-[#20211f]/55"><li>QR</li><li>Settings</li></ul>
         </aside>
       </section>
     </StaffPageShell>
