@@ -6,6 +6,7 @@ import { GuideOverview } from "./pages/GuideOverview";
 import { NewGuide } from "./pages/NewGuide";
 import { GuideLocations } from "./pages/GuideLocations";
 import { GuideColors } from "./pages/GuideColors";
+import { GuidePreview } from "./pages/GuidePreview";
 
 type PaintGuideScreenProps = {
   title: string;
@@ -97,7 +98,7 @@ export default function PaintGuideApp() {
           path="/paint-guide/g/:guideId/preview"
           element={
             <StaffRoute>
-              <PaintGuideScreen title="Paint Guide Preview" />
+              <GuidePreview />
             </StaffRoute>
           }
         />
