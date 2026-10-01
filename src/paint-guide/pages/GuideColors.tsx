@@ -105,6 +105,50 @@ function locationLabel(location: GuideLocation, locations: GuideLocation[]) {
   return parent ? `${parent.name} › ${location.name}` : location.name;
 }
 
+function compareLocations(a: GuideLocation, b: GuideLocation) {
+  return (
+    a.sort_order - b.sort_order ||
+    a.created_at.localeCompare(b.created_at) ||
+    a.id.localeCompare(b.id)
+  );
+}
+
+function hierarchyOrderedLocations(locations: GuideLocation[]) {
+  const topLevel = locations
+    .filter((location) => location.parent_id === null)
+    .sort(compareLocations);
+  const childrenByParent = new Map<string, GuideLocation[]>();
+
+  locations
+    .filter((location) => location.parent_id !== null)
+    .forEach((location) => {
+      const children = childrenByParent.get(location.parent_id!) ?? [];
+      children.push(location);
+      childrenByParent.set(location.parent_id!, children);
+    });
+
+  const ordered: GuideLocation[] = [];
+  const rendered = new Set<string>();
+
+  topLevel.forEach((parent) => {
+    ordered.push(parent);
+    rendered.add(parent.id);
+
+    const children = childrenByParent.get(parent.id) ?? [];
+    children.sort(compareLocations).forEach((child) => {
+      ordered.push(child);
+      rendered.add(child.id);
+    });
+  });
+
+  locations
+    .filter((location) => !rendered.has(location.id))
+    .sort(compareLocations)
+    .forEach((location) => ordered.push(location));
+
+  return ordered;
+}
+
 function PaintRecordForm({
   initial,
   onSave,
@@ -355,7 +399,9 @@ export function GuideColors() {
 
   function assignedLocations(paintRecordId: string) {
     const assignedIds = new Set(assignedLocationIds(paintRecordId));
-    return locations.filter((location) => assignedIds.has(location.id));
+    return hierarchyOrderedLocations(locations).filter((location) =>
+      assignedIds.has(location.id),
+    );
   }
 
   function openAssignmentEditor(paintRecordId: string) {
@@ -753,7 +799,8 @@ export function GuideColors() {
                                 <legend className="sr-only">
                                   Locations for {record.surface}
                                 </legend>
-                                {locations.map((location) => (
+                                {hierarchyOrderedLocations(locations).map(
+                                  (location) => (
                                   <label
                                     className={`flex items-center gap-3 text-sm ${
                                       location.parent_id ? "ml-5" : ""
@@ -774,7 +821,8 @@ export function GuideColors() {
                                     />
                                     {locationLabel(location, locations)}
                                   </label>
-                                ))}
+                                  ),
+                                )}
                               </fieldset>
                             )}
                             {assignmentFailure ? (
