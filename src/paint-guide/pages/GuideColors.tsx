@@ -1,4 +1,4 @@
-import { type FormEvent, useEffect, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { GuideEditorNav } from "../components/GuideEditorNav";
 import { StaffPageShell } from "../components/StaffPageShell";
@@ -9,10 +9,17 @@ import {
   updatePaintRecord,
   type PaintRecordInput,
 } from "../data/paint-records";
+import {
+  listPaintRecordLocations,
+  savePaintRecordLocations,
+} from "../data/paint-record-locations";
 import { getPaintGuide } from "../data/guides";
+import { listGuideLocations } from "../data/locations";
 import type {
+  GuideLocation,
   PaintGuide,
   PaintRecord,
+  PaintRecordLocation,
   PaintRecordSection,
 } from "../data/types";
 
@@ -26,6 +33,11 @@ const sectionOrder: Record<PaintRecordSection, number> = {
 const createError = "Could not add paint record. Please try again.";
 const saveError = "Could not save paint record. Please try again.";
 const deleteError = "Could not delete paint record. Please try again.";
+const saveLocationsError = "Could not save locations. Please try again.";
+const refreshLocationsError =
+  "Could not refresh location assignments. Reload this page before editing locations again.";
+const savedLocationsRefreshError =
+  "Locations were saved, but the latest assignments could not be refreshed. Reload this page before editing locations again.";
 
 type LoadState = "loading" | "ready" | "not_found" | "error";
 type TextField =
@@ -84,6 +96,13 @@ function nextSortOrder(records: PaintRecord[]) {
   return records.length
     ? Math.max(...records.map((record) => record.sort_order)) + 10
     : 0;
+}
+
+function locationLabel(location: GuideLocation, locations: GuideLocation[]) {
+  const parent = location.parent_id
+    ? locations.find((item) => item.id === location.parent_id)
+    : null;
+  return parent ? `${parent.name} › ${location.name}` : location.name;
 }
 
 function PaintRecordForm({
@@ -216,16 +235,43 @@ function PaintRecordForm({
 
 export function GuideColors() {
   const { guideId = "" } = useParams();
+  const mountedRef = useRef(true);
+  const currentGuideIdRef = useRef(guideId);
+  currentGuideIdRef.current = guideId;
   const [guide, setGuide] = useState<PaintGuide | null>(null);
   const [records, setRecords] = useState<PaintRecord[]>([]);
+  const [locations, setLocations] = useState<GuideLocation[]>([]);
+  const [assignments, setAssignments] = useState<PaintRecordLocation[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [adding, setAdding] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [assignmentEditorId, setAssignmentEditorId] = useState<string | null>(
+    null,
+  );
+  const [assignmentDraftLocationIds, setAssignmentDraftLocationIds] = useState<
+    string[]
+  >([]);
   const [createPending, setCreatePending] = useState(false);
   const [editPendingId, setEditPendingId] = useState<string | null>(null);
   const [deletePendingId, setDeletePendingId] = useState<string | null>(null);
+  const [assignmentPendingId, setAssignmentPendingId] = useState<string | null>(
+    null,
+  );
   const [deleteFailure, setDeleteFailure] = useState("");
+  const [assignmentFailure, setAssignmentFailure] = useState("");
+  const [assignmentFailureRecordId, setAssignmentFailureRecordId] = useState<
+    string | null
+  >(null);
+  const [assignmentStateTrusted, setAssignmentStateTrusted] = useState(true);
+
+  useEffect(() => {
+    mountedRef.current = true;
+
+    return () => {
+      mountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -233,10 +279,18 @@ export function GuideColors() {
     setState("loading");
     setGuide(null);
     setRecords([]);
+    setLocations([]);
+    setAssignments([]);
     setAdding(false);
     setEditingId(null);
     setDeletingId(null);
+    setAssignmentEditorId(null);
+    setAssignmentDraftLocationIds([]);
+    setAssignmentPendingId(null);
     setDeleteFailure("");
+    setAssignmentFailure("");
+    setAssignmentFailureRecordId(null);
+    setAssignmentStateTrusted(true);
 
     async function load() {
       try {
@@ -248,11 +302,17 @@ export function GuideColors() {
           return;
         }
 
-        const nextRecords = await listPaintRecords(guideId);
+        const [nextRecords, nextLocations, nextAssignments] = await Promise.all([
+          listPaintRecords(guideId),
+          listGuideLocations(guideId),
+          listPaintRecordLocations(guideId),
+        ]);
         if (!active) return;
 
         setGuide(nextGuide);
         setRecords(sortRecords(nextRecords));
+        setLocations(nextLocations);
+        setAssignments(nextAssignments);
         setState("ready");
       } catch {
         if (active) setState("error");
@@ -267,9 +327,15 @@ export function GuideColors() {
   }, [guideId]);
 
   const mutationPending =
-    createPending || editPendingId !== null || deletePendingId !== null;
+    createPending ||
+    editPendingId !== null ||
+    deletePendingId !== null ||
+    assignmentPendingId !== null;
   const interactionActive =
-    adding || editingId !== null || deletingId !== null;
+    adding ||
+    editingId !== null ||
+    deletingId !== null ||
+    assignmentEditorId !== null;
 
   function upsertRecord(next: PaintRecord) {
     setRecords((current) => {
@@ -279,6 +345,119 @@ export function GuideColors() {
         : [...current, next];
       return sortRecords(updated);
     });
+  }
+
+  function assignedLocationIds(paintRecordId: string) {
+    return assignments
+      .filter((assignment) => assignment.paint_record_id === paintRecordId)
+      .map((assignment) => assignment.location_id);
+  }
+
+  function assignedLocations(paintRecordId: string) {
+    const assignedIds = new Set(assignedLocationIds(paintRecordId));
+    return locations.filter((location) => assignedIds.has(location.id));
+  }
+
+  function openAssignmentEditor(paintRecordId: string) {
+    setDeleteFailure("");
+    setAssignmentFailure("");
+    setAssignmentFailureRecordId(null);
+    setAssignmentDraftLocationIds(assignedLocationIds(paintRecordId));
+    setAssignmentEditorId(paintRecordId);
+  }
+
+  function closeAssignmentEditor() {
+    setAssignmentEditorId(null);
+    setAssignmentDraftLocationIds([]);
+    setAssignmentFailure("");
+    setAssignmentFailureRecordId(null);
+  }
+
+  function isCurrentAssignmentRequest(originatingGuideId: string) {
+    return (
+      mountedRef.current && currentGuideIdRef.current === originatingGuideId
+    );
+  }
+
+  function toggleAssignmentLocation(locationId: string, selected: boolean) {
+    setAssignmentDraftLocationIds((current) => {
+      const next = new Set(current);
+      if (selected) next.add(locationId);
+      else next.delete(locationId);
+      return [...next];
+    });
+  }
+
+  async function saveAssignments(paintRecordId: string) {
+    if (!assignmentStateTrusted) return;
+
+    const originatingGuideId = guideId;
+    const currentLocationIds = assignedLocationIds(paintRecordId);
+    setAssignmentPendingId(paintRecordId);
+    setAssignmentFailure("");
+    setAssignmentFailureRecordId(null);
+
+    try {
+      await savePaintRecordLocations(
+        originatingGuideId,
+        paintRecordId,
+        currentLocationIds,
+        assignmentDraftLocationIds,
+      );
+    } catch {
+      if (!isCurrentAssignmentRequest(originatingGuideId)) return;
+
+      setAssignmentFailure(saveLocationsError);
+      setAssignmentFailureRecordId(paintRecordId);
+
+      try {
+        const nextAssignments = await listPaintRecordLocations(originatingGuideId);
+        if (!isCurrentAssignmentRequest(originatingGuideId)) return;
+
+        setAssignments(nextAssignments);
+        setAssignmentDraftLocationIds(
+          nextAssignments
+            .filter(
+              (assignment) => assignment.paint_record_id === paintRecordId,
+            )
+            .map((assignment) => assignment.location_id),
+        );
+      } catch {
+        if (!isCurrentAssignmentRequest(originatingGuideId)) return;
+
+        setAssignmentStateTrusted(false);
+        setAssignmentFailure(refreshLocationsError);
+        setAssignmentFailureRecordId(paintRecordId);
+      } finally {
+        if (isCurrentAssignmentRequest(originatingGuideId)) {
+          setAssignmentPendingId(null);
+        }
+      }
+
+      return;
+    }
+
+    if (!isCurrentAssignmentRequest(originatingGuideId)) return;
+
+    try {
+      const nextAssignments = await listPaintRecordLocations(originatingGuideId);
+      if (!isCurrentAssignmentRequest(originatingGuideId)) return;
+
+      setAssignments(nextAssignments);
+      closeAssignmentEditor();
+    } catch {
+      if (!isCurrentAssignmentRequest(originatingGuideId)) return;
+
+      setAssignmentStateTrusted(false);
+      setAssignmentFailure(savedLocationsRefreshError);
+      setAssignmentFailureRecordId(paintRecordId);
+      setAssignmentEditorId(null);
+      setAssignmentDraftLocationIds([]);
+    } finally {
+      if (isCurrentAssignmentRequest(originatingGuideId)) {
+        setAssignmentPendingId(null);
+      }
+    }
   }
 
   async function createRecord(input: PaintRecordInput) {
@@ -338,6 +517,9 @@ export function GuideColors() {
     try {
       await deletePaintRecord(guideId, id);
       setRecords((current) => current.filter((record) => record.id !== id));
+      setAssignments((current) =>
+        current.filter((assignment) => assignment.paint_record_id !== id),
+      );
       setDeletingId(null);
     } catch {
       setDeleteFailure(deleteError);
@@ -484,6 +666,17 @@ export function GuideColors() {
                                   {detail}
                                 </p>
                               ))}
+                            <p className="mt-3 text-sm text-[#20211f]/65">
+                              {!assignmentStateTrusted
+                                ? "Location assignments need a page reload."
+                                : assignedLocations(record.id).length
+                                ? assignedLocations(record.id)
+                                    .map((location) =>
+                                      locationLabel(location, locations),
+                                    )
+                                    .join(", ")
+                                : "No locations assigned."}
+                            </p>
                           </div>
                           <div className="flex gap-3 text-xs font-semibold uppercase tracking-[0.12em]">
                             <button
@@ -496,6 +689,17 @@ export function GuideColors() {
                               type="button"
                             >
                               Edit
+                            </button>
+                            <button
+                              disabled={
+                                interactionActive ||
+                                mutationPending ||
+                                !assignmentStateTrusted
+                              }
+                              onClick={() => openAssignmentEditor(record.id)}
+                              type="button"
+                            >
+                              Manage Locations
                             </button>
                             <button
                               className="text-[#9c2f2f] disabled:opacity-60"
@@ -511,6 +715,102 @@ export function GuideColors() {
                             </button>
                           </div>
                         </div>
+
+                        {assignmentFailure &&
+                        assignmentFailureRecordId === record.id &&
+                        assignmentEditorId !== record.id ? (
+                          <p
+                            className="mt-3 text-sm text-[#9c2f2f]"
+                            role="alert"
+                          >
+                            {assignmentFailure}
+                          </p>
+                        ) : null}
+
+                        {assignmentEditorId === record.id ? (
+                          <div className="mt-4 border-t border-[#20211f]/15 pt-4">
+                            <h4 className="font-serif text-lg">
+                              Manage Locations
+                            </h4>
+                            {locations.length === 0 ? (
+                              <div className="mt-3 text-sm text-[#20211f]/65">
+                                <p>No locations available.</p>
+                                <Link
+                                  className="mt-3 inline-flex text-xs font-semibold uppercase tracking-[0.12em] underline"
+                                  to={`/paint-guide/g/${guideId}/locations`}
+                                >
+                                  Add locations
+                                </Link>
+                              </div>
+                            ) : (
+                              <fieldset
+                                className="mt-4 space-y-3"
+                                disabled={
+                                  assignmentPendingId === record.id ||
+                                  !assignmentStateTrusted
+                                }
+                              >
+                                <legend className="sr-only">
+                                  Locations for {record.surface}
+                                </legend>
+                                {locations.map((location) => (
+                                  <label
+                                    className={`flex items-center gap-3 text-sm ${
+                                      location.parent_id ? "ml-5" : ""
+                                    }`}
+                                    key={location.id}
+                                  >
+                                    <input
+                                      checked={assignmentDraftLocationIds.includes(
+                                        location.id,
+                                      )}
+                                      onChange={(event) =>
+                                        toggleAssignmentLocation(
+                                          location.id,
+                                          event.target.checked,
+                                        )
+                                      }
+                                      type="checkbox"
+                                    />
+                                    {locationLabel(location, locations)}
+                                  </label>
+                                ))}
+                              </fieldset>
+                            )}
+                            {assignmentFailure ? (
+                              <p
+                                className="mt-3 text-sm text-[#9c2f2f]"
+                                role="alert"
+                              >
+                                {assignmentFailure}
+                              </p>
+                            ) : null}
+                            <div className="mt-4 flex gap-3">
+                              <button
+                                className="bg-[#20211f] px-4 py-2 text-xs font-semibold uppercase tracking-[0.12em] text-white disabled:opacity-60"
+                                disabled={
+                                  locations.length === 0 ||
+                                  assignmentPendingId === record.id ||
+                                  !assignmentStateTrusted
+                                }
+                                onClick={() => void saveAssignments(record.id)}
+                                type="button"
+                              >
+                                {assignmentPendingId === record.id
+                                  ? "Saving Locations…"
+                                  : "Save Locations"}
+                              </button>
+                              <button
+                                className="text-xs font-semibold uppercase tracking-[0.12em] disabled:opacity-60"
+                                disabled={assignmentPendingId === record.id}
+                                onClick={closeAssignmentEditor}
+                                type="button"
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : null}
 
                         {deletingId === record.id ? (
                           <div className="mt-4 border-t border-[#9c2f2f]/20 pt-4 text-sm">
