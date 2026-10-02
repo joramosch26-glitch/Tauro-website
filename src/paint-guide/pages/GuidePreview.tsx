@@ -96,29 +96,31 @@ function locationLabel(location: GuideLocation, locations: GuideLocation[]) {
 function PaintRecordDetails({
   record,
   compact = false,
+  locationLabels = [],
 }: {
   record: PaintRecord;
   compact?: boolean;
+  locationLabels?: string[];
 }) {
   return (
     <article
       className={
         compact
-          ? "border-t border-[#20211f]/10 py-4 first:border-t-0 first:pt-0"
+          ? "min-w-0 border-t border-[#20211f]/10 py-3 first:border-t-0 first:pt-0"
           : "border border-[#20211f]/15 bg-white p-5 sm:p-6"
       }
     >
       {compact ? (
-        <p className="font-serif text-xl">{record.surface}</p>
+        <p className="font-serif text-lg sm:text-xl">{record.surface}</p>
       ) : (
         <h3 className="font-serif text-2xl">{record.surface}</h3>
       )}
-      <p className="mt-1 text-base text-[#20211f]/80">
+      <p className={compact ? "mt-0.5 text-sm text-[#20211f]/75" : "mt-1 text-base text-[#20211f]/80"}>
         {record.color_name}
         {record.sheen ? ` · ${record.sheen}` : ""}
       </p>
       {record.brand || record.product || record.color_code || record.notes ? (
-        <dl className="mt-4 grid gap-2 text-sm leading-6 text-[#20211f]/65 sm:grid-cols-2">
+        <dl className={compact ? "mt-2 grid gap-x-4 gap-y-1 text-xs leading-5 text-[#20211f]/60 sm:grid-cols-2" : "mt-4 grid gap-2 text-sm leading-6 text-[#20211f]/65 sm:grid-cols-2"}>
           {record.brand ? (
             <div>
               <dt className="font-semibold text-[#20211f]">Brand</dt>
@@ -145,6 +147,18 @@ function PaintRecordDetails({
           ) : null}
         </dl>
       ) : null}
+      {!compact && locationLabels.length ? (
+        <div className="mt-5 border-t border-[#20211f]/10 pt-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9b6b36]">
+            {locationLabels.length === 1 ? "Location" : "Locations"}
+          </p>
+          <div className="mt-2 space-y-1 text-sm leading-6 text-[#20211f]/70">
+            {locationLabels.map((label, index) => (
+              <p key={`${label}-${index}`}>{label}</p>
+            ))}
+          </div>
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -157,11 +171,11 @@ function LocationRecords({ records }: { records: PaintRecord[] }) {
         if (!sectionRecords.length) return null;
 
         return (
-          <section className="mt-5 first:mt-0" key={section}>
+          <section className="mt-4 first:mt-0" key={section}>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9b6b36]">
               {sectionHeading(section)}
             </p>
-            <div className="mt-3">
+            <div className="mt-2 grid gap-x-5 sm:grid-cols-2">
               {sectionRecords.map((record) => (
                 <PaintRecordDetails compact key={record.id} record={record} />
               ))}
@@ -318,11 +332,9 @@ export function GuidePreview() {
           <Link className="text-[#20211f] underline decoration-[#9b6b36] underline-offset-4" to={`/paint-guide/g/${guideId}`}>
             Back to Guide
           </Link>
-          <div className="flex items-center gap-3 text-[#20211f]/65">
-            <span>Staff Preview</span>
-            <span aria-hidden="true">•</span>
-            <span>{guide ? statusLabel(guide.status) : "Staff Preview"}</span>
-          </div>
+          <span className="text-[#20211f]/65">
+            {guide ? statusLabel(guide.status) : "Staff Preview"}
+          </span>
         </div>
 
         <article className="overflow-hidden border border-[#20211f]/15 bg-[#fffdf8] shadow-[0_18px_60px_rgba(32,33,31,0.08)]">
@@ -370,16 +382,13 @@ export function GuidePreview() {
                   {exceptionRecords.map((record) => {
                     const assignedLocations = assignedLocationsForRecord(record.id);
                     return (
-                      <div key={record.id}>
-                        <PaintRecordDetails record={record} />
-                        {assignedLocations.length ? (
-                          <p className="mt-3 text-sm font-semibold text-[#20211f]/65">
-                            {assignedLocations
-                              .map((location) => locationLabel(location, locations))
-                              .join(", ")}
-                          </p>
-                        ) : null}
-                      </div>
+                      <PaintRecordDetails
+                        key={record.id}
+                        locationLabels={assignedLocations.map((location) =>
+                          locationLabel(location, locations),
+                        )}
+                        record={record}
+                      />
                     );
                   })}
                 </div>
@@ -395,16 +404,13 @@ export function GuidePreview() {
                   {additionalRecords.map((record) => {
                     const assignedLocations = assignedLocationsForRecord(record.id);
                     return (
-                      <div key={record.id}>
-                        <PaintRecordDetails record={record} />
-                        {assignedLocations.length ? (
-                          <p className="mt-3 text-sm font-semibold text-[#20211f]/65">
-                            {assignedLocations
-                              .map((location) => locationLabel(location, locations))
-                              .join(", ")}
-                          </p>
-                        ) : null}
-                      </div>
+                      <PaintRecordDetails
+                        key={record.id}
+                        locationLabels={assignedLocations.map((location) =>
+                          locationLabel(location, locations),
+                        )}
+                        record={record}
+                      />
                     );
                   })}
                 </div>
@@ -415,7 +421,7 @@ export function GuidePreview() {
               <h2 id="paint-by-location" className="font-serif text-3xl sm:text-4xl">
                 Paint by Location
               </h2>
-              <div className="mt-8 space-y-8">
+              <div className="mt-8 space-y-6">
                 {topLevelLocations.map((parent) => {
                   const parentRecords = recordsForLocation(parent.id);
                   const children = orderedLocations.filter(
@@ -428,14 +434,12 @@ export function GuidePreview() {
                   if (!parentRecords.length && !visibleChildren.length) return null;
 
                   return (
-                    <section className="border border-[#20211f]/15 bg-white p-5 sm:p-7" key={parent.id}>
+                    <section className="border border-[#20211f]/15 bg-white p-5 sm:p-6" key={parent.id}>
                       <h3 className="font-serif text-2xl">{parent.name}</h3>
                       {parentRecords.length ? <LocationRecords records={parentRecords} /> : null}
                       {visibleChildren.map((child) => (
-                        <section className="mt-6 border-l border-[#9b6b36]/50 pl-5" key={child.id}>
-                          <h4 className="font-serif text-xl">
-                            {locationLabel(child, locations)}
-                          </h4>
+                        <section className="mt-5 border-l border-[#9b6b36]/50 pl-4 sm:pl-5" key={child.id}>
+                          <h4 className="font-serif text-lg sm:text-xl">{child.name}</h4>
                           <LocationRecords records={recordsForLocation(child.id)} />
                         </section>
                       ))}
