@@ -187,6 +187,30 @@ function LocationRecords({ records }: { records: PaintRecord[] }) {
   );
 }
 
+function ExceptionLocationCard({
+  title,
+  parentName,
+  records,
+}: {
+  title: string;
+  parentName?: string;
+  records: PaintRecord[];
+}) {
+  return (
+    <section className="min-w-0 break-words border border-[#20211f]/15 bg-white p-5 sm:p-6">
+      <h3 className="font-serif text-2xl sm:text-3xl">{title}</h3>
+      {parentName ? (
+        <p className="mt-1 text-sm leading-6 text-[#20211f]/60">{parentName}</p>
+      ) : null}
+      <div className="mt-5">
+        {records.map((record) => (
+          <PaintRecordDetails compact key={record.id} record={record} />
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export function GuidePreview() {
   const { guideId = "" } = useParams();
   const [guide, setGuide] = useState<PaintGuide | null>(null);
@@ -308,6 +332,25 @@ export function GuidePreview() {
   const exceptionRecords = records.filter((record) => record.section === "exception");
   const additionalRecords = records.filter((record) => record.section === "additional");
   const orderedLocations = hierarchyOrderedLocations(locations);
+  const exceptionLocationGroups = orderedLocations
+    .map((location) => {
+      // Exact junction rows only; recordsForLocation deduplicates assignment IDs.
+      const locationRecords = recordsForLocation(location.id)
+        .filter((record) => record.section === "exception")
+        .sort(compareRecords);
+      const parent = location.parent_id
+        ? locations.find((item) => item.id === location.parent_id && item.id !== location.id)
+        : undefined;
+      return { location, parentName: parent?.name, records: locationRecords };
+    })
+    .filter((group) => group.records.length > 0);
+  const assignedExceptionIds = new Set(
+    exceptionLocationGroups.flatMap((group) => group.records.map((record) => record.id)),
+  );
+  // Unresolved location references do not count as usable assignments.
+  const unassignedExceptionRecords = exceptionRecords
+    .filter((record) => !assignedExceptionIds.has(record.id))
+    .sort(compareRecords);
   const topLevelLocations = orderedLocations.filter(
     (location) => location.parent_id === null,
   );
@@ -379,18 +422,20 @@ export function GuidePreview() {
                   Exceptions
                 </h2>
                 <div className="mt-8 grid gap-4 sm:grid-cols-2">
-                  {exceptionRecords.map((record) => {
-                    const assignedLocations = assignedLocationsForRecord(record.id);
-                    return (
-                      <PaintRecordDetails
-                        key={record.id}
-                        locationLabels={assignedLocations.map((location) =>
-                          locationLabel(location, locations),
-                        )}
-                        record={record}
-                      />
-                    );
-                  })}
+                  {exceptionLocationGroups.map((group) => (
+                    <ExceptionLocationCard
+                      key={group.location.id}
+                      title={group.location.name}
+                      parentName={group.parentName}
+                      records={group.records}
+                    />
+                  ))}
+                  {unassignedExceptionRecords.length ? (
+                    <ExceptionLocationCard
+                      title="Other Exceptions"
+                      records={unassignedExceptionRecords}
+                    />
+                  ) : null}
                 </div>
               </section>
             ) : null}
