@@ -33,6 +33,6 @@ export function homeownerNoContentResponse(init: ResponseInit = {}) {
   });
 }
 
-export function homeownerUnavailableResponse() {
-  return homeownerJsonResponse({ available: false }, { status: 404 });
+export function homeownerUnavailableResponse(init: ResponseInit = {}) {
+  return homeownerJsonResponse({ available: false }, { ...init, status: 404 });
 }
