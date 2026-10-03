@@ -3,6 +3,7 @@ import type {
   HomeownerEnvironment,
   HomeownerServerEnvironment,
 } from "./types.js";
+import { decodeBase64Url } from "./encoding.js";
 
 const CANONICAL_PRODUCTION_ORIGIN = "https://www.tauropainting.com";
 const ALLOWED_ENVIRONMENTS = new Set<HomeownerEnvironment>([
@@ -12,6 +13,8 @@ const ALLOWED_ENVIRONMENTS = new Set<HomeownerEnvironment>([
   "test",
 ]);
 const PROJECT_REF_PATTERN = /^[a-z0-9]{20}$/;
+const KEY_VERSION_PATTERN = /^[1-9][0-9]*$/;
+const MAX_SMALLINT = 32767;
 
 export class HomeownerEnvironmentError extends Error {
   constructor() {
@@ -20,8 +23,10 @@ export class HomeownerEnvironmentError extends Error {
 }
 
 function requiredValue(source: EnvironmentSource, name: string) {
-  const value = source[name]?.trim();
-  if (!value) throw new HomeownerEnvironmentError();
+  const value = source[name];
+  if (!value || !value.trim() || value !== value.trim()) {
+    throw new HomeownerEnvironmentError();
+  }
   return value;
 }
 
@@ -34,10 +39,12 @@ function parseSupabaseUrl(value: string, expectedProjectRef: string) {
     throw new HomeownerEnvironmentError();
   }
 
-  const authorityEnd = value.search(/[\/?#]/);
-  const authority = value.slice(
-    "https://".length,
-    authorityEnd === -1 ? value.length : authorityEnd,
+  const authorityStart = value.indexOf("//") + 2;
+  const authorityTail = value.slice(authorityStart);
+  const authorityEnd = authorityTail.search(/[/?#]/);
+  const authority = authorityTail.slice(
+    0,
+    authorityEnd === -1 ? authorityTail.length : authorityEnd,
   );
 
   if (
@@ -99,6 +106,44 @@ function parseAllowedOrigins(value: string, environment: HomeownerEnvironment) {
   return origins;
 }
 
+function parseKeyVersion(value: string) {
+  if (!KEY_VERSION_PATTERN.test(value)) throw new HomeownerEnvironmentError();
+  const version = Number(value);
+  if (!Number.isSafeInteger(version) || version > MAX_SMALLINT) {
+    throw new HomeownerEnvironmentError();
+  }
+  return version;
+}
+
+function parseVersionedKeyring(
+  source: EnvironmentSource,
+  activeVersionName: string,
+  keyPrefix: string,
+) {
+  const activeVersion = parseKeyVersion(requiredValue(source, activeVersionName));
+  const keys = new Map<number, Buffer>();
+
+  for (const [name, value] of Object.entries(source)) {
+    if (!name.startsWith(keyPrefix)) continue;
+
+    const versionValue = name.slice(keyPrefix.length);
+    const version = parseKeyVersion(versionValue);
+    if (keys.has(version)) throw new HomeownerEnvironmentError();
+
+    let key: Buffer;
+    try {
+      key = decodeBase64Url(requiredValue({ value }, "value"));
+    } catch {
+      throw new HomeownerEnvironmentError();
+    }
+    if (key.length !== 32) throw new HomeownerEnvironmentError();
+    keys.set(version, key);
+  }
+
+  if (!keys.has(activeVersion)) throw new HomeownerEnvironmentError();
+  return { activeVersion, keys };
+}
+
 export function loadHomeownerServerEnvironment(
   source: EnvironmentSource = process.env,
 ): HomeownerServerEnvironment {
@@ -130,6 +175,21 @@ export function loadHomeownerServerEnvironment(
     allowedOrigins: parseAllowedOrigins(
       requiredValue(source, "TAURO_PG_ALLOWED_ORIGINS"),
       environment,
+    ),
+    tokenLookupHmacKeys: parseVersionedKeyring(
+      source,
+      "TAURO_PG_TOKEN_LOOKUP_HMAC_ACTIVE_VERSION",
+      "TAURO_PG_TOKEN_LOOKUP_HMAC_KEY_V",
+    ),
+    tokenEncryptionKeys: parseVersionedKeyring(
+      source,
+      "TAURO_PG_TOKEN_ENCRYPTION_ACTIVE_VERSION",
+      "TAURO_PG_TOKEN_ENCRYPTION_KEY_V",
+    ),
+    sessionHmacKeys: parseVersionedKeyring(
+      source,
+      "TAURO_PG_SESSION_HMAC_ACTIVE_VERSION",
+      "TAURO_PG_SESSION_HMAC_KEY_V",
     ),
   };
 }
