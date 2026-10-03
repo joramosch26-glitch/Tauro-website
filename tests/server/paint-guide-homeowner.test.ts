@@ -15,10 +15,19 @@ import {
 import { loadHomeownerServerEnvironment } from "../../server/paint-guide-homeowner/env.js";
 import {
   HOMEOWNER_SESSION_COOKIE_NAME,
+  clearHomeownerSessionCookie,
+  readHomeownerSessionCookie,
   serializeHomeownerSessionCookie,
 } from "../../server/paint-guide-homeowner/cookies.js";
+import { createHomeownerDocumentHandler } from "../../server/paint-guide-homeowner/document-handler.js";
 import {
+  validateHomeownerGuideDocument,
+  type HomeownerGuideDocumentData,
+} from "../../server/paint-guide-homeowner/document.js";
+import {
+  callHomeownerDocumentRead,
   callHomeownerSessionExchange,
+  type HomeownerDocumentReadInput,
   type HomeownerSessionExchangeInput,
 } from "../../server/paint-guide-homeowner/rpc.js";
 import {
@@ -100,6 +109,19 @@ function exchangeRequest(
 
 async function unavailableSignature(response: Response) {
   return { status: response.status, body: await response.text() };
+}
+
+const documentFixture: HomeownerGuideDocumentData = {
+  guide: { residence_name: "Homeowner test residence", primary_scope_note: null },
+  locations: [{ id: "71000000-0000-4000-8000-000000000101", parent_id: null, name: "Exterior", sort_order: 0, created_at: "2026-10-03T12:00:00.000Z" }],
+  records: [{ id: "71000000-0000-4000-8000-000000000102", section: "primary", surface: "Siding", brand: "Tauro", product: null, color_name: "White", color_code: null, sheen: null, notes: null, sort_order: 0, created_at: "2026-10-03T12:00:00.000Z" }],
+  assignments: [{ paint_record_id: "71000000-0000-4000-8000-000000000102", location_id: "71000000-0000-4000-8000-000000000101" }],
+};
+
+function documentRequest(cookie?: string, method = "GET") {
+  const headers = new Headers();
+  if (cookie !== undefined) headers.set("Cookie", cookie);
+  return new Request("https://www.tauropainting.com/api/paint-guide/homeowner/document", { method, headers });
 }
 
 test("keyrings require canonical versions, active keys, and exact 32-byte material", () => {
@@ -351,4 +373,107 @@ test("session cookie uses the fixed secure production policy without retaining a
   assert.doesNotMatch(localCookie, /Secure/);
   assert.match(productionCookie, /Secure/);
   assert.equal(localCookie.includes("tpgh1."), false);
+});
+
+test("document cookie reader requires exactly one syntactically valid homeowner cookie", () => {
+  const session = createHomeownerSessionBearer(1);
+  assert.equal(readHomeownerSessionCookie(documentRequest()), null);
+  assert.equal(readHomeownerSessionCookie(documentRequest("other=value")), null);
+  assert.equal(readHomeownerSessionCookie(documentRequest(`${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`)), session.canonical);
+  assert.equal(readHomeownerSessionCookie(documentRequest(`other=value; ${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`)), session.canonical);
+  assert.equal(readHomeownerSessionCookie(documentRequest(`${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}; ${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`)), null);
+  assert.equal(readHomeownerSessionCookie(documentRequest("not-a-cookie")), null);
+});
+
+test("document handler returns only a validated DTO and never refreshes the session", async () => {
+  const session = createHomeownerSessionBearer(1);
+  let captured: HomeownerDocumentReadInput | undefined;
+  const handler = createHomeownerDocumentHandler({
+    loadEnvironment: () => serverEnvironment,
+    readDocument: async (_environment, input) => {
+      captured = input;
+      return { kind: "document", document: documentFixture };
+    },
+  });
+  const response = await handler(documentRequest(`${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), documentFixture);
+  assert.equal(response.headers.get("cache-control"), "no-store, private");
+  assert.equal(response.headers.get("cdn-cache-control"), "no-store");
+  assert.equal(response.headers.get("vercel-cdn-cache-control"), "no-store");
+  assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+  assert.equal(response.headers.get("set-cookie"), null);
+  assert.ok(captured);
+  assert.equal(captured.sessionKeyVersion, 1);
+  assert.equal(captured.sessionHmac.length, 32);
+  assert.deepEqual(captured.sessionHmac, deriveSessionHmac(session, PROJECT_REF, serverEnvironment.sessionHmacKeys));
+});
+
+test("document DTO accepts PostgreSQL UUID lexical forms without version or variant narrowing", () => {
+  const validDocument = { schema_version: 1, ...documentFixture };
+  assert.ok(validateHomeownerGuideDocument(validDocument));
+  assert.ok(validateHomeownerGuideDocument({
+    ...validDocument,
+    locations: [{ ...documentFixture.locations[0], id: "71000000-0000-6000-0000-000000000101" }],
+  }));
+  assert.ok(validateHomeownerGuideDocument({
+    ...validDocument,
+    locations: [{ ...documentFixture.locations[0], id: "71000000-0000-4000-0000-000000000101" }],
+  }));
+  assert.equal(validateHomeownerGuideDocument({
+    ...validDocument,
+    locations: [{ ...documentFixture.locations[0], id: "71000000-0000-6000-0000-00000000010z" }],
+  }), null);
+  assert.equal(validateHomeownerGuideDocument({
+    ...validDocument,
+    locations: [{ ...documentFixture.locations[0], id: "71000000-0000-6000-000000000101" }],
+  }), null);
+});
+
+test("document handler and RPC adapter fail closed for unavailable, malformed, and unexpected data", async () => {
+  const session = createHomeownerSessionBearer(1);
+  const handler = createHomeownerDocumentHandler({
+    loadEnvironment: () => serverEnvironment,
+    readDocument: async () => ({ kind: "unavailable" }),
+  });
+  const baseline = await unavailableSignature(await handler(documentRequest()));
+  for (const request of [
+    documentRequest(`other=value; ${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}; ${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`),
+    documentRequest(`${HOMEOWNER_SESSION_COOKIE_NAME}=tpgs1.01.invalid`),
+    documentRequest(`${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`, "POST"),
+  ]) {
+    const response = await handler(request);
+    assert.deepEqual(await unavailableSignature(response), baseline);
+    if (request.method === "GET") assert.match(response.headers.get("set-cookie") ?? "", /Max-Age=0/);
+  }
+  const missingKeyHandler = createHomeownerDocumentHandler({
+    loadEnvironment: () => ({
+      ...serverEnvironment,
+      sessionHmacKeys: { activeVersion: 2, keys: new Map([[2, Buffer.alloc(32, 7)]]) },
+    }),
+  });
+  assert.deepEqual(
+    await unavailableSignature(await missingKeyHandler(documentRequest(`${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`))),
+    baseline,
+  );
+  const input: HomeownerDocumentReadInput = { sessionKeyVersion: 1, sessionHmac: Buffer.alloc(32, 9) };
+  let name = "";
+  let values: Record<string, unknown> = {};
+  const rpcDocument = { schema_version: 1, ...documentFixture };
+  const accepted = await callHomeownerDocumentRead({ rpc: async (functionName, arguments_) => {
+    name = functionName; values = arguments_; return { data: rpcDocument, error: null };
+  } }, input);
+  assert.deepEqual(accepted, { kind: "document", document: documentFixture });
+  assert.equal(name, "paint_guide_homeowner_document_read");
+  assert.deepEqual(values, { p_session_key_version: 1, p_session_hmac: `\\x${"09".repeat(32)}` });
+  for (const data of [
+    null,
+    [],
+    "unexpected",
+    { schema_version: 1, ...documentFixture, token_hmac: "forbidden" },
+    { schema_version: 1, ...documentFixture, guide: { ...documentFixture.guide, role: "forbidden" } },
+  ]) {
+    assert.deepEqual(await callHomeownerDocumentRead({ rpc: async () => ({ data, error: null }) }, input), { kind: "unavailable" });
+  }
+  assert.match(clearHomeownerSessionCookie({ ...serverEnvironment, environment: "production" }), /Max-Age=0.*SameSite=Strict.*Secure/);
 });

@@ -1,4 +1,8 @@
 import { byteaToPostgrest } from "./bytea.js";
+import {
+  validateHomeownerGuideDocument,
+  type HomeownerGuideDocumentData,
+} from "./document.js";
 import { createHomeownerSupabaseAdminClient } from "./supabase-admin.js";
 import type { HomeownerServerEnvironment } from "./types.js";
 
@@ -12,6 +16,15 @@ export type HomeownerSessionExchangeInput = {
 
 export type HomeownerSessionExchangeResult =
   | { kind: "exchanged" }
+  | { kind: "unavailable" };
+
+export type HomeownerDocumentReadInput = {
+  sessionKeyVersion: number;
+  sessionHmac: Uint8Array;
+};
+
+export type HomeownerDocumentReadResult =
+  | { kind: "document"; document: HomeownerGuideDocumentData }
   | { kind: "unavailable" };
 
 type HomeownerRpcClient = {
@@ -84,6 +97,39 @@ export function exchangeHomeownerSession(
   input: HomeownerSessionExchangeInput,
 ) {
   return callHomeownerSessionExchange(
+    createHomeownerSupabaseAdminClient(environment) as unknown as HomeownerRpcClient,
+    input,
+  );
+}
+
+export async function callHomeownerDocumentRead(
+  client: HomeownerRpcClient,
+  input: HomeownerDocumentReadInput,
+): Promise<HomeownerDocumentReadResult> {
+  if (!validSmallint(input.sessionKeyVersion) || input.sessionHmac.length !== 32) {
+    return { kind: "unavailable" };
+  }
+  try {
+    const { data, error } = await client.rpc(
+      "paint_guide_homeowner_document_read",
+      {
+        p_session_key_version: input.sessionKeyVersion,
+        p_session_hmac: byteaToPostgrest(input.sessionHmac),
+      },
+    );
+    if (error) return { kind: "unavailable" };
+    const document = validateHomeownerGuideDocument(data);
+    return document ? { kind: "document", document } : { kind: "unavailable" };
+  } catch {
+    return { kind: "unavailable" };
+  }
+}
+
+export function readHomeownerDocument(
+  environment: HomeownerServerEnvironment,
+  input: HomeownerDocumentReadInput,
+) {
+  return callHomeownerDocumentRead(
     createHomeownerSupabaseAdminClient(environment) as unknown as HomeownerRpcClient,
     input,
   );
