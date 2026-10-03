@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/postbuild-prerender.mjs",
+    "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
     "lint": "eslint .",
     "preview": "vite preview"
   },
