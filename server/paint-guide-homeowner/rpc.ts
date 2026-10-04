@@ -27,6 +27,15 @@ export type HomeownerDocumentReadResult =
   | { kind: "document"; document: HomeownerGuideDocumentData }
   | { kind: "unavailable" };
 
+export type HomeownerSessionEndInput = {
+  sessionKeyVersion: number;
+  sessionHmac: Uint8Array;
+};
+
+export type HomeownerSessionEndResult =
+  | { kind: "ended" }
+  | { kind: "operational_failure" };
+
 type HomeownerRpcClient = {
   rpc: (
     functionName: string,
@@ -130,6 +139,39 @@ export function readHomeownerDocument(
   input: HomeownerDocumentReadInput,
 ) {
   return callHomeownerDocumentRead(
+    createHomeownerSupabaseAdminClient(environment) as unknown as HomeownerRpcClient,
+    input,
+  );
+}
+
+export async function callHomeownerSessionEnd(
+  client: HomeownerRpcClient,
+  input: HomeownerSessionEndInput,
+): Promise<HomeownerSessionEndResult> {
+  if (!validSmallint(input.sessionKeyVersion) || input.sessionHmac.length !== 32) {
+    return { kind: "operational_failure" };
+  }
+  try {
+    const { data, error } = await client.rpc(
+      "paint_guide_homeowner_session_end",
+      {
+        p_session_key_version: input.sessionKeyVersion,
+        p_session_hmac: byteaToPostgrest(input.sessionHmac),
+      },
+    );
+    return error || data !== true
+      ? { kind: "operational_failure" }
+      : { kind: "ended" };
+  } catch {
+    return { kind: "operational_failure" };
+  }
+}
+
+export function endHomeownerSession(
+  environment: HomeownerServerEnvironment,
+  input: HomeownerSessionEndInput,
+) {
+  return callHomeownerSessionEnd(
     createHomeownerSupabaseAdminClient(environment) as unknown as HomeownerRpcClient,
     input,
   );

@@ -20,14 +20,17 @@ import {
   serializeHomeownerSessionCookie,
 } from "../../server/paint-guide-homeowner/cookies.js";
 import { createHomeownerDocumentHandler } from "../../server/paint-guide-homeowner/document-handler.js";
+import { createHomeownerEndSessionHandler } from "../../server/paint-guide-homeowner/end-session.js";
 import {
   validateHomeownerGuideDocument,
   type HomeownerGuideDocumentData,
 } from "../../server/paint-guide-homeowner/document.js";
 import {
   callHomeownerDocumentRead,
+  callHomeownerSessionEnd,
   callHomeownerSessionExchange,
   type HomeownerDocumentReadInput,
+  type HomeownerSessionEndInput,
   type HomeownerSessionExchangeInput,
 } from "../../server/paint-guide-homeowner/rpc.js";
 import {
@@ -122,6 +125,19 @@ function documentRequest(cookie?: string, method = "GET") {
   const headers = new Headers();
   if (cookie !== undefined) headers.set("Cookie", cookie);
   return new Request("https://www.tauropainting.com/api/paint-guide/homeowner/document", { method, headers });
+}
+
+function endSessionRequest(
+  cookie?: string,
+  options: { method?: string; origin?: string | null } = {},
+) {
+  const headers = new Headers();
+  if (options.origin !== null) headers.set("Origin", options.origin ?? "http://127.0.0.1:3000");
+  if (cookie !== undefined) headers.set("Cookie", cookie);
+  return new Request("https://www.tauropainting.com/api/paint-guide/homeowner/end-session", {
+    method: options.method ?? "POST",
+    headers,
+  });
 }
 
 test("keyrings require canonical versions, active keys, and exact 32-byte material", () => {
@@ -476,4 +492,85 @@ test("document handler and RPC adapter fail closed for unavailable, malformed, a
     assert.deepEqual(await callHomeownerDocumentRead({ rpc: async () => ({ data, error: null }) }, input), { kind: "unavailable" });
   }
   assert.match(clearHomeownerSessionCookie({ ...serverEnvironment, environment: "production" }), /Max-Age=0.*SameSite=Strict.*Secure/);
+});
+
+test("end-session rejects invalid protocol and treats absent or malformed cookies as idempotent", async () => {
+  const session = createHomeownerSessionBearer(1);
+  const handler = createHomeownerEndSessionHandler({
+    loadEnvironment: () => serverEnvironment,
+    endSession: async () => ({ kind: "ended" }),
+  });
+  const unavailable = await unavailableSignature(await handler(endSessionRequest(undefined, { method: "GET" })));
+  for (const request of [
+    endSessionRequest(undefined, { origin: null }),
+    endSessionRequest(undefined, { origin: "https://evil.example" }),
+  ]) {
+    assert.deepEqual(await unavailableSignature(await handler(request)), unavailable);
+  }
+
+  for (const cookie of [
+    undefined,
+    "other=value",
+    `${HOMEOWNER_SESSION_COOKIE_NAME}=invalid`,
+    `${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}; ${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`,
+  ]) {
+    const response = await handler(endSessionRequest(cookie));
+    assert.equal(response.status, 204);
+    assert.match(response.headers.get("set-cookie") ?? "", /Max-Age=0.*HttpOnly.*SameSite=Strict/);
+  }
+});
+
+test("end-session derives only a session HMAC, persists through the exact RPC, and clears the cookie", async () => {
+  const session = createHomeownerSessionBearer(1);
+  let captured: HomeownerSessionEndInput | undefined;
+  const handler = createHomeownerEndSessionHandler({
+    loadEnvironment: () => serverEnvironment,
+    endSession: async (_environment, input) => {
+      captured = input;
+      return { kind: "ended" };
+    },
+  });
+  const response = await handler(endSessionRequest(`${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`));
+  assert.equal(response.status, 204);
+  assert.ok(captured);
+  assert.equal(captured.sessionKeyVersion, 1);
+  assert.deepEqual(captured.sessionHmac, deriveSessionHmac(session, PROJECT_REF, serverEnvironment.sessionHmacKeys));
+  const contents = `${await response.text()} ${Array.from(response.headers.entries()).join(" ")}`;
+  assert.equal(contents.includes(session.canonical), false);
+  assert.equal(contents.includes(captured.sessionHmac.toString("hex")), false);
+  assert.match(response.headers.get("set-cookie") ?? "", /Max-Age=0/);
+
+  const input: HomeownerSessionEndInput = { sessionKeyVersion: 1, sessionHmac: Buffer.alloc(32, 9) };
+  let name = "";
+  let values: Record<string, unknown> = {};
+  assert.deepEqual(await callHomeownerSessionEnd({ rpc: async (functionName, arguments_) => {
+    name = functionName; values = arguments_; return { data: true, error: null };
+  } }, input), { kind: "ended" });
+  assert.equal(name, "paint_guide_homeowner_session_end");
+  assert.deepEqual(values, { p_session_key_version: 1, p_session_hmac: `\\x${"09".repeat(32)}` });
+  for (const responseValue of [false, null, { ended: true }]) {
+    assert.deepEqual(await callHomeownerSessionEnd({ rpc: async () => ({ data: responseValue, error: null }) }, input), { kind: "operational_failure" });
+  }
+});
+
+test("end-session reports operational failures generically while clearing the browser cookie", async () => {
+  const session = createHomeownerSessionBearer(1);
+  const rpcFailure = createHomeownerEndSessionHandler({
+    loadEnvironment: () => serverEnvironment,
+    endSession: async () => ({ kind: "operational_failure" }),
+  });
+  const missingKey = createHomeownerEndSessionHandler({
+    loadEnvironment: () => ({
+      ...serverEnvironment,
+      sessionHmacKeys: { activeVersion: 2, keys: new Map([[2, Buffer.alloc(32, 7)]]) },
+    }),
+  });
+  for (const handler of [rpcFailure, missingKey]) {
+    const response = await handler(endSessionRequest(`${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`));
+    assert.equal(response.status, 503);
+    assert.equal(await response.text(), '{"available":false}');
+    assert.match(response.headers.get("set-cookie") ?? "", /Max-Age=0/);
+    assert.equal(response.headers.get("cache-control"), "no-store, private");
+    assert.equal(response.headers.get("referrer-policy"), "no-referrer");
+  }
 });

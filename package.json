@@ -11,6 +11,7 @@
     "probe:homeowner-bytea": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-bytea-contract.mjs",
     "probe:homeowner-exchange": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-exchange-contract.mjs",
     "probe:homeowner-document": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-document-contract.mjs",
+    "probe:homeowner-end-session": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-end-session-contract.mjs",
     "lint": "eslint .",
     "preview": "vite preview"
   },

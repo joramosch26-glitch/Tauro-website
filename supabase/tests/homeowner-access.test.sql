@@ -119,7 +119,8 @@ where (n.nspname = 'public' and p.proname like 'paint_guide_homeowner_%')
     'validate_homeowner_token_material', 'lock_homeowner_guide',
     'homeowner_access_material', 'invalidate_homeowner_sessions_on_unpublish',
     'homeowner_access_issue', 'homeowner_access_recover', 'homeowner_access_rotate',
-    'homeowner_access_revoke', 'homeowner_session_exchange', 'homeowner_document_read'
+    'homeowner_access_revoke', 'homeowner_session_exchange', 'homeowner_document_read',
+    'homeowner_session_end'
   ));
 
 select extensions.ok(p.prosecdef = (p.proname = 'invalidate_homeowner_sessions_on_unpublish'),
@@ -132,7 +133,8 @@ where (n.nspname = 'public' and p.proname like 'paint_guide_homeowner_%')
     'validate_homeowner_token_material', 'lock_homeowner_guide',
     'homeowner_access_material', 'invalidate_homeowner_sessions_on_unpublish',
     'homeowner_access_issue', 'homeowner_access_recover', 'homeowner_access_rotate',
-    'homeowner_access_revoke', 'homeowner_session_exchange', 'homeowner_document_read'
+    'homeowner_access_revoke', 'homeowner_session_exchange', 'homeowner_document_read',
+    'homeowner_session_end'
   ));
 
 select extensions.is(pg_catalog.pg_get_userbyid(p.proowner), 'postgres', 'Explicit postgres owner')
@@ -144,7 +146,8 @@ where (n.nspname = 'public' and p.proname like 'paint_guide_homeowner_%')
     'validate_homeowner_token_material', 'lock_homeowner_guide',
     'homeowner_access_material', 'invalidate_homeowner_sessions_on_unpublish',
     'homeowner_access_issue', 'homeowner_access_recover', 'homeowner_access_rotate',
-    'homeowner_access_revoke', 'homeowner_session_exchange', 'homeowner_document_read'
+    'homeowner_access_revoke', 'homeowner_session_exchange', 'homeowner_document_read',
+    'homeowner_session_end'
   ));
 
 select extensions.ok('search_path=""' = any(p.proconfig), 'Empty search_path')
@@ -156,8 +159,18 @@ where (n.nspname = 'public' and p.proname like 'paint_guide_homeowner_%')
     'validate_homeowner_token_material', 'lock_homeowner_guide',
     'homeowner_access_material', 'invalidate_homeowner_sessions_on_unpublish',
     'homeowner_access_issue', 'homeowner_access_recover', 'homeowner_access_rotate',
-    'homeowner_access_revoke', 'homeowner_session_exchange', 'homeowner_document_read'
+    'homeowner_access_revoke', 'homeowner_session_exchange', 'homeowner_document_read',
+    'homeowner_session_end'
   ));
+
+select extensions.ok(to_regprocedure('public.paint_guide_homeowner_session_end(smallint,bytea)') is not null,
+  'Session-end public RPC has the exact signature');
+select extensions.ok(not has_function_privilege('public',
+  'public.paint_guide_homeowner_session_end(smallint,bytea)', 'EXECUTE'),
+  'PUBLIC cannot execute session-end RPC');
+select extensions.ok(has_function_privilege('service_role',
+  'public.paint_guide_homeowner_session_end(smallint,bytea)', 'EXECUTE'),
+  'service_role can execute session-end RPC');
 
 -- Actual denied reads, not just catalog claims.
 set local role anon;
@@ -166,6 +179,7 @@ select extensions.throws_ok('select guide_id from paint_guide_private.homeowner_
 select extensions.throws_ok('select id from paint_guide_private.homeowner_sessions', '42501', null, 'anon session read denied');
 
 select extensions.throws_ok('select public.paint_guide_homeowner_document_read(1::smallint, decode(repeat(''11'', 32), ''hex''))', '42501', null, 'anon document RPC denied');
+select extensions.throws_ok('select public.paint_guide_homeowner_session_end(1::smallint, decode(repeat(''11'', 32), ''hex''))', '42501', null, 'anon session-end RPC denied');
 
 reset role;
 set local role authenticated;
@@ -174,6 +188,7 @@ select extensions.throws_ok('select guide_id from paint_guide_private.homeowner_
 select extensions.throws_ok('select id from paint_guide_private.homeowner_sessions', '42501', null, 'authenticated session read denied');
 
 select extensions.throws_ok('select public.paint_guide_homeowner_access_recover(''71000000-0000-4000-8000-000000000101''::uuid, ''71000000-0000-4000-8000-000000000001''::uuid)', '42501', null, 'authenticated staff RPC denied');
+select extensions.throws_ok('select public.paint_guide_homeowner_session_end(1::smallint, decode(repeat(''11'', 32), ''hex''))', '42501', null, 'authenticated session-end RPC denied');
 
 reset role;
 
@@ -264,6 +279,39 @@ select extensions.is(jsonb_array_length((select value from pg_temp.homeowner_tes
 select extensions.throws_ok('select public.paint_guide_homeowner_document_read(1::smallint, decode(repeat(''11'', 32), ''hex''), ''71000000-0000-4000-8000-000000000102''::uuid)', '42883', null, 'Document RPC accepts no arbitrary guide UUID');
 
 select extensions.ok(public.paint_guide_homeowner_document_read(1::smallint, decode(repeat('00', 32), 'hex')) is null, 'Unknown session denied generically');
+
+insert into pg_temp.homeowner_test_results (name, value) values ('session_end_other',
+  public.paint_guide_homeowner_session_exchange(1::smallint, decode(repeat('11', 32), 'hex'),
+    1::smallint, decode(repeat('13', 32), 'hex'), clock_timestamp() + interval '10 minutes'));
+select extensions.ok((select value from pg_temp.homeowner_test_results where name = 'session_end_other') is not null,
+  'Unrelated current session created for session-end isolation');
+
+select extensions.ok(public.paint_guide_homeowner_session_end(1::smallint, decode(repeat('11', 32), 'hex')),
+  'Matching session-end succeeds');
+select extensions.ok((select revoked_at is not null from paint_guide_private.homeowner_sessions
+  where session_key_version = 1 and session_hmac = decode(repeat('11', 32), 'hex')),
+  'Matching session is persistently revoked');
+select extensions.ok((select revoked_at is null from paint_guide_private.homeowner_sessions
+  where session_key_version = 1 and session_hmac = decode(repeat('13', 32), 'hex')),
+  'Session-end leaves unrelated session active');
+insert into pg_temp.homeowner_test_results (name, value) values ('session_end_timestamp', jsonb_build_object(
+  'revoked_at', (select revoked_at from paint_guide_private.homeowner_sessions
+    where session_key_version = 1 and session_hmac = decode(repeat('11', 32), 'hex'))));
+select extensions.ok(public.paint_guide_homeowner_session_end(1::smallint, decode(repeat('11', 32), 'hex')),
+  'Repeated session-end succeeds idempotently');
+select extensions.ok((select value from pg_temp.homeowner_test_results where name = 'session_end_timestamp')->'revoked_at' =
+  (select to_jsonb(revoked_at) from paint_guide_private.homeowner_sessions
+    where session_key_version = 1 and session_hmac = decode(repeat('11', 32), 'hex')),
+  'Repeated session-end preserves original revoked timestamp');
+select extensions.ok(public.paint_guide_homeowner_session_end(1::smallint, decode(repeat('99', 32), 'hex')),
+  'Unknown session-end succeeds without enumeration');
+select extensions.ok((select revoked_at is null from paint_guide_private.homeowner_sessions
+  where session_key_version = 1 and session_hmac = decode(repeat('13', 32), 'hex')),
+  'Unknown session-end changes no unrelated session');
+select extensions.ok(public.paint_guide_homeowner_document_read(1::smallint, decode(repeat('11', 32), 'hex')) is null,
+  'Session-end denies the revoked session document');
+select extensions.ok(public.paint_guide_homeowner_document_read(1::smallint, decode(repeat('13', 32), 'hex')) is not null,
+  'Unrelated current session document remains available');
 
 
 -- Expired and explicitly revoked sessions cannot authorize even if their snapshots match.
