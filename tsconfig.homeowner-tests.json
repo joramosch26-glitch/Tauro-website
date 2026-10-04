@@ -1,0 +1,15 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist/homeowner-tests"
+  },
+  "include": [
+    "src/paint-guide/homeowner/bootstrap.ts",
+    "src/paint-guide/homeowner/client.ts",
+    "src/paint-guide/homeowner/document.ts",
+    "src/paint-guide/homeowner/fragment.ts",
+    "src/paint-guide/presentation/types.ts",
+    "tests/homeowner-bootstrap.test.ts"
+  ]
+}

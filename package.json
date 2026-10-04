@@ -12,6 +12,7 @@
     "probe:homeowner-exchange": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-exchange-contract.mjs",
     "probe:homeowner-document": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-document-contract.mjs",
     "probe:homeowner-end-session": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-end-session-contract.mjs",
+    "test:homeowner-bootstrap": "tsc -p tsconfig.homeowner-tests.json && node --test dist/homeowner-tests/tests/homeowner-bootstrap.test.js",
     "lint": "eslint .",
     "preview": "vite preview"
   },
