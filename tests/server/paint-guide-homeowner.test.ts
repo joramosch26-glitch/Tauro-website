@@ -177,6 +177,44 @@ test("keyrings require canonical versions, active keys, and exact 32-byte materi
   })));
 });
 
+test("test environment accepts only explicit loopback HTTP Supabase URLs", () => {
+  assert.equal(
+    loadHomeownerServerEnvironment(environment({
+      TAURO_PG_SUPABASE_URL: "http://127.0.0.1:55321/",
+    })).supabaseUrl.toString(),
+    "http://127.0.0.1:55321/",
+  );
+  assert.equal(
+    loadHomeownerServerEnvironment(environment({
+      TAURO_PG_SUPABASE_URL: "http://localhost:55321/",
+    })).supabaseUrl.toString(),
+    "http://localhost:55321/",
+  );
+
+  for (const value of [
+    "http://192.168.1.10:55321/",
+    "http://10.0.0.1:55321/",
+    "http://example.com:55321/",
+    "https://127.0.0.1:55321/",
+    "http://127.0.0.1/",
+    "http://user:password@127.0.0.1:55321/",
+    "http://127.0.0.1:55321/path",
+    "http://127.0.0.1:55321/?query=value",
+    "http://127.0.0.1:55321/#fragment",
+  ]) {
+    assert.throws(() => loadHomeownerServerEnvironment(environment({
+      TAURO_PG_SUPABASE_URL: value,
+    })));
+  }
+
+  for (const runtimeEnvironment of ["development", "preview", "production"] as const) {
+    assert.throws(() => loadHomeownerServerEnvironment(environment({
+      TAURO_PG_ENVIRONMENT: runtimeEnvironment,
+      TAURO_PG_SUPABASE_URL: "http://127.0.0.1:55321/",
+    })));
+  }
+});
+
 test("access bearer is canonical, version-routed, and contains 256 bits of randomness", () => {
   const token = createHomeownerAccessToken(2);
   const parsed = parseHomeownerAccessToken(token.canonical);

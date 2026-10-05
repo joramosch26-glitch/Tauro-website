@@ -30,5 +30,6 @@ function parseArray<T>(value: unknown, parse: (item: unknown) => T | null) {
 export function parseHomeownerGuideDocument(value: unknown): HomeownerGuideDocumentData | null {
   if (!isRecord(value) || !isRecord(value.guide)) return null;
   const residenceName = requiredString(value.guide.residence_name); const primaryScopeNote = nullableString(value.guide.primary_scope_note); const locations = parseArray(value.locations, parseLocation); const records = parseArray(value.records, parseRecord); const assignments = parseArray(value.assignments, parseAssignment);
-  return value.schema_version === 1 && residenceName !== null && primaryScopeNote !== undefined && locations !== null && records !== null && assignments !== null ? { guide: { residence_name: residenceName, primary_scope_note: primaryScopeNote }, locations, records, assignments } : null;
+  const keys = Object.keys(value);
+  return keys.length === 4 && keys.every((key) => ["guide", "locations", "records", "assignments"].includes(key)) && residenceName !== null && primaryScopeNote !== undefined && locations !== null && records !== null && assignments !== null ? { guide: { residence_name: residenceName, primary_scope_note: primaryScopeNote }, locations, records, assignments } : null;
 }

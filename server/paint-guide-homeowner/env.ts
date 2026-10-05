@@ -30,7 +30,24 @@ function requiredValue(source: EnvironmentSource, name: string) {
   return value;
 }
 
-function parseSupabaseUrl(value: string, expectedProjectRef: string) {
+function isLocalTestSupabaseUrl(url: URL) {
+  if (
+    url.protocol !== "http:" ||
+    (url.hostname !== "127.0.0.1" && url.hostname !== "localhost") ||
+    !/^[1-9][0-9]*$/.test(url.port)
+  ) {
+    return false;
+  }
+
+  const port = Number(url.port);
+  return Number.isSafeInteger(port) && port <= 65535;
+}
+
+function parseSupabaseUrl(
+  value: string,
+  expectedProjectRef: string,
+  environment: HomeownerEnvironment,
+) {
   let url: URL;
 
   try {
@@ -47,20 +64,21 @@ function parseSupabaseUrl(value: string, expectedProjectRef: string) {
     authorityEnd === -1 ? authorityTail.length : authorityEnd,
   );
 
-  if (
-    url.protocol !== "https:" ||
+  const sharedInvalidShape =
     url.pathname !== "/" ||
-    url.search ||
-    url.hash ||
-    url.username ||
-    url.password ||
-    url.port ||
-    authority !== `${expectedProjectRef}.supabase.co`
-  ) {
-    throw new HomeownerEnvironmentError();
-  }
+    Boolean(url.search) ||
+    Boolean(url.hash) ||
+    Boolean(url.username) ||
+    Boolean(url.password);
+  const isHostedUrl =
+    url.protocol === "https:" &&
+    !url.port &&
+    authority === `${expectedProjectRef}.supabase.co` &&
+    url.hostname === `${expectedProjectRef}.supabase.co`;
+  const isAllowedLocalTestUrl =
+    environment === "test" && isLocalTestSupabaseUrl(url);
 
-  if (url.hostname !== `${expectedProjectRef}.supabase.co`) {
+  if (sharedInvalidShape || (!isHostedUrl && !isAllowedLocalTestUrl)) {
     throw new HomeownerEnvironmentError();
   }
 
@@ -165,6 +183,7 @@ export function loadHomeownerServerEnvironment(
   const supabaseUrl = parseSupabaseUrl(
     requiredValue(source, "TAURO_PG_SUPABASE_URL"),
     expectedProjectRef,
+    environment,
   );
 
   return {

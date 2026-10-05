@@ -14,7 +14,7 @@ const fixture = (residenceName: string): HomeownerGuideDocumentData => ({
   guide: { residence_name: residenceName, primary_scope_note: null },
   locations: [], records: [], assignments: [],
 });
-const transportFixture = { schema_version: 1, ...fixture("Test Residence") };
+const transportFixture = fixture("Test Residence");
 
 type FakeLocation = { pathname: string; search: string; hash: string };
 
@@ -179,6 +179,7 @@ test("bootstrap and browser API client fail closed and keep the token in the exc
 
 test("document guard accepts only the presentation-safe response shape", () => {
   assert.deepEqual(parseHomeownerGuideDocument(transportFixture), fixture("Test Residence"));
-  assert.equal(parseHomeownerGuideDocument({ ...transportFixture, schema_version: 2 }), null);
+  assert.equal(parseHomeownerGuideDocument({ ...transportFixture, schema_version: 1 }), null);
   assert.equal(parseHomeownerGuideDocument({ ...transportFixture, guide: { ...transportFixture.guide, primary_scope_note: 7 } }), null);
+  assert.equal(parseHomeownerGuideDocument({ ...transportFixture, records: {} }), null);
 });
