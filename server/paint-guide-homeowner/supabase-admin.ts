@@ -1,13 +1,15 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import type { HomeownerServerEnvironment } from "./types.js";
+import type { PaintGuideServerEnvironment } from "./types.js";
 
 export function createHomeownerSupabaseAdminClient(
-  environment: HomeownerServerEnvironment,
+  environment: PaintGuideServerEnvironment,
+  fetchImplementation?: typeof fetch,
 ): SupabaseClient {
   return createClient(
     environment.supabaseUrl.toString(),
     environment.supabaseSecretKey,
     {
+      ...(fetchImplementation ? { global: { fetch: fetchImplementation } } : {}),
       auth: {
         autoRefreshToken: false,
         persistSession: false,

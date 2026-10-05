@@ -2,6 +2,7 @@ import type {
   EnvironmentSource,
   HomeownerEnvironment,
   HomeownerServerEnvironment,
+  PaintGuideServerEnvironment,
 } from "./types.js";
 import { decodeBase64Url } from "./encoding.js";
 
@@ -162,9 +163,10 @@ function parseVersionedKeyring(
   return { activeVersion, keys };
 }
 
-export function loadHomeownerServerEnvironment(
+// Staff authorization uses the same project/privacy checks without crypto keys.
+export function loadPaintGuideServerEnvironment(
   source: EnvironmentSource = process.env,
-): HomeownerServerEnvironment {
+): PaintGuideServerEnvironment {
   const expectedProjectRef = requiredValue(source, "TAURO_PG_EXPECTED_PROJECT_REF");
   if (!PROJECT_REF_PATTERN.test(expectedProjectRef)) {
     throw new HomeownerEnvironmentError();
@@ -195,6 +197,14 @@ export function loadHomeownerServerEnvironment(
       requiredValue(source, "TAURO_PG_ALLOWED_ORIGINS"),
       environment,
     ),
+  };
+}
+
+export function loadHomeownerServerEnvironment(
+  source: EnvironmentSource = process.env,
+): HomeownerServerEnvironment {
+  return {
+    ...loadPaintGuideServerEnvironment(source),
     tokenLookupHmacKeys: parseVersionedKeyring(
       source,
       "TAURO_PG_TOKEN_LOOKUP_HMAC_ACTIVE_VERSION",

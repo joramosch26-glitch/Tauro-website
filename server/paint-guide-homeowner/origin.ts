@@ -1,4 +1,4 @@
-import type { HomeownerServerEnvironment } from "./types.js";
+import type { PaintGuideServerEnvironment } from "./types.js";
 
 function parseExactOrigin(value: string) {
   try {
@@ -12,7 +12,7 @@ function parseExactOrigin(value: string) {
 
 export function hasAllowedHomeownerOrigin(
   request: Request,
-  environment: HomeownerServerEnvironment,
+  environment: PaintGuideServerEnvironment,
 ) {
   const origin = request.headers.get("origin");
   if (!origin) return false;

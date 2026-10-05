@@ -9,12 +9,15 @@ export type VersionedKeyring = {
   keys: ReadonlyMap<number, Buffer>;
 };
 
-export type HomeownerServerEnvironment = {
+export type PaintGuideServerEnvironment = {
   supabaseUrl: URL;
   supabaseSecretKey: string;
   expectedProjectRef: string;
   environment: HomeownerEnvironment;
   allowedOrigins: ReadonlySet<string>;
+};
+
+export type HomeownerServerEnvironment = PaintGuideServerEnvironment & {
   tokenLookupHmacKeys: VersionedKeyring;
   tokenEncryptionKeys: VersionedKeyring;
   sessionHmacKeys: VersionedKeyring;
