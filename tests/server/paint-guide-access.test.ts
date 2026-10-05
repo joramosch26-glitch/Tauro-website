@@ -5,7 +5,7 @@ import { byteaToPostgrest } from "../../server/paint-guide-homeowner/bytea.js";
 import { loadHomeownerServerEnvironment } from "../../server/paint-guide-homeowner/env.js";
 import { createPaintGuideStaffAuthorizer, createPaintGuideStaffClient } from "../../server/paint-guide-staff/auth.js";
 import { canonicalStaffHomeownerOrigin, createStaffAccessHandler } from "../../server/paint-guide-staff/access.js";
-import { callStaffAccessMaterial, callStaffAccessStatus, validateStaffAccessStatus,
+import { callStaffAccessMaterial, callStaffAccessRevoke, callStaffAccessStatus, validateStaffAccessStatus,
   type StaffAccessOperation, type StaffAccessRpcClient } from "../../server/paint-guide-staff/access-rpc.js";
 
 const GUIDE = "73000000-0000-4000-8000-000000000101";
@@ -41,7 +41,8 @@ function request(operation: StaffAccessOperation, options: {
   return new Request(`http://127.0.0.1:55400/api/paint-guide/staff/access/${operation}`, {
     method, headers: { Origin: options.origin ?? ORIGIN, "Content-Type": options.contentType ?? "application/json",
       ...(options.authorization === null ? {} : { Authorization: options.authorization ?? `Bearer ${jwt()}` }), ...options.headers },
-    ...(method === "GET" ? {} : { body: options.body ?? JSON.stringify({ guideId: GUIDE }) }),
+    ...(method === "GET" ? {} : { body: options.body ?? JSON.stringify({ guideId: GUIDE,
+      ...(["rotate", "revoke"].includes(operation) ? { expectedTokenGeneration: 1, expectedSessionEpoch: 1 } : {}) }) }),
   });
 }
 function rawStatus(state = "absent", lifecycle = "draft", generation = 1, epoch = 1): Record<string, unknown> {
@@ -66,7 +67,27 @@ function fixture(options: { role?: string; active?: boolean; missingProfile?: bo
     calls.push({ name, args });
     assert.equal(args.p_guide_id, GUIDE);
     assert.equal(args.p_actor_id, USER);
-    if (name.endsWith("_status")) return { data: rawStatus(state, lifecycle), error: null };
+    if (name.endsWith("_status")) return { data: rawStatus(state, lifecycle,
+      Number(stored?.token_generation ?? 1), Number(stored?.session_epoch ?? 1)), error: null };
+    if (name.endsWith("_rotate") || name.endsWith("_revoke")) {
+      if (!stored) return { data: null, error: { code: "P0002" } };
+      if (args.p_expected_token_generation !== stored.token_generation) return { data: null, error: { code: "40001" } };
+      if (name.endsWith("_revoke") && state === "revoked") return { data: {
+        outcome: "already_revoked", token_generation: stored.token_generation, session_epoch: stored.session_epoch }, error: null };
+      if (args.p_expected_session_epoch !== stored.session_epoch) return { data: null, error: { code: "40001" } };
+      stored.session_epoch = Number(stored.session_epoch) + 1;
+      if (name.endsWith("_revoke")) {
+        state = "revoked";
+        return { data: { outcome: "revoked", token_generation: stored.token_generation, session_epoch: stored.session_epoch }, error: null };
+      }
+      stored = { guide_id: GUIDE, format_version: args.p_format_version,
+        token_generation: Number(stored.token_generation) + 1, session_epoch: stored.session_epoch,
+        lookup_key_version: args.p_lookup_key_version, token_hmac: args.p_token_hmac,
+        encryption_key_version: args.p_encryption_key_version, token_ciphertext: args.p_token_ciphertext,
+        encryption_nonce: args.p_encryption_nonce, encryption_tag: args.p_encryption_tag };
+      state = "active";
+      return { data: { outcome: "rotated", access: stored }, error: null };
+    }
     if (name.endsWith("_issue")) {
       if (state === "revoked") return { data: { outcome: "revoked" }, error: null };
       const existed = stored !== null;
@@ -97,7 +118,7 @@ async function safeFailure(response: Response, status: number) {
   assert.equal(response.headers.get("access-control-allow-origin"), null);
 }
 
-for (const operation of ["status", "issue", "recover"] as const) {
+for (const operation of ["status", "issue", "recover", "rotate", "revoke"] as const) {
   test(`${operation}: real staff verifier rejects missing/malformed/forged/wrong-project JWTs and inactive/missing profiles`, async () => {
     for (const authorization of [null, "Bearer malformed", `Bearer ${jwt({}, true)}`,
       `Bearer ${jwt({ iss: "https://wrongprojectabcdefghij.supabase.co/auth/v1" })}`]) {
@@ -127,11 +148,15 @@ for (const operation of ["status", "issue", "recover"] as const) {
     for (const [options, status] of cases) await safeFailure(await f.handler(operation)(request(operation, options)), status);
     assert.equal(f.calls.length, 0);
   });
-  test(`${operation}: active owner and supervisor permitted, verified actor used exclusively`, async () => {
+  test(`${operation}: operation-specific owner/supervisor authorization, verified actor used exclusively`, async () => {
     for (const role of ["owner", "supervisor"]) {
       const f = fixture({ role });
-      if (operation === "recover") assert.equal((await f.handler("issue")(request("issue"))).status, 200);
-      assert.equal((await f.handler(operation)(request(operation))).status, 200);
+      if (["recover", "rotate", "revoke"].includes(operation)) assert.equal((await f.handler("issue")(request("issue"))).status, 200);
+      const before = f.calls.length;
+      const response = await f.handler(operation)(request(operation));
+      if (["rotate", "revoke"].includes(operation) && role === "supervisor") {
+        await safeFailure(response, 403); assert.equal(f.calls.length, before);
+      } else assert.equal(response.status, 200);
       assert.ok(f.calls.every(c => c.args.p_actor_id === USER));
     }
   });
@@ -162,6 +187,127 @@ test("status: lifecycle/access matrix is minimal, consistent and never includes 
     { ...rawStatus("active"), session_epoch: 0 }, { ...rawStatus("active"), homeowner_exchange_available: true }]) {
     assert.equal(validateStaffAccessStatus(bad, GUIDE), null);
   }
+});
+
+for (const operation of ["rotate", "revoke"] as const) {
+  test(`${operation}: exact required CAS fields, safe positive bigint-compatible integers, no extra fields`, async () => {
+    const f = fixture();
+    const body = { guideId: GUIDE, expectedTokenGeneration: 1, expectedSessionEpoch: 1 };
+    const bodies: unknown[] = [
+      { guideId: GUIDE }, { guideId: GUIDE, expectedTokenGeneration: 1 }, { guideId: GUIDE, expectedSessionEpoch: 1 },
+      { ...body, role: "owner" }, { ...body, actorId: USER },
+    ];
+    for (const field of ["expectedTokenGeneration", "expectedSessionEpoch"]) for (const bad of
+      [null, "1", true, 0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1, 9223372036854775808]) bodies.push({ ...body, [field]: bad });
+    bodies.push({ ...body, expectedSessionEpoch: Number.MAX_SAFE_INTEGER });
+    if (operation === "rotate") bodies.push({ ...body, expectedTokenGeneration: Number.MAX_SAFE_INTEGER });
+    for (const bad of bodies) await safeFailure(await f.handler(operation)(request(operation, { body: JSON.stringify(bad) })), 400);
+    assert.equal(f.calls.length, 0);
+  });
+
+  test(`${operation}: stale generation/epoch cannot mutate, retry, or expose private material`, async () => {
+    for (const field of ["expectedTokenGeneration", "expectedSessionEpoch"]) {
+      const f = fixture(); await f.handler("issue")(request("issue"));
+      const before = JSON.stringify(f.material());
+      await safeFailure(await f.handler(operation)(request(operation, {
+        body: JSON.stringify({ guideId: GUIDE, expectedTokenGeneration: 1, expectedSessionEpoch: 1, [field]: 2 }),
+      })), 409);
+      assert.equal(JSON.stringify(f.material()), before);
+      assert.equal(f.calls.filter(c => c.name.endsWith(`_${operation}`)).length, 0);
+    }
+    for (const code of ["40001", "P0002", "42501", "XX000"]) {
+      const f = fixture(); await f.handler("issue")(request("issue"));
+      const client: StaffAccessRpcClient = { rpc: (name, args) => name.endsWith(`_${operation}`)
+        ? Promise.resolve({ data: null, error: { code, message: "synthetic private database detail" } }) : f.client.rpc(name, args) };
+      await safeFailure(await f.handler(operation, client)(request(operation)), code === "40001" ? 409 : code === "P0002" ? 404 : 503);
+      assert.equal(JSON.stringify(f.material()).includes("synthetic private"), false);
+    }
+  });
+
+  test(`${operation}: post-mutation race never returns stale successful credentials or status`, async () => {
+    const f = fixture(); await f.handler("issue")(request("issue"));
+    let statuses = 0;
+    const client: StaffAccessRpcClient = { rpc: (name, args) => name.endsWith("_status") && ++statuses === 2
+      ? Promise.resolve({ data: rawStatus("active", "published", 3, 3), error: null }) : f.client.rpc(name, args) };
+    await safeFailure(await f.handler(operation, client)(request(operation)), 409);
+    assert.equal(f.calls.filter(c => c.name.endsWith(`_${operation}`)).length, 1);
+  });
+}
+
+test("rotate: fresh crypto, exact generation/epoch advances, stable recovery/issue and restoration after revoke", async () => {
+  for (const lifecycle of ["draft", "published", "archived"]) {
+    const f = fixture({ lifecycle });
+    const first = await (await f.handler("issue")(request("issue"))).json();
+    const old = { ...f.material() };
+    const rotated = await f.handler("rotate")(request("rotate", { headers: { Host: "attacker.example" } }));
+    assert.equal(rotated.status, 200);
+    const data = await rotated.json();
+    assert.notEqual(data.privateUrl, first.privateUrl);
+    assert.equal(data.tokenGeneration, 2); assert.equal(data.sessionEpoch, 2);
+    assert.equal(data.accessState, "active"); assert.equal(data.homeownerExchangeAvailable, lifecycle === "published");
+    assert.notEqual(f.material().token_hmac, old.token_hmac); assert.notEqual(f.material().encryption_nonce, old.encryption_nonce);
+    const url = new URL(data.privateUrl); assert.equal(url.origin, ORIGIN); assert.equal(url.search, ""); assert.match(url.hash, /^#tpgh1\.1\.[A-Za-z0-9_-]{43}$/);
+    assert.deepEqual(Object.keys(data).sort(), ["guideId", "guideStatus", "accessState", "tokenGeneration", "sessionEpoch", "homeownerExchangeAvailable", "privateUrl"].sort());
+    for (const op of ["issue", "recover"] as const) assert.equal((await (await f.handler(op)(request(op))).json()).privateUrl, data.privateUrl);
+    const revoked = await f.handler("revoke")(request("revoke", { body: JSON.stringify({ guideId: GUIDE, expectedTokenGeneration: 2, expectedSessionEpoch: 2 }) }));
+    assert.equal(revoked.status, 200);
+    const restored = await f.handler("rotate")(request("rotate", { body: JSON.stringify({ guideId: GUIDE, expectedTokenGeneration: 2, expectedSessionEpoch: 3 }) }));
+    assert.equal(restored.status, 200);
+    const c = await restored.json(); assert.equal(c.accessState, "active"); assert.equal(c.tokenGeneration, 3); assert.equal(c.sessionEpoch, 4);
+    assert.notEqual(c.privateUrl, data.privateUrl); assert.notEqual(c.privateUrl, first.privateUrl);
+    const call = f.calls.find(c => c.name.endsWith("_rotate"))!;
+    assert.deepEqual(Object.keys(call.args).sort(), ["p_guide_id", "p_actor_id", "p_expected_token_generation", "p_expected_session_epoch", "p_format_version", "p_lookup_key_version", "p_token_hmac", "p_encryption_key_version", "p_token_ciphertext", "p_encryption_nonce", "p_encryption_tag"].sort());
+  }
+});
+
+test("revoke: no recovery/crypto, no URL, generation retained, epoch advances once and repeat is idempotent", async () => {
+  const f = fixture(); await f.handler("issue")(request("issue"));
+  const material = { ...f.material() };
+  const handler = createStaffAccessHandler("revoke", { authorize: async () => ({ kind: "authorized", staff: { userId: USER, role: "owner" } }),
+    loadEnvironment: () => environment, createClient: () => f.client,
+    loadCryptoEnvironment: () => { throw Error("Revoke must not load crypto."); } });
+  const response = await handler(request("revoke")); assert.equal(response.status, 200);
+  const data = await response.json(); assert.equal(data.accessState, "revoked"); assert.equal(data.tokenGeneration, 1); assert.equal(data.sessionEpoch, 2);
+  assert.deepEqual(Object.keys(data).sort(), ["guideId", "guideStatus", "accessState", "tokenGeneration", "sessionEpoch", "homeownerExchangeAvailable"].sort());
+  for (const field of ["token_hmac", "token_ciphertext", "encryption_nonce", "encryption_tag"]) assert.equal(f.material()[field], material[field]);
+  await safeFailure(await handler(request("revoke")), 409);
+  const repeat = await handler(request("revoke", { body: JSON.stringify({ guideId: GUIDE, expectedTokenGeneration: 1, expectedSessionEpoch: 2 }) }));
+  assert.equal(repeat.status, 200); assert.equal((await repeat.json()).sessionEpoch, 2);
+  const cas = { expectedTokenGeneration: 1, expectedSessionEpoch: 1 };
+  assert.deepEqual(await callStaffAccessRevoke(f.client, GUIDE, USER, cas), { kind: "conflict" });
+  for (const op of ["issue", "recover"] as const) {
+    const result = await f.handler(op)(request(op)); assert.equal(result.status, 409); assert.equal((await result.json()).privateUrl, undefined);
+  }
+  assert.deepEqual(Object.keys(f.calls.find(c => c.name.endsWith("_revoke"))!.args).sort(), ["p_guide_id", "p_actor_id", "p_expected_token_generation", "p_expected_session_epoch"].sort());
+});
+
+test("rotate/revoke: absent access, malformed mutation/crypto and transport failures fail closed without logging", async (context) => {
+  const logs: unknown[][] = [];
+  for (const name of ["log", "error", "warn", "debug", "info"] as const) context.mock.method(console, name, (...args: unknown[]) => { logs.push(args); });
+  for (const operation of ["rotate", "revoke"] as const) {
+    const absent = fixture(); await safeFailure(await absent.handler(operation)(request(operation)), 404);
+    const f = fixture(); await f.handler("issue")(request("issue"));
+    const malformed = [null, [], {}, { outcome: "revoked", token_generation: 1, session_epoch: 0 },
+      { outcome: "revoked", token_generation: 1, session_epoch: 2, privateUrl: "private" },
+      { outcome: "rotated", access: { ...f.material(), token_generation: 2, session_epoch: 2 } }];
+    for (const data of malformed) {
+      const client: StaffAccessRpcClient = { rpc: (name, args) => name.endsWith(`_${operation}`)
+        ? Promise.resolve({ data, error: null }) : f.client.rpc(name, args) };
+      await safeFailure(await f.handler(operation, client)(request(operation)), 503);
+    }
+    const thrown: StaffAccessRpcClient = { rpc: (name, args) => {
+      if (name.endsWith(`_${operation}`)) throw Error("private transport"); return f.client.rpc(name, args);
+    } };
+    await safeFailure(await f.handler(operation, thrown)(request(operation)), 503);
+  }
+  const f = fixture(); await f.handler("issue")(request("issue"));
+  const corrupt: StaffAccessRpcClient = { rpc: async (name, args) => {
+    if (!name.endsWith("_rotate")) return f.client.rpc(name, args);
+    const badArgs = { ...args, p_encryption_tag: byteaToPostgrest(Buffer.alloc(16)) };
+    return f.client.rpc(name, badArgs);
+  } };
+  await safeFailure(await f.handler("rotate", corrupt)(request("rotate")), 503);
+  assert.deepEqual(logs, []);
 });
 
 test("status requires no crypto keys; wrong-method response advertises POST", async () => {

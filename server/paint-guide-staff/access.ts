@@ -4,9 +4,9 @@ import { homeownerJsonResponse } from "../paint-guide-homeowner/responses.js";
 import type { HomeownerServerEnvironment, PaintGuideServerEnvironment } from "../paint-guide-homeowner/types.js";
 import { requirePaintGuideStaff, paintGuideStaffFailureResponse } from "./auth.js";
 import {
-  callStaffAccessMaterial, callStaffAccessStatus, isStaffAccessGuideId,
+  callStaffAccessMaterial, callStaffAccessRevoke, callStaffAccessStatus, isStaffAccessGuideId,
   recoverStaffAccessBearer, staffAccessRpcClient,
-  type StaffAccessOperation, type StaffAccessRpcClient,
+  type StaffAccessCas, type StaffAccessOperation, type StaffAccessRpcClient,
 } from "./access-rpc.js";
 
 type StaffAccessDependencies = {
@@ -17,7 +17,7 @@ type StaffAccessDependencies = {
 };
 const MAX_REQUEST_BYTES = 1024;
 
-async function parseGuideId(request: Request) {
+async function parseAccessRequest(request: Request, operation: StaffAccessOperation): Promise<({ guideId: string } & Partial<StaffAccessCas>) | null> {
   if (request.headers.get("content-type") !== "application/json") return null;
   const advertisedLength = request.headers.get("content-length");
   if (advertisedLength !== null && (!/^[0-9]+$/.test(advertisedLength)
@@ -43,7 +43,16 @@ async function parseGuideId(request: Request) {
     if (!body || typeof body !== "object" || Array.isArray(body)
       || Object.getPrototypeOf(body) !== Object.prototype) return null;
     const value = body as Record<string, unknown>;
-    return Object.keys(value).length === 1 && isStaffAccessGuideId(value.guideId) ? value.guideId : null;
+    if (!isStaffAccessGuideId(value.guideId)) return null;
+    if (operation !== "rotate" && operation !== "revoke") return Object.keys(value).length === 1 ? { guideId: value.guideId } : null;
+    if (Object.keys(value).length !== 3) return null;
+    const { expectedTokenGeneration, expectedSessionEpoch } = value;
+    if (typeof expectedTokenGeneration !== "number" || !Number.isSafeInteger(expectedTokenGeneration) || expectedTokenGeneration < 1
+      || typeof expectedSessionEpoch !== "number" || !Number.isSafeInteger(expectedSessionEpoch) || expectedSessionEpoch < 1
+      // Counters and their increments must remain exactly representable in JSON.
+      || !Number.isSafeInteger(expectedSessionEpoch + 1)
+      || (operation === "rotate" && !Number.isSafeInteger(expectedTokenGeneration + 1))) return null;
+    return { guideId: value.guideId, expectedTokenGeneration, expectedSessionEpoch };
   } catch { return null; }
 }
 
@@ -68,15 +77,32 @@ export function createStaffAccessHandler(operation: StaffAccessOperation, depend
     try {
       const environment = loadEnvironment();
       if (!hasAllowedHomeownerOrigin(request, environment)) return unavailable(403);
-      const staff = await authorize(request, ["owner", "supervisor"]);
+      const mutating = operation === "rotate" || operation === "revoke";
+      const staff = await authorize(request, mutating ? ["owner"] : ["owner", "supervisor"]);
       if (staff.kind !== "authorized") return paintGuideStaffFailureResponse(staff.reason);
-      const guideId = await parseGuideId(request);
-      if (guideId === null) return unavailable(400);
+      const input = await parseAccessRequest(request, operation);
+      if (input === null) return unavailable(400);
+      const { guideId } = input;
+      const cas = mutating ? input as { guideId: string } & StaffAccessCas : undefined;
       const client = createClient(environment);
       const initial = await callStaffAccessStatus(client, guideId, staff.staff.userId);
       if (initial.kind !== "status") return unavailable(initial.kind === "not_found" ? 404 : 503);
       if (operation === "status") return homeownerJsonResponse(initial.status);
-      if (initial.status.accessState === "revoked") return homeownerJsonResponse(initial.status, { status: 409 });
+      if (cas) {
+        if (initial.status.accessState === "absent") return unavailable(404);
+        if (initial.status.tokenGeneration !== cas.expectedTokenGeneration
+          || initial.status.sessionEpoch !== cas.expectedSessionEpoch) return unavailable(409);
+      }
+      if (operation === "revoke") {
+        const result = await callStaffAccessRevoke(client, guideId, staff.staff.userId, cas!);
+        if (result.kind !== "revoked") return unavailable(result.kind === "conflict" ? 409 : result.kind === "unavailable" ? 404 : 503);
+        const latest = await callStaffAccessStatus(client, guideId, staff.staff.userId);
+        if (latest.kind !== "status") return unavailable(latest.kind === "not_found" ? 404 : 503);
+        if (latest.status.accessState !== "revoked" || latest.status.tokenGeneration !== result.tokenGeneration
+          || latest.status.sessionEpoch !== result.sessionEpoch) return unavailable(409);
+        return homeownerJsonResponse(latest.status);
+      }
+      if (operation !== "rotate" && initial.status.accessState === "revoked") return homeownerJsonResponse(initial.status, { status: 409 });
       if (operation === "recover" && initial.status.accessState === "absent") return unavailable(404);
 
       const cryptoEnvironment = loadCryptoEnvironment();
@@ -86,7 +112,8 @@ export function createStaffAccessHandler(operation: StaffAccessOperation, depend
         || cryptoEnvironment.environment !== environment.environment
         || cryptoEnvironment.supabaseSecretKey !== environment.supabaseSecretKey) return unavailable(503);
       const origin = canonicalStaffHomeownerOrigin(request, cryptoEnvironment);
-      const result = await callStaffAccessMaterial(client, operation, cryptoEnvironment, guideId, staff.staff.userId);
+      const result = await callStaffAccessMaterial(client, operation, cryptoEnvironment, guideId, staff.staff.userId, cas);
+      if (result.kind === "conflict") return unavailable(409);
       if (result.kind === "unavailable") return unavailable(404);
       if (result.kind === "operational_failure") return unavailable(503);
       // Re-read metadata after the RPC: never attach stale publication/CAS data
@@ -96,7 +123,7 @@ export function createStaffAccessHandler(operation: StaffAccessOperation, depend
       if (latest.status.accessState === "revoked") return homeownerJsonResponse(latest.status, { status: 409 });
       if (result.kind !== "active" || latest.status.accessState !== "active"
         || latest.status.tokenGeneration !== result.material.tokenGeneration
-        || latest.status.sessionEpoch !== result.material.sessionEpoch) return unavailable(503);
+        || latest.status.sessionEpoch !== result.material.sessionEpoch) return unavailable(operation === "rotate" ? 409 : 503);
       const privateUrl = `${origin}/paint-guide/p#${recoverStaffAccessBearer(result.material, cryptoEnvironment)}`;
       return homeownerJsonResponse({ ...latest.status, privateUrl });
     } catch { return unavailable(503); }
