@@ -51,7 +51,7 @@ function object(value: unknown): value is Record<string, unknown> {
 }
 
 function exactKeys(value: Record<string, unknown>, keys: string[]) {
-  return Object.keys(value).length === keys.length && keys.every((key) => Object.hasOwn(value, key));
+  return Object.keys(value).length === keys.length && keys.every((key) => Object.prototype.hasOwnProperty.call(value, key));
 }
 
 function positiveInteger(value: unknown): value is number {
