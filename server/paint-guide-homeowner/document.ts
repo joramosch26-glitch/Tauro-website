@@ -36,7 +36,7 @@ function locationsValue(value: unknown): HomeownerGuideDocumentData["locations"]
   for (const valueItem of value) {
     const item = exactObject(valueItem, ["id", "parent_id", "name", "sort_order", "created_at"]);
     if (!item || !uuid(item.id) || !(item.parent_id === null || uuid(item.parent_id)) || typeof item.name !== "string" || !sortOrder(item.sort_order) || !timestamp(item.created_at)) return null;
-    locations.push({ id: item.id, parent_id: item.parent_id, name: item.name, sort_order: item.sort_order, created_at: item.created_at });
+    locations.push({ id: item.id, parent_id: item.parent_id as string | null, name: item.name, sort_order: item.sort_order, created_at: item.created_at });
   }
   return locations;
 }
