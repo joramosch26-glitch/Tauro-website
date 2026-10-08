@@ -14,17 +14,29 @@ if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("TAURO_PG_LOCAL_HTTP_PORT must be an integer between 1 and 65535.");
 }
 
-const apiModules = {
+export const localRuntimeApiModules = Object.freeze({
   "/api/paint-guide/homeowner/exchange": "api/paint-guide/homeowner/exchange.js",
   "/api/paint-guide/homeowner/document": "api/paint-guide/homeowner/document.js",
   "/api/paint-guide/homeowner/end-session": "api/paint-guide/homeowner/end-session.js",
-};
+  "/api/paint-guide/staff/access/status": "api/paint-guide/staff/access/status.js",
+  "/api/paint-guide/staff/access/issue": "api/paint-guide/staff/access/issue.js",
+  "/api/paint-guide/staff/access/recover": "api/paint-guide/staff/access/recover.js",
+  "/api/paint-guide/staff/access/rotate": "api/paint-guide/staff/access/rotate.js",
+  "/api/paint-guide/staff/access/revoke": "api/paint-guide/staff/access/revoke.js",
+});
+
+export function resolveLocalRuntimeApiModule(pathname) {
+  return localRuntimeApiModules[pathname] ?? null;
+}
 
 const mimeTypes = {
   ".css": "text/css; charset=utf-8",
   ".html": "text/html; charset=utf-8",
+  ".jpg": "image/jpeg",
   ".js": "text/javascript; charset=utf-8",
+  ".png": "image/png",
   ".svg": "image/svg+xml",
+  ".webp": "image/webp",
   ".woff2": "font/woff2",
 };
 
@@ -48,7 +60,7 @@ function copyResponseHeaders(response, nodeResponse) {
 
 async function loadApiHandlers() {
   const handlers = new Map();
-  for (const [pathname, modulePath] of Object.entries(apiModules)) {
+  for (const [pathname, modulePath] of Object.entries(localRuntimeApiModules)) {
     const module = await import(new URL(`../dist/local-homeowner-runtime/${modulePath}`, import.meta.url));
     if (!module.default || typeof module.default.fetch !== "function") {
       throw new Error(`Compiled API entrypoint is unavailable: ${pathname}`);
@@ -63,6 +75,8 @@ async function serveStatic(pathname, nodeResponse) {
     ? resolve(staticRoot, "paint-guide.html")
     : pathname.startsWith("/assets/")
       ? pathInside(staticRoot, pathname)
+      : pathname.startsWith("/tauro/")
+        ? pathInside(staticRoot, pathname)
       : null;
   if (!filePath) return false;
 
@@ -79,7 +93,7 @@ async function serveStatic(pathname, nodeResponse) {
   return true;
 }
 
-function requestFromNode(nodeRequest) {
+export function requestFromNode(nodeRequest) {
   const bodyAllowed = nodeRequest.method !== "GET" && nodeRequest.method !== "HEAD";
   return new Request(new URL(nodeRequest.url ?? "/", `http://${host}:${port}`), {
     method: nodeRequest.method,
@@ -127,4 +141,7 @@ async function main() {
   process.once("SIGTERM", () => server.close(() => process.exit(0)));
 }
 
-await main();
+const invokedDirectly = process.argv[1] !== undefined
+  && resolve(process.argv[1]) === fileURLToPath(import.meta.url);
+
+if (invokedDirectly) await main();

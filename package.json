@@ -13,6 +13,7 @@
     "probe:homeowner-document": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-document-contract.mjs",
     "probe:homeowner-end-session": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-end-session-contract.mjs",
     "test:homeowner-bootstrap": "tsc -p tsconfig.homeowner-tests.json && node --test dist/homeowner-tests/tests/homeowner-bootstrap.test.js",
+    "test:paint-guide-access-ui": "tsc -p tsconfig.paint-guide-access-tests.json && node --test dist/paint-guide-access-tests/tests/paint-guide-staff-access.test.js",
     "build:local-homeowner-http-runtime": "tsc -p tsconfig.local-homeowner-runtime.json",
     "check:local-homeowner-http-runtime": "npm run build:local-homeowner-http-runtime && node scripts/local-homeowner-http-runtime.mjs --check",
     "start:local-homeowner-http-runtime": "npm run build:local-homeowner-http-runtime && node scripts/local-homeowner-http-runtime.mjs",

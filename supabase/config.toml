@@ -241,6 +241,11 @@ otp_expiry = 3600
 # admin_email = "admin@email.com"
 # sender_name = "Admin"
 
+# Local Paint Guide staff passwordless sign-in uses the OTP rendered by this template.
+[auth.email.template.magic_link]
+subject = "Tauro Paint Guide staff sign-in code"
+content_path = "./supabase/templates/staff-login-otp.html"
+
 # Uncomment to customize email template
 # [auth.email.template.invite]
 # subject = "You have been invited"

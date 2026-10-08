@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist/paint-guide-access-tests"
+  },
+  "include": [
+    "src/paint-guide/staff/access-client.ts",
+    "tests/paint-guide-staff-access.test.ts"
+  ]
+}
