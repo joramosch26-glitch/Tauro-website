@@ -6,6 +6,8 @@
   },
   "include": [
     "src/paint-guide/staff/access-client.ts",
-    "tests/paint-guide-staff-access.test.ts"
+    "src/paint-guide/staff/qr-code.ts",
+    "tests/paint-guide-staff-access.test.ts",
+    "tests/paint-guide-qr.test.ts"
   ]
 }
