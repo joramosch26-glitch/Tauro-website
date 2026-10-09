@@ -100,11 +100,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
         AUTHORIZATION_TIMEOUT_MS,
       );
 
-      void supabase
-        .from("profiles")
-        .select("user_id, display_name, role, active, created_at, updated_at")
-        .eq("user_id", userId)
-        .maybeSingle()
+      void Promise.resolve(
+        supabase
+          .from("profiles")
+          .select("user_id, display_name, role, active, created_at, updated_at")
+          .eq("user_id", userId)
+          .maybeSingle(),
+      )
         .then(({ data, error }) => {
           if (!isCurrentRequest()) return;
 

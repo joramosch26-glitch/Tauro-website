@@ -22,6 +22,22 @@ test("staff access responses are strict and status alone cannot reveal a private
   assert.equal(parseStaffAccessResponse({ ...status("revoked"), privateUrl: URL }, true), null);
 });
 
+test("response keys use ES2020 own-property checks without trusting an object's hasOwnProperty", () => {
+  const original = Object.getOwnPropertyDescriptor(Object, "hasOwn")!;
+  Object.defineProperty(Object, "hasOwn", { ...original, value: undefined });
+  try {
+    const response = status();
+    Object.defineProperty(response, "hasOwnProperty", { value: () => { throw new Error("Untrusted method must not run."); } });
+    assert.equal(parseStaffAccessResponse(response, false), response);
+    assert.equal(parseStaffAccessResponse(Object.create(response), false), null);
+    const missingKey: Record<string, unknown> = { ...status(), unexpected: true };
+    delete missingKey.tokenGeneration;
+    assert.equal(parseStaffAccessResponse(missingKey, false), null);
+  } finally {
+    Object.defineProperty(Object, "hasOwn", original);
+  }
+});
+
 test("availability copy and owner/supervisor controls distinguish lifecycle from access", () => {
   assert.equal(accessAvailabilityMessage(status("absent")), "No homeowner access has been issued.");
   assert.equal(accessAvailabilityMessage(status("active", "draft")), "Not available until this guide is published.");
