@@ -1,7 +1,8 @@
 // Synthetic builds only; never contacts Supabase or loads customer credentials.
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { readFileSync, readdirSync } from 'node:fs';
+import { readFileSync, readdirSync, mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 const reference = 'abcdefghijklmnopqrst';
 const canary = 'synthetic_backend_only_P0C_leak_canary';
@@ -10,6 +11,7 @@ const inherited = Object.fromEntries(Object.entries(process.env).filter(([name])
 function build(config, expected) {
   const result = spawnSync('npm', ['run', 'build'], { env: { ...inherited, ...config }, encoding: 'utf8' });
   if ((result.status === 0) !== expected) throw new Error('Unexpected synthetic build result.');
+  return result.stdout + result.stderr;
 }
 function inspectOutput() {
   const assets = readdirSync('dist/assets').filter((name) => name.endsWith('.js'));
@@ -69,6 +71,21 @@ for (const environment of ['preview', 'production']) {
   console.log(`PASS synthetic ${environment} build and public/secret bundle checks`);
 }
 const preview = { ...base, VITE_TAURO_PG_ENVIRONMENT: 'preview', TAURO_PG_ENVIRONMENT: 'preview', VERCEL_ENV: 'preview' };
+const diagnostics = build({ ...preview, DEBUG: 'vite:env', VERCEL_TOKEN: canary }, false);
+assert.ok(!diagnostics.includes(canary), 'Server credential leaked through Vite env diagnostics.');
+assert.ok(diagnostics.includes('Paint Guide configuration is unavailable.'));
+const diagnosticDirectory = mkdtempSync(path.join(tmpdir(), 'tauro-p0c-diagnostics-'));
+try {
+  writeFileSync(path.join(diagnosticDirectory, '.env'), `TAURO_PG_SUPABASE_SECRET_KEY=${canary}\n`);
+  const cliDiagnostics = spawnSync('node', [path.resolve('node_modules/vite/bin/vite.js'), 'build',
+    '--config', path.resolve('vite.config.ts'), '--debug'], {
+    cwd: diagnosticDirectory, env: { ...inherited, ...preview, VERCEL_TOKEN: canary }, encoding: 'utf8',
+  });
+  assert.notEqual(cliDiagnostics.status, 0);
+  assert.ok(!(cliDiagnostics.stdout + cliDiagnostics.stderr).includes(canary));
+  assert.ok((cliDiagnostics.stdout + cliDiagnostics.stderr).includes('Paint Guide configuration is unavailable.'));
+} finally { rmSync(diagnosticDirectory, { recursive: true, force: true }); }
+console.log('PASS negative diagnostic builds: DEBUG=vite:env and CLI --debug fail without credential output');
 for (const [name, config] of [
   ['missing deployment config', { VERCEL: '1', VERCEL_ENV: 'production' }],
   ['project mismatch', { ...preview, TAURO_PG_EXPECTED_PROJECT_REF: 'tsrqponmlkjihgfedcba' }],

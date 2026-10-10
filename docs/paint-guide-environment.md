@@ -17,7 +17,7 @@ anon JWT. Hosted anon JWT references must match. JWT parsing here classifies
 configuration, it does not verify signatures or grant authorization. Opaque
 publishable keys cannot be checked offline for project ownership or validity;
 Supabase validates them. Secret/service_role keys are rejected in the browser.
-No server secret or crypto key may use a VITE_ variable. Errors omit values.
+No server secret or crypto key may use a VITE_ variable. Validation errors omit values.
 Server credentials and existing crypto keyrings remain server-only.
 
 Local marketing builds with no browser configuration remain supported. Partial
@@ -38,8 +38,9 @@ On Vercel, system variables `VERCEL=1` and `VERCEL_ENV` must both be available a
 match the explicitly configured environment. Enable Vercel's system environment
 variables for builds/functions. Unsupported or partial markers fail closed.
 These process variables are trusted deployment inputs, not cryptographic
-attestation. Vite rejects dotenv markers absent from or different from the process
-environment. Never derive them from request headers or manually override them to
+attestation. Vite loads only public build inputs from dotenv files and ignores
+dotenv platform markers; only process markers establish platform identity.
+Never derive them from request headers or manually override them to
 pretend a deployment belongs to another environment. `NODE_ENV=production` means
 optimized JavaScript, not a Paint Guide production deployment.
 
@@ -78,6 +79,16 @@ checks are not established by synthetic repository tests. Cached old clients
 remain a limitation requiring release discipline. Auth permissions, roles,
 session/token formats, database schema and RLS are outside this change.
 
+Vite env diagnostics must not receive server process credentials. The build loader
+selects VITE_ values and only the three public server identity fields, excluding
+backend secrets, crypto keyrings and deployment tokens. Vite verbose diagnostics
+can print raw dotenv file contents before filtering, so the config rejects DEBUG
+selectors that enable `vite:env` (including `*` and `vite:*`) before calling
+loadEnv. CLI `--debug` is also rejected. This is intentionally conservative even
+if a negative selector also disables that namespace. Normal builds and other
+debug namespaces remain available. Keep privileged credentials out of VITE_
+variables; use platform secret configuration or the existing server-only keyrings.
+
 ## Fresh recovery validation
 
 The recovered implementation passed 133 automated checks: 112 server checks
@@ -92,6 +103,13 @@ Generated local asset graphs passed synthetic server-secret canary and server-co
 boundary checks; Marketing asset dependencies, prerendered canonical tags,
 structured data, sitemap exclusion and Paint Guide noindex checks passed.
 Existing external analytics scripts were not fetched or audited.
+
+The final security review passed 134 tests (113 server, 7 homeowner, 14 staff/QR).
+Synthetic `DEBUG=vite:env` and CLI `--debug` builds were rejected before env
+diagnostics, with backend/keyring/deployment-token canaries absent from output.
+The CLI case included a synthetic backend credential in a temporary dotenv file.
+Actual Vite dotenv loading was tested to exclude privileged fields and file-supplied
+platform markers. Three normal build modes and five other negative builds passed.
 
 Manual browser QA, real OTP/key validity, live database state and hosted deployment
 smoke tests: NOT RUN. These results support code review, not release approval.

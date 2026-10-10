@@ -2,8 +2,27 @@
 export type PaintGuideEnvironment = "development" | "test" | "preview" | "production";
 export type ConfigurationSource = Readonly<Record<string, string | undefined>>;
 
+// Vite's env diagnostics print every selected process value. Only public build
+// inputs belong here; platform identity is read directly from the process.
+export const PAINT_GUIDE_BUILD_ENV_PREFIXES = [
+  "VITE_",
+  "TAURO_PG_SUPABASE_URL",
+  "TAURO_PG_EXPECTED_PROJECT_REF",
+  "TAURO_PG_ENVIRONMENT",
+] as const;
+
 export class PaintGuideConfigurationError extends Error {
   constructor() { super("Paint Guide configuration is unavailable."); }
+}
+
+export function validateBuildDiagnostics(source: ConfigurationSource) {
+  // Vite logs raw dotenv contents before filtering. Reject env diagnostics before
+  // invoking loadEnv, including wildcard DEBUG selectors and CLI --debug selectors.
+  const selectors = (source.DEBUG ?? "").split(/[\s,]+/).filter((value) => value && !value.startsWith("-"));
+  for (const selector of selectors) {
+    const pattern = selector.split("*").map((part) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*");
+    if (new RegExp(`^${pattern}$`).test("vite:env")) throw new PaintGuideConfigurationError();
+  }
 }
 
 export function requiredConfiguration(source: ConfigurationSource, name: string) {
@@ -24,15 +43,6 @@ export function validateDeploymentEnvironment(source: ConfigurationSource, envir
   if (source.VERCEL === undefined && source.VERCEL_ENV === undefined) return;
   if (source.VERCEL !== "1" || !["development", "preview", "production"].includes(source.VERCEL_ENV ?? "")
     || source.VERCEL_ENV !== environment) throw new PaintGuideConfigurationError();
-}
-
-export function validateBuildDeploymentMarkers(loaded: ConfigurationSource, processSource: ConfigurationSource) {
-  // dotenv files may configure the app, but cannot impersonate platform system variables.
-  for (const name of ["VERCEL", "VERCEL_ENV"]) {
-    if (loaded[name] !== undefined && loaded[name] !== processSource[name]) {
-      throw new PaintGuideConfigurationError();
-    }
-  }
 }
 
 export function parseProjectReference(value: string) {

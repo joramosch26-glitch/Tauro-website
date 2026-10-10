@@ -1,6 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadBrowserConfiguration, validateBrowserBuild, validateBuildDeploymentMarkers, PaintGuideConfigurationError } from "../../src/paint-guide/lib/environment.js";
+import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { loadEnv } from "vite";
+import { loadBrowserConfiguration, validateBrowserBuild, validateBuildDiagnostics, PAINT_GUIDE_BUILD_ENV_PREFIXES, PaintGuideConfigurationError } from "../../src/paint-guide/lib/environment.js";
 import { loadPaintGuideServerEnvironment } from "../../server/paint-guide-homeowner/env.js";
 import { clearHomeownerSessionCookie, serializeHomeownerSessionCookie } from "../../server/paint-guide-homeowner/cookies.js";
 import { createHomeownerSessionBearer } from "../../server/paint-guide-homeowner/sessions.js";
@@ -101,11 +105,39 @@ test("development/test accepts exact loopback URLs; preview/production reject th
 });
 const emptyKeys = { activeVersion: 1, keys: new Map<number, Buffer>() };
 
-test("dotenv cannot introduce or override Vercel platform identity", () => {
-  assert.doesNotThrow(() => validateBuildDeploymentMarkers({}, {}));
-  assert.doesNotThrow(() => validateBuildDeploymentMarkers(source, source));
-  assert.throws(() => validateBuildDeploymentMarkers({ VERCEL: "1", VERCEL_ENV: "production" }, {}));
-  assert.throws(() => validateBuildDeploymentMarkers({ VERCEL_ENV: "production" }, { VERCEL_ENV: "preview" }));
+test("actual Vite env loading excludes server credentials and dotenv platform identity", () => {
+  const directory = mkdtempSync(join(tmpdir(), "tauro-p0c-env-test-"));
+  try {
+    writeFileSync(join(directory, ".env"), [
+      "VITE_TAURO_PG_ENVIRONMENT=preview", "TAURO_PG_ENVIRONMENT=preview",
+      "VERCEL=1", "VERCEL_ENV=production", "VERCEL_TOKEN=synthetic_only",
+      "TAURO_PG_SUPABASE_SECRET_KEY=synthetic_only",
+      "TAURO_PG_TOKEN_ENCRYPTION_KEY_V1=synthetic_only",
+      "TAURO_PG_TOKEN_LOOKUP_HMAC_KEY_V1=synthetic_only",
+      "TAURO_PG_SESSION_HMAC_KEY_V1=synthetic_only",
+    ].join("\n"));
+    const loaded = loadEnv("production", directory, [...PAINT_GUIDE_BUILD_ENV_PREFIXES]);
+    for (const name of ["VERCEL", "VERCEL_ENV", "VERCEL_TOKEN", "TAURO_PG_SUPABASE_SECRET_KEY",
+      "TAURO_PG_TOKEN_ENCRYPTION_KEY_V1", "TAURO_PG_TOKEN_LOOKUP_HMAC_KEY_V1", "TAURO_PG_SESSION_HMAC_KEY_V1"]) {
+      assert.equal(loaded[name], undefined);
+    }
+    assert.equal(loaded.VITE_TAURO_PG_ENVIRONMENT, "preview");
+    assert.equal(loaded.TAURO_PG_ENVIRONMENT, "preview");
+    assert.doesNotThrow(() => validateBrowserBuild({ ...source, ...loaded }));
+  } finally { rmSync(directory, { recursive: true, force: true }); }
+});
+
+test("env diagnostics fail before loading dotenv contents without revealing any values", () => {
+  for (const DEBUG of ["vite:env", "vite:*", "*", "v*:*", "other,vite:env", "vite:*,-vite:env"]) {
+    assert.throws(() => validateBuildDiagnostics({ DEBUG }), (error: unknown) => {
+      assert.ok(error instanceof PaintGuideConfigurationError);
+      assert.equal(error.message, "Paint Guide configuration is unavailable.");
+      return true;
+    });
+  }
+  for (const DEBUG of [undefined, "", "other:*", "vite:config", "-vite:env"]) {
+    assert.doesNotThrow(() => validateBuildDiagnostics({ DEBUG }));
+  }
 });
 
 test("publishable and project-bound legacy anon keys are accepted; privileged and malformed keys rejected", () => {
