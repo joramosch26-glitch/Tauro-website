@@ -38,7 +38,8 @@ On Vercel, system variables `VERCEL=1` and `VERCEL_ENV` must both be available a
 match the explicitly configured environment. Enable Vercel's system environment
 variables for builds/functions. Unsupported or partial markers fail closed.
 These process variables are trusted deployment inputs, not cryptographic
-attestation. Never derive them from request headers or manually override them to
+attestation. Vite rejects dotenv markers absent from or different from the process
+environment. Never derive them from request headers or manually override them to
 pretend a deployment belongs to another environment. `NODE_ENV=production` means
 optimized JavaScript, not a Paint Guide production deployment.
 
@@ -76,3 +77,21 @@ Live key validity, hosted project configuration, real OTP and deployment smoke
 checks are not established by synthetic repository tests. Cached old clients
 remain a limitation requiring release discipline. Auth permissions, roles,
 session/token formats, database schema and RLS are outside this change.
+
+## Fresh recovery validation
+
+The recovered implementation passed 133 automated checks: 112 server checks
+(including shared environment negative regressions and authorization/access),
+7 homeowner bootstrap tests, and 14 staff access/QR tests. Frontend, server and
+Vite TypeScript checks and local HTTP runtime compilation passed.
+
+Local marketing, synthetic preview and synthetic production builds passed.
+Five negative builds rejected missing deployment configuration, project mismatch,
+platform mismatch, privileged browser keys and privileged alternate public values.
+Generated local asset graphs passed synthetic server-secret canary and server-code
+boundary checks; Marketing asset dependencies, prerendered canonical tags,
+structured data, sitemap exclusion and Paint Guide noindex checks passed.
+Existing external analytics scripts were not fetched or audited.
+
+Manual browser QA, real OTP/key validity, live database state and hosted deployment
+smoke tests: NOT RUN. These results support code review, not release approval.

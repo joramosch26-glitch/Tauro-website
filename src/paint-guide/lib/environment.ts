@@ -26,6 +26,15 @@ export function validateDeploymentEnvironment(source: ConfigurationSource, envir
     || source.VERCEL_ENV !== environment) throw new PaintGuideConfigurationError();
 }
 
+export function validateBuildDeploymentMarkers(loaded: ConfigurationSource, processSource: ConfigurationSource) {
+  // dotenv files may configure the app, but cannot impersonate platform system variables.
+  for (const name of ["VERCEL", "VERCEL_ENV"]) {
+    if (loaded[name] !== undefined && loaded[name] !== processSource[name]) {
+      throw new PaintGuideConfigurationError();
+    }
+  }
+}
+
 export function parseProjectReference(value: string) {
   if (!/^[a-z0-9]{20}$/.test(value)) throw new PaintGuideConfigurationError();
   return value;

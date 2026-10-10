@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { loadBrowserConfiguration, validateBrowserBuild, PaintGuideConfigurationError } from "../../src/paint-guide/lib/environment.js";
+import { loadBrowserConfiguration, validateBrowserBuild, validateBuildDeploymentMarkers, PaintGuideConfigurationError } from "../../src/paint-guide/lib/environment.js";
 import { loadPaintGuideServerEnvironment } from "../../server/paint-guide-homeowner/env.js";
 import { clearHomeownerSessionCookie, serializeHomeownerSessionCookie } from "../../server/paint-guide-homeowner/cookies.js";
 import { createHomeownerSessionBearer } from "../../server/paint-guide-homeowner/sessions.js";
@@ -100,6 +100,13 @@ test("development/test accepts exact loopback URLs; preview/production reject th
   }
 });
 const emptyKeys = { activeVersion: 1, keys: new Map<number, Buffer>() };
+
+test("dotenv cannot introduce or override Vercel platform identity", () => {
+  assert.doesNotThrow(() => validateBuildDeploymentMarkers({}, {}));
+  assert.doesNotThrow(() => validateBuildDeploymentMarkers(source, source));
+  assert.throws(() => validateBuildDeploymentMarkers({ VERCEL: "1", VERCEL_ENV: "production" }, {}));
+  assert.throws(() => validateBuildDeploymentMarkers({ VERCEL_ENV: "production" }, { VERCEL_ENV: "preview" }));
+});
 
 test("publishable and project-bound legacy anon keys are accepted; privileged and malformed keys rejected", () => {
   assert.equal(loadBrowserConfiguration({ ...source, VITE_SUPABASE_PUBLISHABLE_KEY: jwt() })?.key, jwt());

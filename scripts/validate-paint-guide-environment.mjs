@@ -20,6 +20,19 @@ function inspectOutput() {
     assert.ok(!source.includes(marker), 'Server boundary leaked into browser assets.');
   }
   const seo = JSON.parse(readFileSync('src/seo.json', 'utf8'));
+  function inspectMarketingGraph(asset, visited = new Set()) {
+    if (/^https?:\/\//.test(asset)) return; // Existing external analytics are outside the local bundle graph.
+    const file = asset.startsWith('/') ? path.join('dist', asset) : asset;
+    if (visited.has(file)) return;
+    visited.add(file);
+    const code = readFileSync(file, 'utf8');
+    for (const marker of ['sb_publishable_synthetic_public_key_only', '.supabase.co', 'tauro_paint_guide_session']) {
+      assert.ok(!code.includes(marker), 'Paint Guide code leaked into Marketing dependency graph.');
+    }
+    for (const dependency of code.matchAll(/(?:from\s*|import\s*)["'](\.\/[^"']+\.js)["']/g)) {
+      inspectMarketingGraph(path.join(path.dirname(file), dependency[1]), visited);
+    }
+  }
   for (const route of [...seo.routes, seo.notFound]) {
     const file = route.route === '/' ? 'dist/index.html' : route.route === '/404'
       ? 'dist/404.html' : `dist${route.route}/index.html`;
@@ -27,7 +40,10 @@ function inspectOutput() {
     assert.ok(html.includes(`<link rel="canonical" href="${route.canonical}"`));
     assert.ok(html.includes('id="ld-json-business"'));
     const scripts = [...html.matchAll(/<script[^>]*src="([^"]+)"/g)].map((match) => match[1]);
-    for (const script of scripts) assert.ok(!script.includes('paint-guide'));
+    for (const script of scripts) {
+      assert.ok(!script.includes('paint-guide'));
+      inspectMarketingGraph(script);
+    }
   }
   const guide = readFileSync('dist/paint-guide.html', 'utf8');
   assert.match(guide, /noindex/);
