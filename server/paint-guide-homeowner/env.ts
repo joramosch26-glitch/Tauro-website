@@ -5,6 +5,12 @@ import type {
   PaintGuideServerEnvironment,
 } from "./types.js";
 import { decodeBase64Url } from "./encoding.js";
+import {
+  parseProjectUrl,
+  validateDeploymentEnvironment,
+  validateBrowserServerAgreement,
+  isHttpLoopbackOrigin,
+} from "../../src/paint-guide/lib/environment.js";
 
 const CANONICAL_PRODUCTION_ORIGIN = "https://www.tauropainting.com";
 const ALLOWED_ENVIRONMENTS = new Set<HomeownerEnvironment>([
@@ -29,61 +35,6 @@ function requiredValue(source: EnvironmentSource, name: string) {
     throw new HomeownerEnvironmentError();
   }
   return value;
-}
-
-function isLocalTestSupabaseUrl(url: URL) {
-  if (
-    url.protocol !== "http:" ||
-    (url.hostname !== "127.0.0.1" && url.hostname !== "localhost") ||
-    !/^[1-9][0-9]*$/.test(url.port)
-  ) {
-    return false;
-  }
-
-  const port = Number(url.port);
-  return Number.isSafeInteger(port) && port <= 65535;
-}
-
-function parseSupabaseUrl(
-  value: string,
-  expectedProjectRef: string,
-  environment: HomeownerEnvironment,
-) {
-  let url: URL;
-
-  try {
-    url = new URL(value);
-  } catch {
-    throw new HomeownerEnvironmentError();
-  }
-
-  const authorityStart = value.indexOf("//") + 2;
-  const authorityTail = value.slice(authorityStart);
-  const authorityEnd = authorityTail.search(/[/?#]/);
-  const authority = authorityTail.slice(
-    0,
-    authorityEnd === -1 ? authorityTail.length : authorityEnd,
-  );
-
-  const sharedInvalidShape =
-    url.pathname !== "/" ||
-    Boolean(url.search) ||
-    Boolean(url.hash) ||
-    Boolean(url.username) ||
-    Boolean(url.password);
-  const isHostedUrl =
-    url.protocol === "https:" &&
-    !url.port &&
-    authority === `${expectedProjectRef}.supabase.co` &&
-    url.hostname === `${expectedProjectRef}.supabase.co`;
-  const isAllowedLocalTestUrl =
-    environment === "test" && isLocalTestSupabaseUrl(url);
-
-  if (sharedInvalidShape || (!isHostedUrl && !isAllowedLocalTestUrl)) {
-    throw new HomeownerEnvironmentError();
-  }
-
-  return url;
 }
 
 function parseAllowedOrigins(value: string, environment: HomeownerEnvironment) {
@@ -111,13 +62,18 @@ function parseAllowedOrigins(value: string, environment: HomeownerEnvironment) {
       throw new HomeownerEnvironmentError();
     }
 
-    if (environment === "production" && origin.protocol !== "https:") {
+    if (origin.protocol === "http:" && ((environment !== "development" && environment !== "test")
+      || !isHttpLoopbackOrigin(value))) {
       throw new HomeownerEnvironmentError();
     }
 
     origins.add(origin.origin);
   }
 
+  // A single cookie policy must work for every configured origin.
+  if (new Set([...origins].map((value) => new URL(value).protocol)).size !== 1) {
+    throw new HomeownerEnvironmentError();
+  }
   if (environment === "production" && !origins.has(CANONICAL_PRODUCTION_ORIGIN)) {
     throw new HomeownerEnvironmentError();
   }
@@ -182,11 +138,16 @@ export function loadPaintGuideServerEnvironment(
     throw new HomeownerEnvironmentError();
   }
 
-  const supabaseUrl = parseSupabaseUrl(
-    requiredValue(source, "TAURO_PG_SUPABASE_URL"),
-    expectedProjectRef,
-    environment,
-  );
+  let supabaseUrl: URL;
+  try {
+    validateDeploymentEnvironment(source, environment);
+    validateBrowserServerAgreement(source, source.VERCEL !== undefined || source.VERCEL_ENV !== undefined);
+    supabaseUrl = parseProjectUrl(
+      requiredValue(source, "TAURO_PG_SUPABASE_URL"),
+      expectedProjectRef,
+      environment,
+    );
+  } catch { throw new HomeownerEnvironmentError(); }
 
   return {
     supabaseUrl,

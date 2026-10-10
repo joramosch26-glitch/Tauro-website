@@ -14,7 +14,11 @@ function cookieAttributes(environment: HomeownerServerEnvironment) {
     "SameSite=Strict",
     `Path=${HOMEOWNER_SESSION_COOKIE_PATH}`,
   ];
-  if (environment.environment === "production") attributes.push("Secure");
+  // Configuration is validated before use; never trust Host/forwarded headers.
+  if (environment.environment === "production"
+    || [...environment.allowedOrigins].every((origin) => new URL(origin).protocol === "https:")) {
+    attributes.push("Secure");
+  }
   return attributes;
 }
 

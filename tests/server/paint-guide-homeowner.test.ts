@@ -207,7 +207,7 @@ test("test environment accepts only explicit loopback HTTP Supabase URLs", () =>
     })));
   }
 
-  for (const runtimeEnvironment of ["development", "preview", "production"] as const) {
+  for (const runtimeEnvironment of ["preview", "production"] as const) {
     assert.throws(() => loadHomeownerServerEnvironment(environment({
       TAURO_PG_ENVIRONMENT: runtimeEnvironment,
       TAURO_PG_SUPABASE_URL: "http://127.0.0.1:55321/",
