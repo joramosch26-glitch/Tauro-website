@@ -70,6 +70,11 @@ for (const environment of ['preview', 'production']) {
   assert.ok(assets.some((name) => readFileSync(path.join('dist/assets', name), 'utf8').includes('sb_publishable_synthetic_public_key_only')));
   console.log(`PASS synthetic ${environment} build and public/secret bundle checks`);
 }
+const local = { ...base, VERCEL: undefined,
+  VITE_SUPABASE_URL: 'http://127.0.0.1:55321', TAURO_PG_SUPABASE_URL: 'http://127.0.0.1:55321',
+  VITE_TAURO_PG_ENVIRONMENT: 'development', TAURO_PG_ENVIRONMENT: 'development' };
+build(local, true); inspectOutput();
+console.log('PASS synthetic local Paint Guide build with loopback backend and bundle checks');
 const preview = { ...base, VITE_TAURO_PG_ENVIRONMENT: 'preview', TAURO_PG_ENVIRONMENT: 'preview', VERCEL_ENV: 'preview' };
 const diagnostics = build({ ...preview, DEBUG: 'vite:env', VERCEL_TOKEN: canary }, false);
 assert.ok(!diagnostics.includes(canary), 'Server credential leaked through Vite env diagnostics.');
@@ -87,6 +92,10 @@ try {
 } finally { rmSync(diagnosticDirectory, { recursive: true, force: true }); }
 console.log('PASS negative diagnostic builds: DEBUG=vite:env and CLI --debug fail without credential output');
 for (const [name, config] of [
+  ['hosted development database', { ...base, VERCEL: undefined,
+    VITE_TAURO_PG_ENVIRONMENT: 'development', TAURO_PG_ENVIRONMENT: 'development' }],
+  ['hosted test database', { ...base, VERCEL: undefined,
+    VITE_TAURO_PG_ENVIRONMENT: 'test', TAURO_PG_ENVIRONMENT: 'test' }],
   ['missing deployment config', { VERCEL: '1', VERCEL_ENV: 'production' }],
   ['project mismatch', { ...preview, TAURO_PG_EXPECTED_PROJECT_REF: 'tsrqponmlkjihgfedcba' }],
   ['platform mismatch', { ...preview, VERCEL_ENV: 'production' }],

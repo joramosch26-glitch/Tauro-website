@@ -49,7 +49,7 @@ function key(byte: number) {
 
 function environment(overrides: EnvironmentSource = {}): EnvironmentSource {
   return {
-    TAURO_PG_SUPABASE_URL: `https://${PROJECT_REF}.supabase.co`,
+    TAURO_PG_SUPABASE_URL: "http://127.0.0.1:55321",
     TAURO_PG_SUPABASE_SECRET_KEY: key(9),
     TAURO_PG_EXPECTED_PROJECT_REF: PROJECT_REF,
     TAURO_PG_ENVIRONMENT: "test",
@@ -259,6 +259,9 @@ test("AES-256-GCM authenticates canonical access tokens", () => {
   assert.throws(() => decryptHomeownerAccessToken(corruptedTag, aadContext, ring));
   assert.throws(() => decryptHomeownerAccessToken(encrypted, { ...aadContext, guideId: "71000000-0000-4000-8000-000000000102" }, ring));
   assert.throws(() => decryptHomeownerAccessToken(encrypted, aadContext, keyring(1, [1, 7])));
+  // Sharing a project must not make ciphertext interchangeable across deployments.
+  const preview = encryptHomeownerAccessToken(token, { ...aadContext, environment: "preview" }, ring);
+  assert.throws(() => decryptHomeownerAccessToken(preview, { ...aadContext, environment: "production" }, ring));
 });
 
 test("session bearer is canonical, version-routed, and HMAC-backed", () => {

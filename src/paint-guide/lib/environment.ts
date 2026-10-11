@@ -57,7 +57,8 @@ export function isHttpLoopbackOrigin(value: string) {
 
 export function parseProjectUrl(value: string, reference: string, environment: PaintGuideEnvironment) {
   parseProjectReference(reference);
-  const hosted = value === `https://${reference}.supabase.co` || value === `https://${reference}.supabase.co/`;
+  const hosted = (environment === "preview" || environment === "production")
+    && (value === `https://${reference}.supabase.co` || value === `https://${reference}.supabase.co/`);
   const local = (environment === "development" || environment === "test")
     && isHttpLoopbackOrigin(value.endsWith("/") ? value.slice(0, -1) : value);
   if (!hosted && !local) throw new PaintGuideConfigurationError();
@@ -96,6 +97,13 @@ export function loadBrowserConfiguration(source: ConfigurationSource) {
   const key = requiredConfiguration(source, BROWSER_NAMES[1]);
   validateBrowserKey(key, reference, url.protocol === "http:");
   return { environment, reference, url, key };
+}
+
+// Validate identity even when disabled; Preview must never create a browser SDK
+// client (direct PostgREST writes bypass our server endpoints).
+export function loadBrowserRuntimeConfiguration(source: ConfigurationSource) {
+  const configuration = loadBrowserConfiguration(source);
+  return configuration?.environment === "preview" ? null : configuration;
 }
 
 export function validateBrowserServerAgreement(source: ConfigurationSource, required = false) {

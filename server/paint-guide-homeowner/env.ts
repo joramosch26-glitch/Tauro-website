@@ -149,6 +149,9 @@ export function loadPaintGuideServerEnvironment(
     );
   } catch { throw new HomeownerEnvironmentError(); }
 
+  // No Preview reads, OTP verification, RPCs or mutations against the shared backend.
+  if (environment === "preview") throw new HomeownerEnvironmentError();
+
   return {
     supabaseUrl,
     supabaseSecretKey: requiredValue(source, "TAURO_PG_SUPABASE_SECRET_KEY"),

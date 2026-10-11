@@ -2,6 +2,16 @@
 
 This is a review checkpoint, not production deployment approval.
 
+## Single-backend policy
+
+Paint Guide uses one hosted backend, shared with Commander and JCC. Database
+identity is independent of deployment identity: Preview and Production may use
+the same reference. Production must still be explicitly configured as production.
+Preview builds validate the complete P0-C contract but Paint Guide is disabled
+in the browser and all backend handlers fail closed before database access.
+Development/test reject hosted URLs and use only the existing local Supabase
+stack with synthetic data. See [single-database launch gates](paint-guide-single-database.md).
+
 ## Configuration contract
 
 Set the same project reference in `VITE_TAURO_PG_EXPECTED_PROJECT_REF` and
@@ -25,7 +35,7 @@ browser configuration fails the build; the browser fails closed without creating
 a client. Configured local builds require matching server public boundary values,
 but not a server secret or keyring during asset compilation.
 
-Development/test permit exact `http://127.0.0.1:<port>` or
+Development/test require exact `http://127.0.0.1:<port>` or
 `http://localhost:<port>` roots for local Supabase. Preview/production require
 hosted HTTPS Supabase and HTTPS allowed origins. HTTP origins are permitted only
 for explicit loopback development/test. Mixed HTTP/HTTPS origin sets are rejected

@@ -14,7 +14,7 @@ const SESSION = "73000000-0000-4000-8000-000000000002";
 const ORIGIN = "http://127.0.0.1:55400";
 const PROJECT = "abcdefghijklmnopqrst";
 const source = {
-  TAURO_PG_SUPABASE_URL: `https://${PROJECT}.supabase.co`,
+  TAURO_PG_SUPABASE_URL: "http://127.0.0.1:55321",
   TAURO_PG_SUPABASE_SECRET_KEY: "synthetic-staff-access-credential",
   TAURO_PG_EXPECTED_PROJECT_REF: PROJECT, TAURO_PG_ENVIRONMENT: "test",
   TAURO_PG_HOMEOWNER_ACCESS_ENABLED: "true", TAURO_PG_ALLOWED_ORIGINS: ORIGIN,
@@ -405,7 +405,7 @@ test("issue: revocation between initial status and issue is handled without expo
 });
 
 test("canonical origin: production fixed hostname, exact allowed nonproduction origin, no Host/unsafe HTTP", () => {
-  const production = loadHomeownerServerEnvironment({ ...source, TAURO_PG_ENVIRONMENT: "production",
+  const production = loadHomeownerServerEnvironment({ ...source, TAURO_PG_SUPABASE_URL: `https://${PROJECT}.supabase.co`, TAURO_PG_ENVIRONMENT: "production",
     TAURO_PG_ALLOWED_ORIGINS: "https://www.tauropainting.com,https://preview.example" });
   assert.equal(canonicalStaffHomeownerOrigin(request("issue", { origin: "https://preview.example", headers: { Host: "attacker.example" } }), production), "https://www.tauropainting.com");
   assert.equal(canonicalStaffHomeownerOrigin(request("issue"), environment), ORIGIN);

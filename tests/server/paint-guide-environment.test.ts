@@ -3,12 +3,19 @@ import test from "node:test";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { loadEnv } from "vite";
-import { loadBrowserConfiguration, validateBrowserBuild, validateBuildDiagnostics, PAINT_GUIDE_BUILD_ENV_PREFIXES, PaintGuideConfigurationError } from "../../src/paint-guide/lib/environment.js";
-import { loadPaintGuideServerEnvironment } from "../../server/paint-guide-homeowner/env.js";
+import { createServer, loadEnv } from "vite";
+import { loadBrowserRuntimeConfiguration, loadBrowserConfiguration, validateBrowserBuild, validateBuildDiagnostics, PAINT_GUIDE_BUILD_ENV_PREFIXES, PaintGuideConfigurationError } from "../../src/paint-guide/lib/environment.js";
+import { loadHomeownerServerEnvironment, loadPaintGuideServerEnvironment } from "../../server/paint-guide-homeowner/env.js";
 import { clearHomeownerSessionCookie, serializeHomeownerSessionCookie } from "../../server/paint-guide-homeowner/cookies.js";
 import { createHomeownerSessionBearer } from "../../server/paint-guide-homeowner/sessions.js";
 import { hasAllowedHomeownerOrigin } from "../../server/paint-guide-homeowner/origin.js";
+
+import { createStaffAccessHandler } from "../../server/paint-guide-staff/access.js";
+import { createPaintGuideStaffAuthorizer } from "../../server/paint-guide-staff/auth.js";
+import { createHomeownerAccessToken } from "../../server/paint-guide-homeowner/crypto.js";
+import { createHomeownerExchangeHandler } from "../../server/paint-guide-homeowner/exchange.js";
+import { createHomeownerDocumentHandler } from "../../server/paint-guide-homeowner/document-handler.js";
+import { createHomeownerEndSessionHandler } from "../../server/paint-guide-homeowner/end-session.js";
 
 const reference = "abcdefghijklmnopqrst";
 const other = "tsrqponmlkjihgfedcba";
@@ -16,11 +23,11 @@ const url = `https://${reference}.supabase.co`;
 const publicKey = "sb_publishable_synthetic_public_key_only";
 const source = {
   VITE_SUPABASE_URL: url, VITE_SUPABASE_PUBLISHABLE_KEY: publicKey,
-  VITE_TAURO_PG_EXPECTED_PROJECT_REF: reference, VITE_TAURO_PG_ENVIRONMENT: "preview",
-  TAURO_PG_SUPABASE_URL: url, TAURO_PG_EXPECTED_PROJECT_REF: reference, TAURO_PG_ENVIRONMENT: "preview",
+  VITE_TAURO_PG_EXPECTED_PROJECT_REF: reference, VITE_TAURO_PG_ENVIRONMENT: "production",
+  TAURO_PG_SUPABASE_URL: url, TAURO_PG_EXPECTED_PROJECT_REF: reference, TAURO_PG_ENVIRONMENT: "production",
   TAURO_PG_SUPABASE_SECRET_KEY: "synthetic_backend_only_canary",
-  TAURO_PG_HOMEOWNER_ACCESS_ENABLED: "true", TAURO_PG_ALLOWED_ORIGINS: "https://preview.example.test",
-  VERCEL: "1", VERCEL_ENV: "preview",
+  TAURO_PG_HOMEOWNER_ACCESS_ENABLED: "true", TAURO_PG_ALLOWED_ORIGINS: "https://www.tauropainting.com",
+  VERCEL: "1", VERCEL_ENV: "production",
 };
 function jwt(role = "anon", ref: string | undefined = reference) {
   return [ { alg: "HS256", typ: "JWT" }, { role, ref } ].map((value) => Buffer.from(JSON.stringify(value)).toString("base64url")).join(".") + ".synthetic_signature";
@@ -32,12 +39,18 @@ test("local marketing build and browser stay disabled with missing configuration
   assert.throws(() => loadPaintGuideServerEnvironment({}));
 });
 
-test("matching preview and production config reaches real browser/build/server validators", () => {
+test("same project supports preview builds and production runtime; preview runtime is disabled", () => {
   for (const environment of ["preview", "production"]) {
     const config = { ...source, VERCEL_ENV: environment, TAURO_PG_ENVIRONMENT: environment,
       VITE_TAURO_PG_ENVIRONMENT: environment, TAURO_PG_ALLOWED_ORIGINS: "https://www.tauropainting.com" };
     assert.equal(validateBrowserBuild(config)?.reference, reference);
-    assert.equal(loadPaintGuideServerEnvironment(config).expectedProjectRef, reference);
+    if (environment === "preview") {
+      assert.equal(loadBrowserRuntimeConfiguration(config), null);
+      assert.throws(() => loadPaintGuideServerEnvironment(config));
+    } else {
+      assert.equal(loadBrowserRuntimeConfiguration(config)?.reference, reference);
+      assert.equal(loadPaintGuideServerEnvironment(config).expectedProjectRef, reference);
+    }
     assert.equal(loadBrowserConfiguration(config)?.key, publicKey);
   }
 });
@@ -48,8 +61,8 @@ test("project, URL and environment disagreements fail at build and server startu
     { TAURO_PG_EXPECTED_PROJECT_REF: other },
     { VITE_SUPABASE_URL: `https://${other}.supabase.co` },
     { TAURO_PG_SUPABASE_URL: `https://${other}.supabase.co` },
-    { VITE_TAURO_PG_ENVIRONMENT: "production" },
-    { TAURO_PG_ENVIRONMENT: "production" },
+    { VITE_TAURO_PG_ENVIRONMENT: "preview" },
+    { TAURO_PG_ENVIRONMENT: "preview" },
     { VITE_TAURO_PG_ENVIRONMENT: "" },
     { VITE_SUPABASE_PUBLISHABLE_KEY: "" },
     { VITE_TAURO_PG_EXPECTED_PROJECT_REF: "" },
@@ -63,7 +76,7 @@ test("project, URL and environment disagreements fail at build and server startu
 test("Vercel markers must both be present and match the configured environment", async (t) => {
   for (const [index, overrides] of [
     { VERCEL: undefined }, { VERCEL_ENV: undefined }, { VERCEL: "0" },
-    { VERCEL_ENV: "test" }, { VERCEL_ENV: "production" }, { VERCEL_ENV: " preview " },
+    { VERCEL_ENV: "test" }, { VERCEL_ENV: "preview" }, { VERCEL_ENV: " preview " },
   ].entries()) await t.test(`platform ${index}`, () => {
     assert.throws(() => validateBrowserBuild({ ...source, ...overrides }));
     assert.throws(() => loadPaintGuideServerEnvironment({ ...source, ...overrides }));
@@ -123,7 +136,7 @@ test("actual Vite env loading excludes server credentials and dotenv platform id
     }
     assert.equal(loaded.VITE_TAURO_PG_ENVIRONMENT, "preview");
     assert.equal(loaded.TAURO_PG_ENVIRONMENT, "preview");
-    assert.doesNotThrow(() => validateBrowserBuild({ ...source, ...loaded }));
+    assert.doesNotThrow(() => validateBrowserBuild({ ...source, VERCEL_ENV: "preview", ...loaded }));
   } finally { rmSync(directory, { recursive: true, force: true }); }
 });
 
@@ -161,9 +174,11 @@ test("Vite rejects privileged values in other public variables without disclosin
   }
 });
 
-test("HTTPS cookies are Secure and HttpOnly in every environment, including clearing", () => {
-  for (const environment of ["development", "test", "preview", "production"]) {
+test("HTTPS cookies remain Secure and HttpOnly in enabled environments, including clearing", () => {
+  for (const environment of ["development", "test", "production"]) {
     const config = { ...source, VERCEL: undefined, VERCEL_ENV: undefined,
+      TAURO_PG_SUPABASE_URL: environment === "production" ? url : "http://127.0.0.1:55321",
+      VITE_SUPABASE_URL: environment === "production" ? url : "http://127.0.0.1:55321",
       TAURO_PG_ENVIRONMENT: environment, VITE_TAURO_PG_ENVIRONMENT: environment,
       TAURO_PG_ALLOWED_ORIGINS: "https://www.tauropainting.com" };
     const loaded = { ...loadPaintGuideServerEnvironment(config), tokenLookupHmacKeys: emptyKeys,
@@ -182,4 +197,77 @@ test("unsafe or mixed origins fail closed; forwarded/host headers cannot authori
   assert.equal(hasAllowedHomeownerOrigin(new Request("https://preview.example.test", { headers: {
     Origin: "https://attacker.example.test", Host: "preview.example.test", "x-forwarded-host": "preview.example.test",
     "x-forwarded-proto": "https", "x-vercel-env": "production" } }), environment), false);
+});
+
+test("development/test reject hosted databases in browser, build and server", () => {
+  for (const environment of ["development", "test"]) {
+    const config = { ...source, VERCEL: undefined, VERCEL_ENV: undefined,
+      VITE_TAURO_PG_ENVIRONMENT: environment, TAURO_PG_ENVIRONMENT: environment };
+    assert.throws(() => loadBrowserRuntimeConfiguration(config));
+    assert.throws(() => validateBrowserBuild(config));
+    assert.throws(() => loadPaintGuideServerEnvironment(config));
+    const local = { ...config, VITE_SUPABASE_URL: "http://127.0.0.1:55321",
+      TAURO_PG_SUPABASE_URL: "http://127.0.0.1:55321" };
+    assert.equal(loadBrowserRuntimeConfiguration(local)?.environment, environment);
+    assert.equal(loadPaintGuideServerEnvironment(local).environment, environment);
+  }
+});
+
+test("preview denies every access endpoint and homeowner handler before authorization or RPC", async () => {
+  const preview = { ...source, VERCEL_ENV: "preview", TAURO_PG_ENVIRONMENT: "preview",
+    VITE_TAURO_PG_ENVIRONMENT: "preview", TAURO_PG_ALLOWED_ORIGINS: "https://preview.example.test" };
+  let calls = 0;
+  const unexpected = () => { calls++; throw new Error("Unexpected backend access."); };
+  const loadEnvironment = () => loadPaintGuideServerEnvironment(preview);
+  const loadCryptoEnvironment = () => loadHomeownerServerEnvironment(preview);
+  for (const operation of ["status", "issue", "recover", "rotate", "revoke"] as const) {
+    const handler = createStaffAccessHandler(operation, { loadEnvironment,
+      loadCryptoEnvironment, authorize: unexpected, createClient: unexpected });
+    const response = await handler(new Request("https://preview.example.test/api/paint-guide/staff/access/" + operation, {
+      method: "POST", headers: { Origin: "https://preview.example.test", "Content-Type": "application/json",
+        Authorization: "Bearer synthetic.credential.signature" },
+      body: JSON.stringify({ guideId: "73000000-0000-4000-8000-000000000101", expectedTokenGeneration: 1, expectedSessionEpoch: 1 }),
+    }));
+    assert.equal(response.status, 503);
+    assert.deepEqual(await response.json(), { available: false });
+  }
+  const authorize = createPaintGuideStaffAuthorizer({ loadEnvironment, createClient: unexpected });
+  assert.equal((await authorize(new Request("https://preview.example.test", {
+    headers: { Authorization: "Bearer synthetic.credential.signature" } }), ["owner"])).kind, "denied");
+  const session = createHomeownerSessionBearer(1).canonical;
+  const headers = { Origin: "https://preview.example.test", "Content-Type": "application/json",
+    Cookie: "tauro_paint_guide_session=" + session };
+  const handlers = [
+    [createHomeownerExchangeHandler({ loadEnvironment: loadCryptoEnvironment, exchangeSession: unexpected }), "POST", JSON.stringify({ token: createHomeownerAccessToken(1).canonical })],
+    [createHomeownerDocumentHandler({ loadEnvironment: loadCryptoEnvironment, readDocument: unexpected }), "GET", undefined],
+    [createHomeownerEndSessionHandler({ loadEnvironment: loadCryptoEnvironment, endSession: unexpected }), "POST", undefined],
+  ] as const;
+  for (const [handler, method, body] of handlers) {
+    const response = await handler(new Request("https://preview.example.test/api/paint-guide/homeowner/test", { method, headers, body }));
+    assert.notEqual(response.status, 200);
+    assert.notEqual(response.status, 204);
+    assert.equal(response.headers.get("Set-Cookie"), null);
+  }
+  assert.equal(calls, 0);
+});
+
+
+test("actual browser SDK adapter disables Preview and keeps Production enabled", async () => {
+  for (const environment of ["preview", "production"]) {
+    const browserValues = { ...source, VITE_TAURO_PG_ENVIRONMENT: environment };
+    const define = Object.fromEntries(Object.entries(browserValues)
+      .filter(([name]) => name.startsWith("VITE_"))
+      .map(([name, value]) => ["import.meta.env." + name, JSON.stringify(value)]));
+    const server = await createServer({ configFile: false, envFile: false,
+      define, server: { middlewareMode: true, watch: null } });
+    try {
+      const adapter = await server.ssrLoadModule("/src/paint-guide/lib/supabase.ts");
+      assert.equal(adapter.isSupabaseConfigured, environment === "production");
+      if (environment === "preview") assert.equal(adapter.supabase, null);
+      else {
+        assert.ok(adapter.supabase);
+        await adapter.supabase.auth.stopAutoRefresh();
+      }
+    } finally { await server.close(); }
+  }
 });

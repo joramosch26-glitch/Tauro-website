@@ -1,9 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
-import { loadBrowserConfiguration } from "./environment";
+import { loadBrowserRuntimeConfiguration } from "./environment";
 
 function browserConfiguration() {
   try {
-    return loadBrowserConfiguration({
+    return loadBrowserRuntimeConfiguration({
       VITE_SUPABASE_URL: import.meta.env.VITE_SUPABASE_URL,
       VITE_SUPABASE_PUBLISHABLE_KEY: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       VITE_TAURO_PG_EXPECTED_PROJECT_REF: import.meta.env.VITE_TAURO_PG_EXPECTED_PROJECT_REF,
