@@ -215,7 +215,16 @@ test("development/test reject hosted databases in browser, build and server", ()
 
 test("preview denies every access endpoint and homeowner handler before authorization or RPC", async () => {
   const preview = { ...source, VERCEL_ENV: "preview", TAURO_PG_ENVIRONMENT: "preview",
-    VITE_TAURO_PG_ENVIRONMENT: "preview", TAURO_PG_ALLOWED_ORIGINS: "https://preview.example.test" };
+    VITE_TAURO_PG_ENVIRONMENT: "preview", TAURO_PG_ALLOWED_ORIGINS: "https://preview.example.test",
+    TAURO_PG_TOKEN_LOOKUP_HMAC_ACTIVE_VERSION: "1", TAURO_PG_TOKEN_LOOKUP_HMAC_KEY_V1: Buffer.alloc(32, 1).toString("base64url"),
+    TAURO_PG_TOKEN_ENCRYPTION_ACTIVE_VERSION: "1", TAURO_PG_TOKEN_ENCRYPTION_KEY_V1: Buffer.alloc(32, 2).toString("base64url"),
+    TAURO_PG_SESSION_HMAC_ACTIVE_VERSION: "1", TAURO_PG_SESSION_HMAC_KEY_V1: Buffer.alloc(32, 3).toString("base64url"),
+  };
+  assert.equal(loadHomeownerServerEnvironment({ ...preview, VERCEL_ENV: "production",
+    TAURO_PG_ENVIRONMENT: "production", VITE_TAURO_PG_ENVIRONMENT: "production",
+    TAURO_PG_ALLOWED_ORIGINS: "https://www.tauropainting.com" }).environment, "production");
+  const syntaxValidBearer = [{ typ: "JWT", alg: "ES256" }, { sub: "73000000-0000-4000-8000-000000000001" }]
+    .map(value => Buffer.from(JSON.stringify(value)).toString("base64url")).join(".") + "." + Buffer.alloc(64).toString("base64url");
   let calls = 0;
   const unexpected = () => { calls++; throw new Error("Unexpected backend access."); };
   const loadEnvironment = () => loadPaintGuideServerEnvironment(preview);
@@ -231,9 +240,11 @@ test("preview denies every access endpoint and homeowner handler before authoriz
     assert.equal(response.status, 503);
     assert.deepEqual(await response.json(), { available: false });
   }
-  const authorize = createPaintGuideStaffAuthorizer({ loadEnvironment, createClient: unexpected });
+  let authorizationEnvironmentCalls = 0;
+  const authorize = createPaintGuideStaffAuthorizer({ loadEnvironment: () => { authorizationEnvironmentCalls++; return loadEnvironment(); }, createClient: unexpected });
   assert.equal((await authorize(new Request("https://preview.example.test", {
-    headers: { Authorization: "Bearer synthetic.credential.signature" } }), ["owner"])).kind, "denied");
+    headers: { Authorization: "Bearer " + syntaxValidBearer } }), ["owner"])).kind, "denied");
+  assert.equal(authorizationEnvironmentCalls, 1);
   const session = createHomeownerSessionBearer(1).canonical;
   const headers = { Origin: "https://preview.example.test", "Content-Type": "application/json",
     Cookie: "tauro_paint_guide_session=" + session };
