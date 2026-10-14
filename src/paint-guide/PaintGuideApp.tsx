@@ -1,4 +1,4 @@
-import { Link, Outlet, Route, Routes } from "react-router-dom";
+import { Link, Outlet, Route, Routes, useParams } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthProvider";
 import { RequireStaffAuth } from "./auth/RequireStaffAuth";
 import { GuideDashboard } from "./pages/GuideDashboard";
@@ -65,6 +65,13 @@ function StaffAuthLayout() {
   );
 }
 
+// A guide switch must discard editor drafts and pending UI callbacks, even when
+// React Router reuses the same route element (including A -> B -> A navigation).
+function GuideRoute({ children }: { children: React.ReactNode }) {
+  const { guideId } = useParams();
+  return <StaffRoute key={guideId}>{children}</StaffRoute>;
+}
+
 export default function PaintGuideApp() {
   return (
     <Routes>
@@ -88,22 +95,22 @@ export default function PaintGuideApp() {
         <Route
           path="/paint-guide/g/:guideId"
           element={
-            <StaffRoute>
+            <GuideRoute>
               <GuideOverview />
-            </StaffRoute>
+            </GuideRoute>
           }
         />
-        <Route path="/paint-guide/g/:guideId/locations" element={<StaffRoute><GuideLocations /></StaffRoute>} />
-        <Route path="/paint-guide/g/:guideId/colors" element={<StaffRoute><GuideColors /></StaffRoute>} />
+        <Route path="/paint-guide/g/:guideId/locations" element={<GuideRoute><GuideLocations /></GuideRoute>} />
+        <Route path="/paint-guide/g/:guideId/colors" element={<GuideRoute><GuideColors /></GuideRoute>} />
         <Route
           path="/paint-guide/g/:guideId/preview"
           element={
-            <StaffRoute>
+            <GuideRoute>
               <GuidePreview />
-            </StaffRoute>
+            </GuideRoute>
           }
         />
-        <Route path="/paint-guide/g/:guideId/access" element={<StaffRoute><GuideAccess /></StaffRoute>} />
+        <Route path="/paint-guide/g/:guideId/access" element={<GuideRoute><GuideAccess /></GuideRoute>} />
       </Route>
       <Route path="/paint-guide/p" element={<PaintGuideScreen title="Paint Guide Client" />} />
       <Route path="/paint-guide/*" element={<PaintGuideNotFound />} />

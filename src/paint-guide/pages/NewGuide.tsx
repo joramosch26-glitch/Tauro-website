@@ -1,10 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { StaffPageShell } from "../components/StaffPageShell";
 import { createPaintGuide } from "../data/guides";
 
 export function NewGuide() {
   const navigate = useNavigate();
+  const mounted = useRef(false);
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
   const [residenceName, setResidenceName] = useState("");
   const [primaryScopeNote, setPrimaryScopeNote] = useState("");
   const [validationError, setValidationError] = useState("");
@@ -29,8 +34,10 @@ export function NewGuide() {
         residenceName: trimmedResidenceName,
         primaryScopeNote: primaryScopeNote.trim(),
       });
+      if (!mounted.current) return;
       navigate(`/paint-guide/g/${guide.id}`);
     } catch {
+      if (!mounted.current) return;
       setSubmitError("Could not create Paint Guide. Please try again.");
       setIsSubmitting(false);
     }
@@ -40,7 +47,7 @@ export function NewGuide() {
     <StaffPageShell title="New Paint Guide">
       <section className="max-w-2xl py-10 sm:py-14">
         <p className="max-w-xl leading-7 text-[#20211f]/65">
-          Start with the residence and a concise scope note. Locations and finish records can be added in a later phase.
+          Start with the residence and a concise scope note, then add locations and paint specifications.
         </p>
         <form className="mt-8 border border-[#20211f]/15 bg-white p-6 sm:p-9" onSubmit={(event) => void handleSubmit(event)}>
           <div>

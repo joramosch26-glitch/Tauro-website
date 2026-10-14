@@ -126,7 +126,7 @@ export function GuideOverview() {
               <option value="published">Published</option>
               <option value="archived">Archived</option>
             </select>
-            <p className="mt-2 text-sm text-[#20211f]/55">Published is an internal lifecycle state. Homeowner access is not available yet.</p>
+            <p className="mt-2 text-sm text-[#20211f]/55">Publish the guide before managing homeowner access on the Access &amp; QR page.</p>
           </div>
           {validationError ? <p className="mt-5 text-sm text-[#9c2f2f]" role="alert">{validationError}</p> : null}
           {saveError ? <p className="mt-5 text-sm text-[#9c2f2f]" role="alert">{saveError}</p> : null}
@@ -136,8 +136,7 @@ export function GuideOverview() {
         <aside className="border-t border-[#20211f]/15 pt-6 lg:border-l lg:border-t-0 lg:pl-7 lg:pt-0">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9b6b36]">Guide details</p>
           <p className="mt-4 text-sm leading-7 text-[#20211f]/65">Last updated {guide ? formatDate(guide.updated_at) : ""}</p>
-          <p className="mt-8 text-xs font-semibold uppercase tracking-[0.18em] text-[#20211f]/45">Coming later</p>
-          <ul className="mt-3 space-y-2 text-sm text-[#20211f]/55"><li>QR</li><li>Settings</li></ul>
+          <Link className="mt-8 inline-flex text-sm font-semibold underline" to={`/paint-guide/g/${guideId}/access`}>Manage Access &amp; QR</Link>
         </aside>
       </section>
     </StaffPageShell>

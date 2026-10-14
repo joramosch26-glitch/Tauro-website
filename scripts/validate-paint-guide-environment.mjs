@@ -9,8 +9,15 @@ const canary = 'synthetic_backend_only_P0C_leak_canary';
 const inherited = Object.fromEntries(Object.entries(process.env).filter(([name]) =>
   !name.startsWith('VITE_') && !name.startsWith('TAURO_PG_') && !name.startsWith('VERCEL')));
 function build(config, expected) {
-  const result = spawnSync('npm', ['run', 'build'], { env: { ...inherited, ...config }, encoding: 'utf8' });
+  // Invoke Node entrypoints directly: Windows cannot spawn npm.cmd without a
+  // command shell. Avoid shell interpolation of configuration or diagnostics.
+  const options = { env: { ...inherited, ...config }, encoding: 'utf8' };
+  const result = spawnSync(process.execPath, [path.resolve('node_modules/vite/bin/vite.js'), 'build'], options);
   if ((result.status === 0) !== expected) throw new Error('Unexpected synthetic build result.');
+  if (result.status === 0) {
+    const prerender = spawnSync(process.execPath, [path.resolve('scripts/postbuild-prerender.mjs')], options);
+    if (prerender.status !== 0) throw new Error('Synthetic marketing prerender failed.');
+  }
   return result.stdout + result.stderr;
 }
 function inspectOutput() {
