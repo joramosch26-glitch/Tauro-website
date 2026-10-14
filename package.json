@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "vite build && node scripts/postbuild-prerender.mjs",
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
+    "test:paint-guide-functional": "node --test tests/paint-guide-functional.test.mjs",
     "test:server": "tsc -p tsconfig.server-tests.json && node --test dist/server-tests/tests/server/paint-guide-homeowner.test.js dist/server-tests/tests/server/paint-guide-staff.test.js dist/server-tests/tests/server/paint-guide-access.test.js dist/server-tests/tests/server/paint-guide-environment.test.js",
     "probe:homeowner-bytea": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-bytea-contract.mjs",
     "probe:homeowner-exchange": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-exchange-contract.mjs",

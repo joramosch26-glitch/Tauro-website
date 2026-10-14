@@ -17,7 +17,7 @@ export type CreateGuideLocationInput = {
 };
 
 export async function listGuideLocations(guideId: string): Promise<GuideLocation[]> {
-  const { data, error } = await client().from("guide_locations").select(COLUMNS).eq("guide_id", guideId).order("sort_order", { ascending: true }).order("created_at", { ascending: true });
+  const { data, error } = await client().from("guide_locations").select(COLUMNS).eq("guide_id", guideId).order("sort_order", { ascending: true }).order("created_at", { ascending: true }).order("id", { ascending: true });
   if (error) throw error;
   return (data ?? []) as GuideLocation[];
 }

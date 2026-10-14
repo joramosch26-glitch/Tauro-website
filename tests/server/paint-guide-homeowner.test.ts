@@ -615,3 +615,70 @@ test("end-session reports operational failures generically while clearing the br
     assert.equal(response.headers.get("referrer-policy"), "no-referrer");
   }
 });
+
+// Composition regression: the simulated RPC backend makes expiry/revocation
+// decisions. This does not test live PostgreSQL predicates or deployed RLS.
+for (const reason of ["expiry", "revocation", "logout"] as const) {
+  test(`homeowner composed exchange/read/${reason}: unavailable sessions clear cookies and never return cached data`, async () => {
+    const access = createHomeownerAccessToken(2);
+    const expectedLookup = deriveLookupHmac(access, PROJECT_REF, serverEnvironment.tokenLookupHmacKeys);
+    let now = new Date("2026-10-01T12:00:00Z");
+    let revoked = false;
+    let stored: HomeownerSessionExchangeInput | undefined;
+    const exchange = createHomeownerExchangeHandler({
+      loadEnvironment: () => serverEnvironment, now: () => now,
+      exchangeSession: async (_environment, input) => {
+        if (revoked || !Buffer.from(input.tokenHmac).equals(expectedLookup)) return { kind: "unavailable" };
+        stored = input;
+        return { kind: "exchanged" };
+      },
+    });
+    const read = createHomeownerDocumentHandler({
+      loadEnvironment: () => serverEnvironment,
+      readDocument: async (_environment, input) => {
+        const active = stored && !revoked && now < stored.expiresAt
+          && input.sessionKeyVersion === stored.sessionKeyVersion
+          && Buffer.from(input.sessionHmac).equals(Buffer.from(stored.sessionHmac));
+        return active ? { kind: "document", document: documentFixture } : { kind: "unavailable" };
+      },
+    });
+    const issue = await exchange(exchangeRequest(JSON.stringify({ token: access.canonical })));
+    assert.equal(issue.status, 204);
+    assert.ok(stored);
+    assert.equal(stored.expiresAt.getTime() - now.getTime(), HOMEOWNER_SESSION_TTL_SECONDS * 1000);
+    const cookie = issue.headers.get("set-cookie")!.split(";", 1)[0];
+    const initial = await read(documentRequest(cookie));
+    assert.equal(initial.status, 200);
+    assert.deepEqual(await initial.json(), documentFixture);
+    assert.equal(initial.headers.get("set-cookie"), null); // Reads never extend TTL.
+    if (reason === "expiry") {
+      now = new Date(stored.expiresAt);
+    } else if (reason === "revocation") {
+      revoked = true;
+    } else {
+      const end = createHomeownerEndSessionHandler({ loadEnvironment: () => serverEnvironment,
+        endSession: async (_environment, input) => {
+          assert.deepEqual(input.sessionHmac, stored!.sessionHmac);
+          stored = undefined;
+          return { kind: "ended" };
+        },
+      });
+      const response = await end(endSessionRequest(cookie));
+      assert.equal(response.status, 204);
+      assert.match(response.headers.get("set-cookie") ?? "", /Max-Age=0/);
+    }
+    const unavailable = await read(documentRequest(cookie));
+    assert.equal(unavailable.status, 404);
+    assert.deepEqual(await unavailable.json(), { available: false });
+    assert.match(unavailable.headers.get("set-cookie") ?? "", /Max-Age=0/);
+    assert.equal(unavailable.headers.get("cache-control"), "no-store, private");
+    const wrongLink = createHomeownerAccessToken(2);
+    const invalid = await exchange(exchangeRequest(JSON.stringify({ token: wrongLink.canonical })));
+    assert.equal(invalid.status, 404);
+    assert.deepEqual(await invalid.json(), { available: false });
+    assert.match(invalid.headers.get("set-cookie") ?? "", /Max-Age=0/);
+    if (reason === "revocation") {
+      assert.equal((await exchange(exchangeRequest(JSON.stringify({ token: access.canonical })))).status, 404);
+    }
+  });
+}
