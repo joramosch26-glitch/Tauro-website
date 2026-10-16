@@ -207,6 +207,7 @@ function App() {
     { name: "Home", to: "/" },
     { name: "Services", to: "/services" },
     { name: "Projects", to: "/projects" },
+    { name: "Service Areas", to: "/locations" },
     { name: "About", to: "/about" },
     { name: "Contact", to: "/contact" },
   ];

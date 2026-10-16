@@ -90,7 +90,7 @@ export default function Provo() {
           <div className="lg:col-span-5 lg:col-start-8">
             <p className={`${eyebrow} mb-6 text-[#9a6a25]`}>See the standard</p>
             <h2 id="provo-work-heading" className={`${heading} text-slate-950`}>The work carries the conversation.</h2>
-            <p className="mt-7 leading-8 text-slate-600">Explore Tauro&apos;s selected work across premium interiors, exteriors, cabinetry, architectural woodwork, stain, and clear finishes. The portfolio shares real Tauro work without attaching unverified Provo project names or locations.</p>
+            <p className="mt-7 leading-8 text-slate-600">Explore Tauro&apos;s selected work across premium interiors and exteriors, cabinetry, architectural woodwork, stain, and clear finishes.</p>
             <div className="mt-8 flex flex-wrap gap-5"><Link to="/projects" className="inline-flex min-h-14 items-center gap-5 bg-slate-950 px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#9a6a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4">View selected work <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link><Link to="/locations" className={`${textLink} text-slate-950`}>Where Tauro works <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div>
           </div>
         </div>

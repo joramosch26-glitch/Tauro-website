@@ -85,7 +85,7 @@ export default function ParkCityDeerValley() {
           <div className="lg:col-span-5 lg:col-start-8">
             <p className={`${eyebrow} mb-6 text-[#9a6a25]`}>See the standard</p>
             <h2 id="park-city-portfolio-heading" className={`${heading} text-slate-950`}>Work that makes the case.</h2>
-            <p className="mt-7 leading-8 text-slate-600">Explore Tauro&apos;s portfolio of premium interior finishes, cabinetry, woodwork, exteriors, and custom-home details. Each image is presented as Tauro work—not as an unverified Park City or Deer Valley project.</p>
+            <p className="mt-7 leading-8 text-slate-600">Explore Tauro&apos;s portfolio of premium interior finishes, cabinetry, woodwork, exteriors, and custom-home details.</p>
             <div className="mt-8 flex flex-wrap gap-5"><Link to="/projects" className="inline-flex min-h-14 items-center gap-5 bg-slate-950 px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#9a6a25]">View projects <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link><Link to="/locations" className={`${textLink} text-slate-950`}>Where Tauro works <ArrowUpRight aria-hidden="true" className="h-4 w-4" /></Link></div>
           </div>
         </div>

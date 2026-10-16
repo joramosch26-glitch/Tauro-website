@@ -77,9 +77,9 @@ export default function Orem() {
       <section aria-labelledby="orem-work-heading" className="bg-white py-20 lg:py-28">
         <div className="mx-auto grid max-w-7xl gap-10 px-6 lg:grid-cols-12 lg:items-end lg:gap-16 lg:px-8">
           <div className="lg:col-span-7">
-            <p className={`${eyebrow} mb-6 text-[#9a6a25]`}>See the finish language</p>
-            <h2 id="orem-work-heading" className={`${heading} max-w-2xl text-slate-950`}>A portfolio of work, without made-up labels.</h2>
-            <p className="mt-7 max-w-2xl leading-8 text-slate-600">Explore Tauro&apos;s selected work across custom-home interiors, exteriors, cabinetry, woodwork, stain, and clear finishes. Each image represents real Tauro work without attaching unverified project names or locations.</p>
+            <p className={`${eyebrow} mb-6 text-[#9a6a25]`}>Selected work</p>
+            <h2 id="orem-work-heading" className={`${heading} max-w-2xl text-slate-950`}>Details that bring a home together.</h2>
+            <p className="mt-7 max-w-2xl leading-8 text-slate-600">Explore Tauro&apos;s selected work, from custom-home interiors and exteriors to cabinetry, architectural woodwork, stain, and clear finishes.</p>
           </div>
           <div className="flex flex-col items-start gap-5 lg:col-span-5 lg:items-end">
             <Link to="/projects" className="inline-flex min-h-14 items-center justify-center gap-5 bg-slate-950 px-6 py-4 text-xs font-semibold uppercase tracking-[0.12em] text-white transition-colors hover:bg-[#9a6a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4">View selected work <ArrowUpRight aria-hidden="true" className="h-4 w-4 shrink-0" /></Link>

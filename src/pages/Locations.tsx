@@ -2,18 +2,29 @@ import { ArrowUpRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const eyebrow = "text-xs font-semibold uppercase tracking-[0.24em]";
-const textLink = "inline-flex min-h-11 items-center gap-4 border-b border-current py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors hover:text-[#9a6a25] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4";
+const textLink = "inline-flex min-h-11 items-center gap-4 border-b border-current py-2 text-xs font-semibold uppercase tracking-[0.14em] transition-colors hover:text-[#c5a374] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4";
 
 const coverage = [
-  "Orem & Utah County", "Alpine & Highland", "American Fork & Pleasant Grove", "Cedar Hills & Lehi",
-  "Mapleton & Springville", "Provo & Utah County", "Woodland Hills & Elk Ridge", "Heber Valley & surrounding communities",
+  { label: "Orem", href: "/locations/orem" },
+  { label: "Provo", href: "/locations/provo" },
+  { label: "Alpine", href: "/locations/alpine" },
+  { label: "Highland", href: "/locations/highland" },
+  { label: "Mapleton", href: "/locations/mapleton" },
+  { label: "Lehi", href: "/locations/lehi" },
+  { label: "American Fork", href: "/locations/american-fork" },
+  { label: "Pleasant Grove", href: "/locations/pleasant-grove" },
+  { label: "Springville", href: "/locations/springville" },
+  { label: "Cedar Hills", href: "/locations/cedar-hills" },
+  { label: "Woodland Hills", href: "/locations/woodland-hills" },
+  { label: "Elk Ridge", href: "/locations/elk-ridge" },
+  { label: "Heber Valley & surrounding communities" },
 ];
 
 const featuredMarkets = [
   {
     location: "Midway, Utah", title: "A finish process that meets the setting.", image: "/tauro/exterior-custom-home.webp",
     alt: "Tauro Painting exterior finish work on a custom home", href: "/locations/midway", link: "Explore Midway",
-    description: "Tauro has completed custom-home work in the Midway area. Explore a considered approach to house painting, cabinetry, stain, wood finishes, interiors, exteriors, and final punch.",
+    description: "Explore our custom-home painting and finishing services in Midway, Park City, and Deer Valley, from interiors and cabinetry to wood finishes and exterior details.",
   },
   {
     location: "Park City / Deer Valley, Utah", title: "Finish standards for exceptional homes.", image: "/tauro/exterior-residence.webp",
@@ -51,7 +62,7 @@ export default function Locations() {
       </section>
 
       <section aria-labelledby="coverage-heading" className="bg-slate-950 py-20 text-white lg:py-28">
-        <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8"><div className="lg:col-span-5"><p className={`${eyebrow} mb-6 text-[#c5a374]`}>Regional coverage</p><h2 id="coverage-heading" className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl">Other areas we serve.</h2><p className="mt-7 max-w-md leading-8 text-white/70">For the right custom-home project, Tauro serves these Utah County and surrounding communities. Tell us where the project stands and what finishes are involved.</p></div><ul className="grid border-t border-white/20 sm:grid-cols-2 lg:col-span-6 lg:col-start-7">{coverage.map((area) => <li key={area} className="border-b border-white/20 px-0 py-5 text-lg font-medium tracking-[-0.02em] text-white/85 sm:odd:pr-6 sm:even:pl-6">{area}</li>)}</ul></div>
+        <div className="mx-auto grid max-w-7xl gap-12 px-6 lg:grid-cols-12 lg:gap-16 lg:px-8"><div className="lg:col-span-5"><p className={`${eyebrow} mb-6 text-[#c5a374]`}>Regional coverage</p><h2 id="coverage-heading" className="text-4xl font-semibold leading-[1.08] tracking-[-0.04em] sm:text-5xl">Other areas we serve.</h2><p className="mt-7 max-w-md leading-8 text-white/70">For the right custom-home project, Tauro serves these Utah County and surrounding communities. Tell us where the project stands and what finishes are involved.</p></div><ul className="grid border-t border-white/20 sm:grid-cols-2 lg:col-span-6 lg:col-start-7">{coverage.map((area) => <li key={area.label} className="border-b border-white/20 px-0 py-5 text-lg font-medium tracking-[-0.02em] text-white/85 sm:odd:pr-6 sm:even:pl-6">{area.href ? <Link to={area.href} className="transition-colors hover:text-[#c5a374] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4">{area.label}</Link> : area.label}</li>)}</ul></div>
       </section>
 
       <section aria-labelledby="locations-cta-heading" className="bg-[#f5f3ee] py-20 lg:py-28">
