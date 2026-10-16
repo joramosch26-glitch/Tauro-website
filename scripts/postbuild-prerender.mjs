@@ -1,5 +1,6 @@
 import fs from "fs";
 import path from "path";
+import { createServer } from "vite";
 
 const distDir = path.resolve("dist");
 const baseHtmlPath = path.join(distDir, "index.html");
@@ -13,6 +14,18 @@ if (!fs.existsSync(baseHtmlPath)) {
 const baseHtml = fs.readFileSync(baseHtmlPath, "utf8");
 const seo = JSON.parse(fs.readFileSync(seoPath, "utf8"));
 const routes = [...seo.routes, seo.notFound];
+const publicRoutePaths = new Set(seo.routes.map(({ route }) => route));
+const previewBuild = process.env.VERCEL_ENV === "preview";
+
+if (publicRoutePaths.size !== seo.routes.length || publicRoutePaths.has(seo.notFound.route)) {
+  throw new Error("postbuild-prerender: SEO route manifest contains duplicate or reserved paths");
+}
+
+for (const route of publicRoutePaths) {
+  if (!route.startsWith("/") || route.includes("..") || route.includes("\\")) {
+    throw new Error(`postbuild-prerender: unsafe route in SEO manifest: ${route}`);
+  }
+}
 
 function escapeAttr(value) {
   return value.replace(/&/g, "&amp;").replace(/"/g, "&quot;");
@@ -66,13 +79,15 @@ function buildPageSchema(meta) {
 
 function injectSeoHead(html, meta) {
   const cleanHtml = removeExistingSeo(html);
-  const robots = meta.robots ?? "index,follow";
+  const robots = previewBuild ? "noindex,nofollow" : meta.robots ?? "index,follow";
   const businessSchema = `<script id="ld-json-business" type="application/ld+json">${JSON.stringify(seo.business).replace(/</g, "\\u003c")}</script>`;
   const pageSchema = buildPageSchema(meta);
+  const previewMarker = previewBuild ? '<meta name="tauro-preview" content="noindex" />' : "";
   const seoBlock = `
     <title>${escapeAttr(meta.title)}</title>
     <meta name="description" content="${escapeAttr(meta.description)}" />
     <meta name="robots" content="${escapeAttr(robots)}" />
+    ${previewMarker}
     <link rel="canonical" href="${escapeAttr(meta.canonical)}" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="${escapeAttr(seo.siteName)}" />
@@ -91,15 +106,37 @@ function injectSeoHead(html, meta) {
   return cleanHtml.replace("</head>", `${seoBlock}\n${businessSchema}\n${pageSchema}\n</head>`);
 }
 
-for (const meta of routes) {
-  const finalHtml = injectSeoHead(baseHtml, meta);
-  const outputPath = meta.route === "/"
-    ? path.join(distDir, "index.html")
-    : meta.route === "/404"
-      ? path.join(distDir, "404.html")
-      : path.join(distDir, meta.route.slice(1), "index.html");
+const vite = await createServer({
+  configFile: path.resolve("vite.config.ts"),
+  appType: "custom",
+  logLevel: "error",
+  server: { middlewareMode: true },
+});
 
-  fs.mkdirSync(path.dirname(outputPath), { recursive: true });
-  fs.writeFileSync(outputPath, finalHtml, "utf8");
-  console.log(`Generated: ${outputPath}`);
+try {
+  const { renderRoute } = await vite.ssrLoadModule("/src/entry-server.tsx");
+
+  for (const meta of routes) {
+    const markup = renderRoute(meta.route);
+    const resourceHints = [...markup.matchAll(/<link rel="preload"[^>]*\/?\s*>/g)].map(([hint]) => hint);
+    const hydrationMarkup = markup.replace(/<link rel="preload"[^>]*\/?\s*>/g, "");
+    const rootPattern = /(<div id="root">).*?(<\/div>)/is;
+    if (!rootPattern.test(baseHtml)) {
+      throw new Error("postbuild-prerender: HTML shell has no root element");
+    }
+    const shellWithMarkup = baseHtml.replace(rootPattern, (_match, open, close) => `${open}${hydrationMarkup}${close}`);
+    const pageHtml = shellWithMarkup.replace("</head>", `${resourceHints.join("\n")}\n</head>`);
+    const finalHtml = injectSeoHead(pageHtml, meta);
+    const outputPath = meta.route === "/"
+      ? path.join(distDir, "index.html")
+      : meta.route === "/404"
+        ? path.join(distDir, "404.html")
+        : path.join(distDir, meta.route.slice(1), "index.html");
+
+    fs.mkdirSync(path.dirname(outputPath), { recursive: true });
+    fs.writeFileSync(outputPath, finalHtml, "utf8");
+    console.log(`Generated: ${outputPath}`);
+  }
+} finally {
+  await vite.close();
 }

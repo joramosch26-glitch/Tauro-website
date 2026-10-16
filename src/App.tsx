@@ -84,7 +84,13 @@ function App() {
       ...seo.notFound,
       canonical: `${seo.productionOrigin}${normalizedPath}`,
     };
-    const robots = routeMeta ? "index,follow" : seo.notFound.robots;
+    const previewNoIndex =
+      document.querySelector('meta[name="tauro-preview"]')?.getAttribute("content") === "noindex";
+    const robots = previewNoIndex
+      ? "noindex,nofollow"
+      : routeMeta
+        ? "index,follow"
+        : seo.notFound.robots;
 
     const upsertMeta = (
       selector: string,
