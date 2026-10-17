@@ -150,7 +150,7 @@ test("renders only the public SEO allowlist and controlled 404", () => {
       assert.ok(html.includes(`<meta name="robots" content="${expectedPreviewRobots}"`), `${meta.route} is indexable in a preview build`);
       assert.ok(html.includes('<meta name="tauro-preview" content="noindex"'), "preview marker is missing");
     } else {
-      assert.ok(html.includes('<meta name="robots" content="index,follow"'), `${meta.route} robots directive changed outside a preview build`);
+      assert.ok(html.includes(`<meta name="robots" content="${meta.robots ?? "index,follow"}"`), `${meta.route} robots directive changed outside a preview build`);
       assert.ok(!html.includes('name="tauro-preview"'), "preview marker leaked into a non-preview build");
     }
     assert.match(html, /<script id="ld-json-business" type="application\/ld\+json">/);
@@ -166,6 +166,16 @@ test("renders only the public SEO allowlist and controlled 404", () => {
   assert.match(notFoundHtml, /This page is<br[^>]*\/>not in the plan\./);
   assert.ok(notFoundHtml.includes(`<meta name="robots" content="${expectedPreviewRobots ?? "noindex,follow"}"`));
   assert.ok(notFoundHtml.includes(`href="${seo.notFound.canonical}"`));
+
+  const officeCheckMeta = seo.routes.find(({ route }) => route === "/office-routing-check");
+  assert.ok(officeCheckMeta, "temporary office check route is missing from prerender manifest");
+  assert.equal(officeCheckMeta.robots, "noindex,nofollow");
+  const sitemap = fs.readFileSync(path.join(root, "public", "sitemap.xml"), "utf8");
+  assert.ok(!sitemap.includes(officeCheckMeta.canonical), "temporary office check route must not be in the sitemap");
+  for (const meta of seo.routes.filter(({ route }) => route !== officeCheckMeta.route)) {
+    const file = meta.route === "/" ? path.join(dist, "index.html") : path.join(dist, meta.route.slice(1), "index.html");
+    assert.ok(!fs.readFileSync(file, "utf8").includes(`href="${officeCheckMeta.route}"`), `${meta.route} links to the temporary route`);
+  }
 });
 
 test("initial HTML serves route content without JavaScript and hydrates cleanly", async () => {
@@ -274,11 +284,45 @@ test("contact form keeps required fields and never sends a real inquiry", async 
   await context.close();
 });
 
+test("temporary office check is noindex, unlinked, office-only, and excluded from lead analytics", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  const destinations = [];
+  page.on("request", (request) => {
+    if (request.url().includes("formsubmit.co") && request.method() === "POST") destinations.push(request.url());
+  });
+  const submissions = await mockFormSubmit(page, { body: { success: "true", message: "Test accepted." } });
+  await page.goto(`${origin}${vitePreviewPath("/office-routing-check")}`, { waitUntil: "domcontentloaded" });
+  assert.equal(await page.locator('meta[name="robots"]').getAttribute("content"), expectedPreviewRobots ?? "noindex,nofollow");
+  assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), "https://www.tauropainting.com/office-routing-check");
+  assert.match(await page.locator("body").innerText(), /Temporary internal test/i);
+  assert.equal(await page.locator('a[href="/office-routing-check"]').count(), 0);
+  await page.evaluate(() => {
+    window.__tauroLeadEvents = [];
+    window.gtag = (...args) => window.__tauroLeadEvents.push(args);
+  });
+
+  const form = page.locator("form").first();
+  await fillInquiryForm(form);
+  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+  await page.getByRole("status").waitFor({ state: "visible" });
+  assert.deepEqual(destinations, ["https://formsubmit.co/ajax/office@tauropainting.com"]);
+  assert.equal(submissions.length, 1);
+  assert.equal(submissions[0].submittedFrom, "http://127.0.0.1:4178/office-routing-check");
+  assert.deepEqual(await page.evaluate(() => window.__tauroLeadEvents), []);
+  await context.close();
+});
+
 test("phone is optional and email remains required on both inquiry forms", async () => {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
   const page = await context.newPage();
   const submissions = await mockFormSubmit(page, { body: { success: "true", message: "Submission accepted." } });
+  const destinations = [];
+  page.on("request", (request) => {
+    if (request.url().includes("formsubmit.co") && request.method() === "POST") destinations.push(request.url());
+  });
 
   for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
     await page.goto(url, { waitUntil: "domcontentloaded" });
@@ -297,6 +341,10 @@ test("phone is optional and email remains required on both inquiry forms", async
   assert.equal(submissions.length, 2);
   assert.equal(submissions[0].phone, "");
   assert.equal(submissions[1].phone, "");
+  assert.deepEqual(destinations, [
+    "https://formsubmit.co/ajax/tauropaintingutah@gmail.com",
+    "https://formsubmit.co/ajax/tauropaintingutah@gmail.com",
+  ]);
   await context.close();
 });
 

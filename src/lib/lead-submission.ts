@@ -7,6 +7,12 @@ export interface LeadInquiry {
   message: string;
 }
 
+export const DEFAULT_LEAD_RECIPIENT = "tauropaintingutah@gmail.com";
+export const OFFICE_TEST_RECIPIENT = "office@tauropainting.com";
+export type LeadSubmissionRecipient =
+  | typeof DEFAULT_LEAD_RECIPIENT
+  | typeof OFFICE_TEST_RECIPIENT;
+
 export type LeadSubmissionOutcome = "rejected" | "unconfirmed" | "duplicate" | "timed_out" | "submitted_unconfirmed";
 export type LeadSubmissionResult = "accepted" | "submitted_unconfirmed";
 export const LEAD_SUBMISSION_TIMEOUT_MS = 15_000;
@@ -26,6 +32,7 @@ interface FormSubmitResponse {
 export async function submitLeadInquiry(
   inquiry: LeadInquiry,
   submittedFrom: string,
+  recipient: LeadSubmissionRecipient = DEFAULT_LEAD_RECIPIENT,
 ): Promise<LeadSubmissionResult> {
   const controller = new AbortController();
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
@@ -37,7 +44,7 @@ export async function submitLeadInquiry(
   });
 
   const request = (async () => {
-    const response = await fetch("https://formsubmit.co/ajax/tauropaintingutah@gmail.com", {
+    const response = await fetch(`https://formsubmit.co/ajax/${recipient}`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -5,7 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import SubmissionError from "@/components/SubmissionError";
-import { LeadSubmissionError, submitLeadInquiry } from "@/lib/lead-submission";
+import {
+  DEFAULT_LEAD_RECIPIENT,
+  LeadSubmissionError,
+  submitLeadInquiry,
+  type LeadSubmissionRecipient,
+} from "@/lib/lead-submission";
 
 const contactDetails = [
   { label: "Phone", value: "(801) 928-9520", href: "tel:8019289520" },
@@ -18,7 +23,15 @@ const fieldClass =
   "h-12 rounded-none border-0 border-b border-slate-300 bg-transparent px-0 shadow-none focus-visible:border-[#9a6a25] focus-visible:ring-0";
 const labelClass = "mb-2 block text-xs font-semibold uppercase tracking-[0.16em] text-slate-600";
 
-export default function Contact() {
+interface ContactProps {
+  recipient?: LeadSubmissionRecipient;
+  trackLead?: boolean;
+}
+
+export default function Contact({
+  recipient = DEFAULT_LEAD_RECIPIENT,
+  trackLead = true,
+}: ContactProps = {}) {
   const [showSuccess, setShowSuccess] = useState(false);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -64,6 +77,7 @@ export default function Contact() {
       const outcome = await submitLeadInquiry(
         { name, phone, email, projectType, projectLocation, message },
         `${window.location.origin}${window.location.pathname}`,
+        recipient,
       );
       if (outcome === "submitted_unconfirmed") {
         setSubmitError(outcome);
@@ -72,7 +86,7 @@ export default function Contact() {
 
       try {
         const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
-        if (typeof gtag === "function") {
+        if (trackLead && typeof gtag === "function") {
           gtag("event", "generate_lead", {
             form_location: "contact_page",
             project_type: projectType,
