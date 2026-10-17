@@ -8,7 +8,8 @@ import seo from "../src/seo.json" with { type: "json" };
 
 const root = path.resolve(".");
 const dist = path.join(root, "dist");
-const origin = "http://127.0.0.1:4178";
+const previewPort = Number(process.env.PRERENDER_TEST_PORT ?? 4178);
+const origin = `http://127.0.0.1:${previewPort}`;
 const vitePreviewPath = (route) => route === "/" ? "/" : `${route}/`;
 const expectedPreviewRobots = process.env.VERCEL_ENV === "preview" ? "noindex,nofollow" : null;
 const expectedCityPaths = [
@@ -29,28 +30,91 @@ const expectedCityPaths = [
 let previewProcess;
 let browser;
 
+async function instrumentSubmissionTimeout(page) {
+  await page.addInitScript(() => {
+    const submissionTimeoutMs = 15_000;
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    const nativeClearTimeout = window.clearTimeout.bind(window);
+    const timers = { created: [], cleared: [] };
+    Object.defineProperty(window, "__tauroSubmissionTimers", { value: timers });
+    window.setTimeout = (callback, delay, ...args) => {
+      const timerId = nativeSetTimeout(callback, delay === submissionTimeoutMs ? 50 : delay, ...args);
+      if (delay === submissionTimeoutMs) timers.created.push(timerId);
+      return timerId;
+    };
+    window.clearTimeout = (timerId) => {
+      if (timers.created.includes(timerId)) timers.cleared.push(timerId);
+      return nativeClearTimeout(timerId);
+    };
+  });
+}
+
+async function submissionTimeoutRecords(page) {
+  return page.evaluate(() => window.__tauroSubmissionTimers);
+}
+
+async function mockFormSubmit(page, { status = 200, body, rawBody, contentType = "application/json" }) {
+  const submissions = [];
+  const corsHeaders = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-headers": "accept,content-type",
+  };
+
+  await page.route("https://formsubmit.co/**", async (route) => {
+    if (route.request().method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    if (route.request().method() !== "POST") {
+      await route.abort();
+      return;
+    }
+
+    submissions.push(JSON.parse(route.request().postData() ?? "{}"));
+    await route.fulfill({
+      status,
+      headers: { ...corsHeaders, "content-type": contentType },
+      body: rawBody ?? JSON.stringify(body),
+    });
+  });
+
+  return submissions;
+}
+
+async function fillInquiryForm(form) {
+  await form.getByLabel("Name", { exact: true }).fill("Morgan Test");
+  await form.getByLabel("Phone", { exact: true }).fill("8015550100");
+  await form.getByLabel("Email", { exact: true }).fill("morgan@example.test");
+  await form.getByLabel("Project type", { exact: true }).selectOption("interior");
+  await form.getByLabel("Project city or ZIP (optional)", { exact: true }).fill("Provo, UT");
+  await form.getByLabel("Project details", { exact: true }).fill("Mock project details for form tests.");
+}
+
 before(async () => {
   assert.ok(fs.existsSync(path.join(dist, "index.html")), "run npm run build first");
   const viteCli = path.join(root, "node_modules/vite/bin/vite.js");
-  previewProcess = spawn(process.execPath, [viteCli, "preview", "--host", "127.0.0.1", "--port", "4178", "--strictPort"], {
+  let previewOutput = "";
+  previewProcess = spawn(process.execPath, [viteCli, "preview", "--host", "127.0.0.1", "--port", String(previewPort), "--strictPort"], {
     cwd: root,
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
   });
+  previewProcess.stdout.setEncoding("utf8").on("data", (chunk) => { previewOutput += chunk; });
+  previewProcess.stderr.setEncoding("utf8").on("data", (chunk) => { previewOutput += chunk; });
 
   let ready = false;
   for (let i = 0; i < 40; i += 1) {
     if (previewProcess.exitCode !== null) throw new Error(`vite preview exited with ${previewProcess.exitCode}`);
-    try {
-      const response = await fetch(origin);
-      if (response.ok) {
-        ready = true;
-        break;
-      }
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 250));
+    if (previewOutput.includes(origin)) {
+      ready = true;
+      break;
     }
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  assert.ok(ready, "vite preview did not start");
+  assert.ok(ready, `this test run's Vite preview did not announce ${origin}: ${previewOutput}`);
+  const previewResponse = await fetch(origin);
+  assert.ok(previewResponse.ok, `this test run's Vite preview returned ${previewResponse.status}`);
 
   const executablePath = process.env.CHROMIUM_PATH || "/usr/bin/chromium";
   browser = await chromium.launch({ headless: true, executablePath });
@@ -78,6 +142,7 @@ test("renders only the public SEO allowlist and controlled 404", () => {
     const html = fs.readFileSync(file, "utf8");
     assert.doesNotMatch(html, /<div id="root">\s*<\/div>/i, `${meta.route} has an empty root`);
     assert.match(html, /<main\b/i, `${meta.route} has no server-rendered main content`);
+    assert.equal((html.match(/<h1\b/gi) ?? []).length, 1, `${meta.route} should contain one H1`);
     const escapedTitle = meta.title.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
     assert.ok(html.includes(`<title>${escapedTitle}</title>`), `${meta.route} has the wrong title`);
     assert.ok(html.includes(`href="${meta.canonical}"`), `${meta.route} has the wrong canonical`);
@@ -156,6 +221,20 @@ test("desktop and mobile service area navigation works without horizontal overfl
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${origin}${vitePreviewPath("/locations")}`);
   await page.screenshot({ path: "/tmp/tauro-website-ssg-desktop.png", fullPage: true, animations: "disabled" });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(origin, { waitUntil: "domcontentloaded" });
+  await page.screenshot({ path: "/tmp/tauro-inquiry-home-desktop.png", animations: "disabled" });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(origin, { waitUntil: "domcontentloaded" });
+  assert.equal(await page.getByRole("link", { name: /call tauro/i }).isVisible(), true);
+  assert.equal(await page.getByRole("link", { name: /request a walkthrough/i }).first().isVisible(), true);
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  await page.screenshot({ path: "/tmp/tauro-inquiry-home-mobile.png", animations: "disabled" });
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  assert.equal(await page.locator("form").getByRole("button", { name: "Request a Walkthrough" }).isVisible(), true);
   await context.close();
 });
 
@@ -174,5 +253,209 @@ test("contact form keeps required fields and never sends a real inquiry", async 
   assert.equal(await form.evaluate((element) => element.checkValidity()), false);
   await form.getByRole("button", { name: "Request a Walkthrough" }).click();
   assert.deepEqual(externalPosts, []);
+  await context.close();
+});
+
+test("home and contact forms do not report provider-level rejection as success", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  const submissions = await mockFormSubmit(page, {
+    status: 200,
+    body: { success: "false", message: "Provider rejected the request." },
+  });
+
+  for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    const form = page.locator("form").first();
+    await fillInquiryForm(form);
+    await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+
+    const alert = page.getByRole("alert");
+    await alert.waitFor({ state: "visible" });
+    assert.match(await alert.innerText(), /could not accept your request/i);
+    assert.equal(await page.getByRole("status").count(), 0);
+    assert.equal(await form.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "Provo, UT");
+    assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
+    assert.equal(await alert.getByRole("link", { name: "Call Tauro at (801) 928-9520" }).getAttribute("href"), "tel:8019289520");
+  }
+
+  assert.equal(submissions.length, 2);
+  assert.equal(submissions[0].projectLocation, "Provo, UT");
+  assert.equal(submissions[1].projectLocation, "Provo, UT");
+  await context.close();
+});
+
+test("successful provider acknowledgment clears the contact form; HTTP failure keeps the home form actionable", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  await instrumentSubmissionTimeout(page);
+  const successSubmissions = await mockFormSubmit(page, {
+    body: { success: "true", message: "Submission accepted." },
+  });
+
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  const contactForm = page.locator("form").first();
+  await fillInquiryForm(contactForm);
+  await contactForm.getByLabel("Project city or ZIP (optional)").fill("");
+  await contactForm.getByRole("button", { name: "Request a Walkthrough" }).click();
+  await page.getByRole("status").waitFor({ state: "visible" });
+  const successTimers = await submissionTimeoutRecords(page);
+  assert.equal(successTimers.created.length, 1);
+  assert.deepEqual(successTimers.cleared, successTimers.created);
+  assert.equal(await contactForm.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "");
+  assert.equal(successSubmissions.length, 1);
+  assert.equal(successSubmissions[0].projectLocation, "");
+
+  await fillInquiryForm(contactForm);
+  await contactForm.getByLabel("Project city or ZIP (optional)").fill("");
+  await contactForm.getByRole("button", { name: "Request a Walkthrough" }).click();
+  const duplicateAlert = page.getByRole("alert");
+  await duplicateAlert.waitFor({ state: "visible" });
+  assert.match(await duplicateAlert.innerText(), /request was sent recently/i);
+  assert.equal(await page.getByRole("status").count(), 0);
+  assert.equal(await contactForm.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "");
+  assert.equal(successSubmissions.length, 1);
+
+  await page.unroute("https://formsubmit.co/**");
+  const failedSubmissions = await mockFormSubmit(page, {
+    status: 503,
+    body: { success: false, message: "Service unavailable." },
+  });
+  await page.goto(`${origin}/#contact`, { waitUntil: "domcontentloaded" });
+  const homeForm = page.locator("form").first();
+  await fillInquiryForm(homeForm);
+  await homeForm.getByRole("button", { name: "Request a Walkthrough" }).click();
+  const alert = page.getByRole("alert");
+  await alert.waitFor({ state: "visible" });
+  assert.match(await alert.innerText(), /could not accept your request/i);
+  assert.equal(await homeForm.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "Provo, UT");
+  assert.equal(await homeForm.getByRole("button", { name: "Request a Walkthrough" }).isEnabled(), true);
+  assert.equal(failedSubmissions.length, 1);
+  const completedTimers = await submissionTimeoutRecords(page);
+  assert.equal(completedTimers.created.length, 1);
+  assert.deepEqual(completedTimers.cleared, completedTimers.created);
+  await context.close();
+});
+
+test("a 2xx response without acknowledgment is submitted-but-unconfirmed on both forms", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  const submissions = await mockFormSubmit(page, {
+    status: 200,
+    body: { message: "Response without an acknowledgment." },
+  });
+  for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    const form = page.locator("form").first();
+    await fillInquiryForm(form);
+    await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+
+    const status = page.getByRole("status");
+    await status.waitFor({ state: "visible" });
+    assert.match(await status.innerText(), /request submitted; receipt unconfirmed/i);
+    assert.match(await status.innerText(), /call us to confirm before sending again/i);
+    assert.equal(await page.getByRole("alert").count(), 0);
+    assert.equal(await status.getByRole("link", { name: "Call Tauro at (801) 928-9520" }).getAttribute("href"), "tel:8019289520");
+    assert.equal(await page.getByRole("status").filter({ hasText: "Request received successfully" }).count(), 0);
+    assert.equal(await form.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "Provo, UT");
+    assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
+  }
+  assert.equal(submissions.length, 2);
+  await context.close();
+});
+
+test("boolean success is accepted, explicit failure is rejected, and non-JSON 2xx is unconfirmed", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+
+  await mockFormSubmit(page, { body: { success: true, message: "Accepted." } });
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  let form = page.locator("form").first();
+  await fillInquiryForm(form);
+  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+  await page.getByRole("status").waitFor({ state: "visible" });
+
+  await page.unroute("https://formsubmit.co/**");
+  await mockFormSubmit(page, { body: { success: false, message: "Rejected." } });
+  await page.goto(`${origin}/#contact`, { waitUntil: "domcontentloaded" });
+  form = page.locator("form").first();
+  await fillInquiryForm(form);
+  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+  let alert = page.getByRole("alert");
+  await alert.waitFor({ state: "visible" });
+  assert.match(await alert.innerText(), /could not accept your request/i);
+  assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
+
+  await page.unroute("https://formsubmit.co/**");
+  await mockFormSubmit(page, { body: { error: "Rejected." } });
+  await page.goto(`${origin}/#contact`, { waitUntil: "domcontentloaded" });
+  form = page.locator("form").first();
+  await fillInquiryForm(form);
+  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+  alert = page.getByRole("alert");
+  await alert.waitFor({ state: "visible" });
+  assert.match(await alert.innerText(), /could not accept your request/i);
+
+  await page.unroute("https://formsubmit.co/**");
+  await mockFormSubmit(page, { rawBody: "not-json", contentType: "text/plain" });
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  form = page.locator("form").first();
+  await fillInquiryForm(form);
+  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+  const unconfirmedStatus = page.getByRole("status");
+  await unconfirmedStatus.waitFor({ state: "visible" });
+  assert.match(await unconfirmedStatus.innerText(), /request submitted; receipt unconfirmed/i);
+  assert.equal(await page.getByRole("alert").count(), 0);
+  assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
+  await context.close();
+});
+
+test("a hanging FormSubmit request times out accessibly, preserves fields, and clears its timer", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  await instrumentSubmissionTimeout(page);
+  await page.addInitScript(() => {
+    const nativeFetch = window.fetch.bind(window);
+    window.__formSubmitMockPosts = [];
+    window.fetch = (input, init) => {
+      if (String(input) === "https://formsubmit.co/ajax/tauropaintingutah@gmail.com") {
+        window.__formSubmitMockPosts.push(JSON.parse(String(init?.body ?? "{}")));
+        return new Promise((_, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Mock request aborted by timeout", "AbortError"));
+          }, { once: true });
+        });
+      }
+      return nativeFetch(input, init);
+    };
+  });
+
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  const form = page.locator("form").first();
+  await fillInquiryForm(form);
+  const submitButton = form.getByRole("button", { name: "Request a Walkthrough" });
+  await submitButton.click();
+  const alert = page.getByRole("alert");
+  await alert.waitFor({ state: "visible" });
+  await page.waitForFunction(() => {
+    const button = document.querySelector('form button[type="submit"]');
+    return button instanceof HTMLButtonElement && !button.disabled;
+  });
+  assert.equal(await submitButton.isEnabled(), true, "pending state clears after timeout");
+  assert.match(await alert.innerText(), /could not confirm whether your request was received/i);
+  assert.match(await alert.innerText(), /call us to confirm before sending again/i);
+  assert.equal(await alert.getByRole("link", { name: "Call Tauro at (801) 928-9520" }).getAttribute("href"), "tel:8019289520");
+  assert.equal(await form.getByLabel("Name", { exact: true }).inputValue(), "Morgan Test");
+  assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
+  assert.equal(await page.getByRole("status").count(), 0);
+  assert.equal(await page.evaluate(() => window.__formSubmitMockPosts.length), 1, "no automatic retry occurs");
+  const timers = await submissionTimeoutRecords(page);
+  assert.equal(timers.created.length, 1);
+  assert.deepEqual(timers.cleared, timers.created);
   await context.close();
 });

@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowRight } from "lucide-react";
+import { ArrowDown, ArrowRight, Phone } from "lucide-react";
 import { Link } from "react-router-dom";
 
 const proof = [
@@ -52,6 +52,14 @@ export default function HeroSection() {
                 Explore our work
               </Link>
             </div>
+
+            <a
+              href="tel:8019289520"
+              className="mt-5 inline-flex min-h-11 items-center gap-2 text-sm font-medium text-white/85 underline decoration-white/40 underline-offset-4 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+            >
+              <Phone aria-hidden="true" className="h-4 w-4" />
+              Call Tauro · (801) 928-9520
+            </a>
           </div>
 
           <div className="mt-12 grid max-w-4xl grid-cols-2 border-t border-white/20 pt-6 sm:grid-cols-4">
