@@ -27,7 +27,7 @@ export default function Contact() {
   const [projectLocation, setProjectLocation] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<"rejected" | "unconfirmed" | "duplicate" | "timed_out" | null>(null);
+  const [submitError, setSubmitError] = useState<"rejected" | "unconfirmed" | "duplicate" | "timed_out" | "submitted_unconfirmed" | null>(null);
   const [website, setWebsite] = useState("");
   const [lastSubmittedSignature, setLastSubmittedSignature] = useState("");
   const [lastSubmittedAt, setLastSubmittedAt] = useState(0);
@@ -61,10 +61,14 @@ export default function Contact() {
     setIsSubmitting(true);
 
     try {
-      await submitLeadInquiry(
+      const outcome = await submitLeadInquiry(
         { name, phone, email, projectType, projectLocation, message },
         `${window.location.origin}${window.location.pathname}`,
       );
+      if (outcome === "submitted_unconfirmed") {
+        setSubmitError(outcome);
+        return;
+      }
 
       try {
         const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;

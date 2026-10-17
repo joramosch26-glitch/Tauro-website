@@ -7,7 +7,8 @@ export interface LeadInquiry {
   message: string;
 }
 
-export type LeadSubmissionOutcome = "rejected" | "unconfirmed" | "duplicate" | "timed_out";
+export type LeadSubmissionOutcome = "rejected" | "unconfirmed" | "duplicate" | "timed_out" | "submitted_unconfirmed";
+export type LeadSubmissionResult = "accepted" | "submitted_unconfirmed";
 export const LEAD_SUBMISSION_TIMEOUT_MS = 15_000;
 
 export class LeadSubmissionError extends Error {
@@ -25,7 +26,7 @@ interface FormSubmitResponse {
 export async function submitLeadInquiry(
   inquiry: LeadInquiry,
   submittedFrom: string,
-): Promise<void> {
+): Promise<LeadSubmissionResult> {
   const controller = new AbortController();
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
@@ -59,12 +60,13 @@ export async function submitLeadInquiry(
     let result: FormSubmitResponse;
     try {
       result = await response.json() as FormSubmitResponse;
-    } catch {
-      throw new LeadSubmissionError("unconfirmed");
+    } catch (error) {
+      if (controller.signal.aborted) throw error;
+      return "submitted_unconfirmed";
     }
 
     if (result.success === true || result.success === "true") {
-      return;
+      return "accepted";
     }
 
     if (
@@ -75,11 +77,11 @@ export async function submitLeadInquiry(
       throw new LeadSubmissionError("rejected");
     }
 
-    throw new LeadSubmissionError("unconfirmed");
+    return "submitted_unconfirmed";
   })();
 
   try {
-    await Promise.race([request, timeout]);
+    return await Promise.race([request, timeout]);
   } catch (error) {
     if (controller.signal.aborted && !(error instanceof LeadSubmissionError)) {
       throw new LeadSubmissionError("timed_out");

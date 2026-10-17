@@ -339,7 +339,7 @@ test("successful provider acknowledgment clears the contact form; HTTP failure k
   await context.close();
 });
 
-test("an unconfirmed FormSubmit response never reports success and keeps the inquiry", async () => {
+test("a 2xx response without acknowledgment is submitted-but-unconfirmed on both forms", async () => {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
   const page = await context.newPage();
@@ -347,21 +347,27 @@ test("an unconfirmed FormSubmit response never reports success and keeps the inq
     status: 200,
     body: { message: "Response without an acknowledgment." },
   });
-  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
-  const form = page.locator("form").first();
-  await fillInquiryForm(form);
-  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+  for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    const form = page.locator("form").first();
+    await fillInquiryForm(form);
+    await form.getByRole("button", { name: "Request a Walkthrough" }).click();
 
-  const alert = page.getByRole("alert");
-  await alert.waitFor({ state: "visible" });
-  assert.match(await alert.innerText(), /could not confirm whether your request was received/i);
-  assert.equal(await page.getByRole("status").count(), 0);
-  assert.equal(await form.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "Provo, UT");
-  assert.equal(submissions.length, 1);
+    const status = page.getByRole("status");
+    await status.waitFor({ state: "visible" });
+    assert.match(await status.innerText(), /request submitted; receipt unconfirmed/i);
+    assert.match(await status.innerText(), /call us to confirm before sending again/i);
+    assert.equal(await page.getByRole("alert").count(), 0);
+    assert.equal(await status.getByRole("link", { name: "Call Tauro at (801) 928-9520" }).getAttribute("href"), "tel:8019289520");
+    assert.equal(await page.getByRole("status").filter({ hasText: "Request received successfully" }).count(), 0);
+    assert.equal(await form.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "Provo, UT");
+    assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
+  }
+  assert.equal(submissions.length, 2);
   await context.close();
 });
 
-test("boolean success is accepted, while boolean failure and non-JSON responses are not", async () => {
+test("boolean success is accepted, explicit failure is rejected, and non-JSON 2xx is unconfirmed", async () => {
   const context = await browser.newContext({ reducedMotion: "reduce" });
   await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
   const page = await context.newPage();
@@ -400,10 +406,10 @@ test("boolean success is accepted, while boolean failure and non-JSON responses 
   form = page.locator("form").first();
   await fillInquiryForm(form);
   await form.getByRole("button", { name: "Request a Walkthrough" }).click();
-  alert = page.getByRole("alert");
-  await alert.waitFor({ state: "visible" });
-  assert.match(await alert.innerText(), /could not confirm whether your request was received/i);
-  assert.equal(await page.getByRole("status").count(), 0);
+  const unconfirmedStatus = page.getByRole("status");
+  await unconfirmedStatus.waitFor({ state: "visible" });
+  assert.match(await unconfirmedStatus.innerText(), /request submitted; receipt unconfirmed/i);
+  assert.equal(await page.getByRole("alert").count(), 0);
   assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
   await context.close();
 });
