@@ -29,7 +29,7 @@ const expectedCityPaths = [
 let previewProcess;
 let browser;
 
-async function mockFormSubmit(page, { status = 200, body }) {
+async function mockFormSubmit(page, { status = 200, body, rawBody, contentType = "application/json" }) {
   const submissions = [];
   const corsHeaders = {
     "access-control-allow-origin": "*",
@@ -51,8 +51,8 @@ async function mockFormSubmit(page, { status = 200, body }) {
     submissions.push(JSON.parse(route.request().postData() ?? "{}"));
     await route.fulfill({
       status,
-      headers: { ...corsHeaders, "content-type": "application/json" },
-      body: JSON.stringify(body),
+      headers: { ...corsHeaders, "content-type": contentType },
+      body: rawBody ?? JSON.stringify(body),
     });
   });
 
@@ -64,7 +64,7 @@ async function fillInquiryForm(form) {
   await form.getByLabel("Phone", { exact: true }).fill("8015550100");
   await form.getByLabel("Email", { exact: true }).fill("morgan@example.test");
   await form.getByLabel("Project type", { exact: true }).selectOption("interior");
-  await form.getByLabel("Project city or ZIP", { exact: true }).fill("Provo, UT");
+  await form.getByLabel("Project city or ZIP (optional)", { exact: true }).fill("Provo, UT");
   await form.getByLabel("Project details", { exact: true }).fill("Mock project details for form tests.");
 }
 
@@ -250,7 +250,7 @@ test("home and contact forms do not report provider-level rejection as success",
     await alert.waitFor({ state: "visible" });
     assert.match(await alert.innerText(), /could not accept your request/i);
     assert.equal(await page.getByRole("status").count(), 0);
-    assert.equal(await form.getByLabel("Project city or ZIP", { exact: true }).inputValue(), "Provo, UT");
+    assert.equal(await form.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "Provo, UT");
     assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
     assert.equal(await alert.getByRole("link", { name: "Call Tauro at (801) 928-9520" }).getAttribute("href"), "tel:8019289520");
   }
@@ -272,18 +272,21 @@ test("successful provider acknowledgment clears the contact form; HTTP failure k
   await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
   const contactForm = page.locator("form").first();
   await fillInquiryForm(contactForm);
+  await contactForm.getByLabel("Project city or ZIP (optional)").fill("");
   await contactForm.getByRole("button", { name: "Request a Walkthrough" }).click();
   await page.getByRole("status").waitFor({ state: "visible" });
-  assert.equal(await contactForm.getByLabel("Project city or ZIP", { exact: true }).inputValue(), "");
+  assert.equal(await contactForm.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "");
   assert.equal(successSubmissions.length, 1);
+  assert.equal(successSubmissions[0].projectLocation, "");
 
   await fillInquiryForm(contactForm);
+  await contactForm.getByLabel("Project city or ZIP (optional)").fill("");
   await contactForm.getByRole("button", { name: "Request a Walkthrough" }).click();
   const duplicateAlert = page.getByRole("alert");
   await duplicateAlert.waitFor({ state: "visible" });
   assert.match(await duplicateAlert.innerText(), /request was sent recently/i);
   assert.equal(await page.getByRole("status").count(), 0);
-  assert.equal(await contactForm.getByLabel("Project city or ZIP", { exact: true }).inputValue(), "Provo, UT");
+  assert.equal(await contactForm.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "");
   assert.equal(successSubmissions.length, 1);
 
   await page.unroute("https://formsubmit.co/**");
@@ -298,7 +301,7 @@ test("successful provider acknowledgment clears the contact form; HTTP failure k
   const alert = page.getByRole("alert");
   await alert.waitFor({ state: "visible" });
   assert.match(await alert.innerText(), /could not accept your request/i);
-  assert.equal(await homeForm.getByLabel("Project city or ZIP", { exact: true }).inputValue(), "Provo, UT");
+  assert.equal(await homeForm.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "Provo, UT");
   assert.equal(await homeForm.getByRole("button", { name: "Request a Walkthrough" }).isEnabled(), true);
   assert.equal(failedSubmissions.length, 1);
   await context.close();
@@ -321,7 +324,54 @@ test("an unconfirmed FormSubmit response never reports success and keeps the inq
   await alert.waitFor({ state: "visible" });
   assert.match(await alert.innerText(), /could not confirm whether your request was received/i);
   assert.equal(await page.getByRole("status").count(), 0);
-  assert.equal(await form.getByLabel("Project city or ZIP", { exact: true }).inputValue(), "Provo, UT");
+  assert.equal(await form.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "Provo, UT");
   assert.equal(submissions.length, 1);
+  await context.close();
+});
+
+test("boolean success is accepted, while boolean failure and non-JSON responses are not", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+
+  await mockFormSubmit(page, { body: { success: true, message: "Accepted." } });
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  let form = page.locator("form").first();
+  await fillInquiryForm(form);
+  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+  await page.getByRole("status").waitFor({ state: "visible" });
+
+  await page.unroute("https://formsubmit.co/**");
+  await mockFormSubmit(page, { body: { success: false, message: "Rejected." } });
+  await page.goto(`${origin}/#contact`, { waitUntil: "domcontentloaded" });
+  form = page.locator("form").first();
+  await fillInquiryForm(form);
+  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+  let alert = page.getByRole("alert");
+  await alert.waitFor({ state: "visible" });
+  assert.match(await alert.innerText(), /could not accept your request/i);
+  assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
+
+  await page.unroute("https://formsubmit.co/**");
+  await mockFormSubmit(page, { body: { error: "Rejected." } });
+  await page.goto(`${origin}/#contact`, { waitUntil: "domcontentloaded" });
+  form = page.locator("form").first();
+  await fillInquiryForm(form);
+  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+  alert = page.getByRole("alert");
+  await alert.waitFor({ state: "visible" });
+  assert.match(await alert.innerText(), /could not accept your request/i);
+
+  await page.unroute("https://formsubmit.co/**");
+  await mockFormSubmit(page, { rawBody: "not-json", contentType: "text/plain" });
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  form = page.locator("form").first();
+  await fillInquiryForm(form);
+  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+  alert = page.getByRole("alert");
+  await alert.waitFor({ state: "visible" });
+  assert.match(await alert.innerText(), /could not confirm whether your request was received/i);
+  assert.equal(await page.getByRole("status").count(), 0);
+  assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
   await context.close();
 });

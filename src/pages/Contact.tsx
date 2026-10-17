@@ -248,8 +248,8 @@ export default function Contact() {
               </div>
 
               <div>
-                <label htmlFor="contact-project-location" className={labelClass}>Project city or ZIP</label>
-                <Input id="contact-project-location" name="projectLocation" value={projectLocation} onChange={(event) => setProjectLocation(event.target.value)} placeholder="City or ZIP code" className={fieldClass} required />
+                <label htmlFor="contact-project-location" className={labelClass}>Project city or ZIP (optional)</label>
+                <Input id="contact-project-location" name="projectLocation" value={projectLocation} onChange={(event) => setProjectLocation(event.target.value)} placeholder="City or ZIP code" className={fieldClass} />
               </div>
 
               <div>
