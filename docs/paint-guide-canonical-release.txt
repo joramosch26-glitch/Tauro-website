@@ -1,0 +1,43 @@
+PAINT GUIDE V1 CANONICAL RELEASE — SYNTHETIC ONLY
+
+Integration starts at current Marketing main e0f64866e3e8275552b8e1e3aec0fb8b7307dd38
+and incorporates approved Paint Guide baseline 6837a10c46ade82d6ac2298fcb25f1619b29f894.
+No protected-staging origin override is included. Production links remain fixed
+to https://www.tauropainting.com. Preview runtime remains disabled.
+
+Real-customer activation is NOT authorized. Production requires an explicit
+TAURO_PG_CUSTOMER_ACCESS_ENABLED value. For this release it MUST be false, with
+exact, separately recorded UUIDv4 values in TAURO_PG_SYNTHETIC_RELEASE_GUIDE_ID
+and TAURO_PG_SYNTHETIC_RELEASE_ACTOR_ID. No wildcard, whitespace or inferred IDs.
+Missing/malformed values fail closed. TAURO_PG_HOMEOWNER_ACCESS_ENABLED remains
+true for synthetic acceptance; it is not the customer-activation gate.
+
+Staff access operations require both pinned UUIDs after ordinary authorization,
+before RPC/crypto. Homeowner exchange requires the current token HMAC recovered
+through the existing private server-only RPC for that pinned guide and actor.
+Homeowner document responses must match the pinned published residence and its
+actual record/location UUID provenance. Empty guides are unavailable under this
+temporary gate. No new schemas, RPCs, key versions or crypto formats are added.
+Preflight requires zero existing homeowner access/session records; preserve all
+preexisting guide/business data. After synthetic cleanup, dead pinned IDs leave
+customer access closed. Removing pins while leaving activation false cannot
+open access. Activation true with leftover pins also fails closed. Enabling real
+customers requires separate owner approval and deliberate configuration change.
+
+Keep all server credentials/keyrings Production-only and unchanged. Never put
+them in VITE_ configuration, command arguments, reports or plaintext env files.
+The existing Marketing source/routes/SEO/prerender/analytics/public files must
+remain byte-identical to current main, aside from the two-entry Vite build and
+Paint Guide-specific Vercel rewrites. Verify build/prerender/bundle separation.
+
+Evidence: prefer booleans, statuses and opaque resource IDs. The stateless
+scripts/paint-guide-safe-evidence.mjs redacts every generation independently.
+Never take screenshots while a private link or QR is visible, never emit raw
+HTTP bodies/Set-Cookie/Authorization, never record traces containing credentials.
+Use in-memory canonical HTTP acceptance for live header/cookie verification.
+
+Rollback must restore the captured previous complete Vercel deployment and the
+exact five alias mappings, not a partial static asset copy. Store rollback IDs,
+nonsecret environment metadata and exact commands in the owner-restricted local
+execution packet outside Git. Do not change SSO or shared Auth/SMTP settings.
+Do not delete historical deployments, credentials, backups or unrelated files.

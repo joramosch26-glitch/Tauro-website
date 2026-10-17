@@ -1,6 +1,9 @@
 node_modules
 dist
+/.temp/
 .vercel
 .env
 .env.local
 .DS_Store
+supabase/.temp/
+supabase/.branches/

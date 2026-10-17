@@ -1,0 +1,13 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist/paint-guide-access-tests"
+  },
+  "include": [
+    "src/paint-guide/staff/access-client.ts",
+    "src/paint-guide/staff/qr-code.ts",
+    "tests/paint-guide-staff-access.test.ts",
+    "tests/paint-guide-qr.test.ts"
+  ]
+}
