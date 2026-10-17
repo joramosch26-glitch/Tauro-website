@@ -8,7 +8,8 @@ import seo from "../src/seo.json" with { type: "json" };
 
 const root = path.resolve(".");
 const dist = path.join(root, "dist");
-const origin = "http://127.0.0.1:4178";
+const previewPort = Number(process.env.PRERENDER_TEST_PORT ?? 4178);
+const origin = `http://127.0.0.1:${previewPort}`;
 const vitePreviewPath = (route) => route === "/" ? "/" : `${route}/`;
 const expectedPreviewRobots = process.env.VERCEL_ENV === "preview" ? "noindex,nofollow" : null;
 const expectedCityPaths = [
@@ -28,6 +29,29 @@ const expectedCityPaths = [
 
 let previewProcess;
 let browser;
+
+async function instrumentSubmissionTimeout(page) {
+  await page.addInitScript(() => {
+    const submissionTimeoutMs = 15_000;
+    const nativeSetTimeout = window.setTimeout.bind(window);
+    const nativeClearTimeout = window.clearTimeout.bind(window);
+    const timers = { created: [], cleared: [] };
+    Object.defineProperty(window, "__tauroSubmissionTimers", { value: timers });
+    window.setTimeout = (callback, delay, ...args) => {
+      const timerId = nativeSetTimeout(callback, delay === submissionTimeoutMs ? 50 : delay, ...args);
+      if (delay === submissionTimeoutMs) timers.created.push(timerId);
+      return timerId;
+    };
+    window.clearTimeout = (timerId) => {
+      if (timers.created.includes(timerId)) timers.cleared.push(timerId);
+      return nativeClearTimeout(timerId);
+    };
+  });
+}
+
+async function submissionTimeoutRecords(page) {
+  return page.evaluate(() => window.__tauroSubmissionTimers);
+}
 
 async function mockFormSubmit(page, { status = 200, body, rawBody, contentType = "application/json" }) {
   const submissions = [];
@@ -71,25 +95,26 @@ async function fillInquiryForm(form) {
 before(async () => {
   assert.ok(fs.existsSync(path.join(dist, "index.html")), "run npm run build first");
   const viteCli = path.join(root, "node_modules/vite/bin/vite.js");
-  previewProcess = spawn(process.execPath, [viteCli, "preview", "--host", "127.0.0.1", "--port", "4178", "--strictPort"], {
+  let previewOutput = "";
+  previewProcess = spawn(process.execPath, [viteCli, "preview", "--host", "127.0.0.1", "--port", String(previewPort), "--strictPort"], {
     cwd: root,
-    stdio: "ignore",
+    stdio: ["ignore", "pipe", "pipe"],
   });
+  previewProcess.stdout.setEncoding("utf8").on("data", (chunk) => { previewOutput += chunk; });
+  previewProcess.stderr.setEncoding("utf8").on("data", (chunk) => { previewOutput += chunk; });
 
   let ready = false;
   for (let i = 0; i < 40; i += 1) {
     if (previewProcess.exitCode !== null) throw new Error(`vite preview exited with ${previewProcess.exitCode}`);
-    try {
-      const response = await fetch(origin);
-      if (response.ok) {
-        ready = true;
-        break;
-      }
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, 250));
+    if (previewOutput.includes(origin)) {
+      ready = true;
+      break;
     }
+    await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  assert.ok(ready, "vite preview did not start");
+  assert.ok(ready, `this test run's Vite preview did not announce ${origin}: ${previewOutput}`);
+  const previewResponse = await fetch(origin);
+  assert.ok(previewResponse.ok, `this test run's Vite preview returned ${previewResponse.status}`);
 
   const executablePath = process.env.CHROMIUM_PATH || "/usr/bin/chromium";
   browser = await chromium.launch({ headless: true, executablePath });
@@ -265,6 +290,7 @@ test("successful provider acknowledgment clears the contact form; HTTP failure k
   const context = await browser.newContext({ reducedMotion: "reduce" });
   await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
   const page = await context.newPage();
+  await instrumentSubmissionTimeout(page);
   const successSubmissions = await mockFormSubmit(page, {
     body: { success: "true", message: "Submission accepted." },
   });
@@ -275,6 +301,9 @@ test("successful provider acknowledgment clears the contact form; HTTP failure k
   await contactForm.getByLabel("Project city or ZIP (optional)").fill("");
   await contactForm.getByRole("button", { name: "Request a Walkthrough" }).click();
   await page.getByRole("status").waitFor({ state: "visible" });
+  const successTimers = await submissionTimeoutRecords(page);
+  assert.equal(successTimers.created.length, 1);
+  assert.deepEqual(successTimers.cleared, successTimers.created);
   assert.equal(await contactForm.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "");
   assert.equal(successSubmissions.length, 1);
   assert.equal(successSubmissions[0].projectLocation, "");
@@ -304,6 +333,9 @@ test("successful provider acknowledgment clears the contact form; HTTP failure k
   assert.equal(await homeForm.getByLabel("Project city or ZIP (optional)", { exact: true }).inputValue(), "Provo, UT");
   assert.equal(await homeForm.getByRole("button", { name: "Request a Walkthrough" }).isEnabled(), true);
   assert.equal(failedSubmissions.length, 1);
+  const completedTimers = await submissionTimeoutRecords(page);
+  assert.equal(completedTimers.created.length, 1);
+  assert.deepEqual(completedTimers.cleared, completedTimers.created);
   await context.close();
 });
 
@@ -373,5 +405,51 @@ test("boolean success is accepted, while boolean failure and non-JSON responses 
   assert.match(await alert.innerText(), /could not confirm whether your request was received/i);
   assert.equal(await page.getByRole("status").count(), 0);
   assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
+  await context.close();
+});
+
+test("a hanging FormSubmit request times out accessibly, preserves fields, and clears its timer", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  await instrumentSubmissionTimeout(page);
+  await page.addInitScript(() => {
+    const nativeFetch = window.fetch.bind(window);
+    window.__formSubmitMockPosts = [];
+    window.fetch = (input, init) => {
+      if (String(input) === "https://formsubmit.co/ajax/tauropaintingutah@gmail.com") {
+        window.__formSubmitMockPosts.push(JSON.parse(String(init?.body ?? "{}")));
+        return new Promise((_, reject) => {
+          init?.signal?.addEventListener("abort", () => {
+            reject(new DOMException("Mock request aborted by timeout", "AbortError"));
+          }, { once: true });
+        });
+      }
+      return nativeFetch(input, init);
+    };
+  });
+
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  const form = page.locator("form").first();
+  await fillInquiryForm(form);
+  const submitButton = form.getByRole("button", { name: "Request a Walkthrough" });
+  await submitButton.click();
+  const alert = page.getByRole("alert");
+  await alert.waitFor({ state: "visible" });
+  await page.waitForFunction(() => {
+    const button = document.querySelector('form button[type="submit"]');
+    return button instanceof HTMLButtonElement && !button.disabled;
+  });
+  assert.equal(await submitButton.isEnabled(), true, "pending state clears after timeout");
+  assert.match(await alert.innerText(), /could not confirm whether your request was received/i);
+  assert.match(await alert.innerText(), /call us to confirm before sending again/i);
+  assert.equal(await alert.getByRole("link", { name: "Call Tauro at (801) 928-9520" }).getAttribute("href"), "tel:8019289520");
+  assert.equal(await form.getByLabel("Name", { exact: true }).inputValue(), "Morgan Test");
+  assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
+  assert.equal(await page.getByRole("status").count(), 0);
+  assert.equal(await page.evaluate(() => window.__formSubmitMockPosts.length), 1, "no automatic retry occurs");
+  const timers = await submissionTimeoutRecords(page);
+  assert.equal(timers.created.length, 1);
+  assert.deepEqual(timers.cleared, timers.created);
   await context.close();
 });

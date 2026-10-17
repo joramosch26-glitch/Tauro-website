@@ -18,7 +18,7 @@ export default function ContactSection() {
   const [projectLocation, setProjectLocation] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<"rejected" | "unconfirmed" | "duplicate" | null>(null);
+  const [submitError, setSubmitError] = useState<"rejected" | "unconfirmed" | "duplicate" | "timed_out" | null>(null);
   const [website, setWebsite] = useState("");
   const [lastSubmittedSignature, setLastSubmittedSignature] = useState("");
   const [lastSubmittedAt, setLastSubmittedAt] = useState(0);

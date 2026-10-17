@@ -7,7 +7,8 @@ export interface LeadInquiry {
   message: string;
 }
 
-export type LeadSubmissionOutcome = "rejected" | "unconfirmed" | "duplicate";
+export type LeadSubmissionOutcome = "rejected" | "unconfirmed" | "duplicate" | "timed_out";
+export const LEAD_SUBMISSION_TIMEOUT_MS = 15_000;
 
 export class LeadSubmissionError extends Error {
   constructor(readonly outcome: LeadSubmissionOutcome) {
@@ -25,43 +26,68 @@ export async function submitLeadInquiry(
   inquiry: LeadInquiry,
   submittedFrom: string,
 ): Promise<void> {
-  const response = await fetch("https://formsubmit.co/ajax/tauropaintingutah@gmail.com", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify({
-      ...inquiry,
-      submittedFrom,
-      _subject: `New Tauro Painting lead — ${inquiry.name || "Website Form"}`,
-      _replyto: inquiry.email,
-      _template: "table",
-    }),
+  const controller = new AbortController();
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  const timeout = new Promise<never>((_, reject) => {
+    timeoutId = setTimeout(() => {
+      controller.abort();
+      reject(new LeadSubmissionError("timed_out"));
+    }, LEAD_SUBMISSION_TIMEOUT_MS);
   });
 
-  if (!response.ok) {
-    throw new LeadSubmissionError("rejected");
-  }
+  const request = (async () => {
+    const response = await fetch("https://formsubmit.co/ajax/tauropaintingutah@gmail.com", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: JSON.stringify({
+        ...inquiry,
+        submittedFrom,
+        _subject: `New Tauro Painting lead — ${inquiry.name || "Website Form"}`,
+        _replyto: inquiry.email,
+        _template: "table",
+      }),
+      signal: controller.signal,
+    });
 
-  let result: FormSubmitResponse;
-  try {
-    result = await response.json() as FormSubmitResponse;
-  } catch {
+    if (!response.ok) {
+      throw new LeadSubmissionError("rejected");
+    }
+
+    let result: FormSubmitResponse;
+    try {
+      result = await response.json() as FormSubmitResponse;
+    } catch {
+      throw new LeadSubmissionError("unconfirmed");
+    }
+
+    if (result.success === true || result.success === "true") {
+      return;
+    }
+
+    if (
+      result.success === false ||
+      result.success === "false" ||
+      result.error
+    ) {
+      throw new LeadSubmissionError("rejected");
+    }
+
     throw new LeadSubmissionError("unconfirmed");
-  }
+  })();
 
-  if (result.success === true || result.success === "true") {
-    return;
+  try {
+    await Promise.race([request, timeout]);
+  } catch (error) {
+    if (controller.signal.aborted && !(error instanceof LeadSubmissionError)) {
+      throw new LeadSubmissionError("timed_out");
+    }
+    throw error;
+  } finally {
+    if (timeoutId !== undefined) {
+      clearTimeout(timeoutId);
+    }
   }
-
-  if (
-    result.success === false ||
-    result.success === "false" ||
-    result.error
-  ) {
-    throw new LeadSubmissionError("rejected");
-  }
-
-  throw new LeadSubmissionError("unconfirmed");
 }
