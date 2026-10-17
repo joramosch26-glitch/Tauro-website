@@ -45,7 +45,7 @@ export default function Locations() {
 
       <section aria-labelledby="flagship-markets-heading" className="bg-[#f5f3ee] py-20 lg:py-28">
         <div className="mx-auto max-w-7xl px-6 lg:px-8">
-          <div className="grid gap-8 lg:grid-cols-12 lg:items-end"><div className="lg:col-span-7"><p className={`${eyebrow} mb-6 text-[#9a6a25]`}>Featured markets</p><h2 id="flagship-markets-heading" className="max-w-3xl text-4xl font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 sm:text-5xl">Two markets. One exacting finish standard.</h2></div><p className="leading-8 text-slate-600 lg:col-span-4 lg:col-start-9">Explore the markets where Tauro&apos;s premium location pages are ready to guide a custom-home conversation.</p></div>
+          <div className="grid gap-8 lg:grid-cols-12 lg:items-end"><div className="lg:col-span-7"><p className={`${eyebrow} mb-6 text-[#9a6a25]`}>Featured markets</p><h2 id="flagship-markets-heading" className="max-w-3xl text-4xl font-semibold leading-[1.08] tracking-[-0.04em] text-slate-950 sm:text-5xl">Two markets. One exacting finish standard.</h2></div><p className="leading-8 text-slate-600 lg:col-span-4 lg:col-start-9">Explore Tauro&apos;s painting and finishing work in Midway and Park City / Deer Valley, then find service details for Utah County communities below.</p></div>
           <div className="mt-14 grid gap-10 lg:grid-cols-2 lg:gap-12">
             {featuredMarkets.map((market) => (
               <article key={market.href} className="flex flex-col">
