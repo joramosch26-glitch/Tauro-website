@@ -37,7 +37,7 @@ export async function submitLeadInquiry(
   });
 
   const request = (async () => {
-    const response = await fetch("https://formsubmit.co/ajax/tauropaintingutah@gmail.com", {
+    const response = await fetch("https://formsubmit.co/ajax/office@tauropainting.com", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
