@@ -18,7 +18,7 @@ export default function CTASection() {
           Building something that deserves a better finish?
         </h2>
         <p className="mx-auto mt-6 max-w-2xl text-lg leading-8 text-white/70">
-          Send us the plans, schedule a walkthrough, or call us to talk through your next custom home or residential project.
+          Share the project details, request an on-site walkthrough, or call us to talk through your next custom home or residential project.
         </p>
         <div className="mt-9 flex flex-col justify-center gap-3 sm:flex-row">
           <Link

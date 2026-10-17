@@ -29,6 +29,45 @@ const expectedCityPaths = [
 let previewProcess;
 let browser;
 
+async function mockFormSubmit(page, { status = 200, body }) {
+  const submissions = [];
+  const corsHeaders = {
+    "access-control-allow-origin": "*",
+    "access-control-allow-methods": "POST, OPTIONS",
+    "access-control-allow-headers": "accept,content-type",
+  };
+
+  await page.route("https://formsubmit.co/**", async (route) => {
+    if (route.request().method() === "OPTIONS") {
+      await route.fulfill({ status: 204, headers: corsHeaders });
+      return;
+    }
+
+    if (route.request().method() !== "POST") {
+      await route.abort();
+      return;
+    }
+
+    submissions.push(JSON.parse(route.request().postData() ?? "{}"));
+    await route.fulfill({
+      status,
+      headers: { ...corsHeaders, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    });
+  });
+
+  return submissions;
+}
+
+async function fillInquiryForm(form) {
+  await form.getByLabel("Name", { exact: true }).fill("Morgan Test");
+  await form.getByLabel("Phone", { exact: true }).fill("8015550100");
+  await form.getByLabel("Email", { exact: true }).fill("morgan@example.test");
+  await form.getByLabel("Project type", { exact: true }).selectOption("interior");
+  await form.getByLabel("Project city or ZIP", { exact: true }).fill("Provo, UT");
+  await form.getByLabel("Project details", { exact: true }).fill("Mock project details for form tests.");
+}
+
 before(async () => {
   assert.ok(fs.existsSync(path.join(dist, "index.html")), "run npm run build first");
   const viteCli = path.join(root, "node_modules/vite/bin/vite.js");
@@ -78,6 +117,7 @@ test("renders only the public SEO allowlist and controlled 404", () => {
     const html = fs.readFileSync(file, "utf8");
     assert.doesNotMatch(html, /<div id="root">\s*<\/div>/i, `${meta.route} has an empty root`);
     assert.match(html, /<main\b/i, `${meta.route} has no server-rendered main content`);
+    assert.equal((html.match(/<h1\b/gi) ?? []).length, 1, `${meta.route} should contain one H1`);
     const escapedTitle = meta.title.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
     assert.ok(html.includes(`<title>${escapedTitle}</title>`), `${meta.route} has the wrong title`);
     assert.ok(html.includes(`href="${meta.canonical}"`), `${meta.route} has the wrong canonical`);
@@ -156,6 +196,20 @@ test("desktop and mobile service area navigation works without horizontal overfl
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${origin}${vitePreviewPath("/locations")}`);
   await page.screenshot({ path: "/tmp/tauro-website-ssg-desktop.png", fullPage: true, animations: "disabled" });
+
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await page.goto(origin, { waitUntil: "domcontentloaded" });
+  await page.screenshot({ path: "/tmp/tauro-inquiry-home-desktop.png", animations: "disabled" });
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto(origin, { waitUntil: "domcontentloaded" });
+  assert.equal(await page.getByRole("link", { name: /call tauro/i }).isVisible(), true);
+  assert.equal(await page.getByRole("link", { name: /request a walkthrough/i }).first().isVisible(), true);
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  await page.screenshot({ path: "/tmp/tauro-inquiry-home-mobile.png", animations: "disabled" });
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
+  assert.equal(await page.locator("form").getByRole("button", { name: "Request a Walkthrough" }).isVisible(), true);
   await context.close();
 });
 
@@ -174,5 +228,100 @@ test("contact form keeps required fields and never sends a real inquiry", async 
   assert.equal(await form.evaluate((element) => element.checkValidity()), false);
   await form.getByRole("button", { name: "Request a Walkthrough" }).click();
   assert.deepEqual(externalPosts, []);
+  await context.close();
+});
+
+test("home and contact forms do not report provider-level rejection as success", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  const submissions = await mockFormSubmit(page, {
+    status: 200,
+    body: { success: "false", message: "Provider rejected the request." },
+  });
+
+  for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    const form = page.locator("form").first();
+    await fillInquiryForm(form);
+    await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+
+    const alert = page.getByRole("alert");
+    await alert.waitFor({ state: "visible" });
+    assert.match(await alert.innerText(), /could not accept your request/i);
+    assert.equal(await page.getByRole("status").count(), 0);
+    assert.equal(await form.getByLabel("Project city or ZIP", { exact: true }).inputValue(), "Provo, UT");
+    assert.equal(await form.getByLabel("Project details", { exact: true }).inputValue(), "Mock project details for form tests.");
+    assert.equal(await alert.getByRole("link", { name: "Call Tauro at (801) 928-9520" }).getAttribute("href"), "tel:8019289520");
+  }
+
+  assert.equal(submissions.length, 2);
+  assert.equal(submissions[0].projectLocation, "Provo, UT");
+  assert.equal(submissions[1].projectLocation, "Provo, UT");
+  await context.close();
+});
+
+test("successful provider acknowledgment clears the contact form; HTTP failure keeps the home form actionable", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  const successSubmissions = await mockFormSubmit(page, {
+    body: { success: "true", message: "Submission accepted." },
+  });
+
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  const contactForm = page.locator("form").first();
+  await fillInquiryForm(contactForm);
+  await contactForm.getByRole("button", { name: "Request a Walkthrough" }).click();
+  await page.getByRole("status").waitFor({ state: "visible" });
+  assert.equal(await contactForm.getByLabel("Project city or ZIP", { exact: true }).inputValue(), "");
+  assert.equal(successSubmissions.length, 1);
+
+  await fillInquiryForm(contactForm);
+  await contactForm.getByRole("button", { name: "Request a Walkthrough" }).click();
+  const duplicateAlert = page.getByRole("alert");
+  await duplicateAlert.waitFor({ state: "visible" });
+  assert.match(await duplicateAlert.innerText(), /request was sent recently/i);
+  assert.equal(await page.getByRole("status").count(), 0);
+  assert.equal(await contactForm.getByLabel("Project city or ZIP", { exact: true }).inputValue(), "Provo, UT");
+  assert.equal(successSubmissions.length, 1);
+
+  await page.unroute("https://formsubmit.co/**");
+  const failedSubmissions = await mockFormSubmit(page, {
+    status: 503,
+    body: { success: false, message: "Service unavailable." },
+  });
+  await page.goto(`${origin}/#contact`, { waitUntil: "domcontentloaded" });
+  const homeForm = page.locator("form").first();
+  await fillInquiryForm(homeForm);
+  await homeForm.getByRole("button", { name: "Request a Walkthrough" }).click();
+  const alert = page.getByRole("alert");
+  await alert.waitFor({ state: "visible" });
+  assert.match(await alert.innerText(), /could not accept your request/i);
+  assert.equal(await homeForm.getByLabel("Project city or ZIP", { exact: true }).inputValue(), "Provo, UT");
+  assert.equal(await homeForm.getByRole("button", { name: "Request a Walkthrough" }).isEnabled(), true);
+  assert.equal(failedSubmissions.length, 1);
+  await context.close();
+});
+
+test("an unconfirmed FormSubmit response never reports success and keeps the inquiry", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  const submissions = await mockFormSubmit(page, {
+    status: 200,
+    body: { message: "Response without an acknowledgment." },
+  });
+  await page.goto(`${origin}${vitePreviewPath("/contact")}`, { waitUntil: "domcontentloaded" });
+  const form = page.locator("form").first();
+  await fillInquiryForm(form);
+  await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+
+  const alert = page.getByRole("alert");
+  await alert.waitFor({ state: "visible" });
+  assert.match(await alert.innerText(), /could not confirm whether your request was received/i);
+  assert.equal(await page.getByRole("status").count(), 0);
+  assert.equal(await form.getByLabel("Project city or ZIP", { exact: true }).inputValue(), "Provo, UT");
+  assert.equal(submissions.length, 1);
   await context.close();
 });

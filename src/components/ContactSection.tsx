@@ -4,6 +4,8 @@ import { ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import SubmissionError from "@/components/SubmissionError";
+import { LeadSubmissionError, submitLeadInquiry } from "@/lib/lead-submission";
 
 const fieldClass = "h-12 rounded-none border-0 border-b border-slate-300 bg-transparent px-0 shadow-none focus-visible:border-[#9a6a25] focus-visible:ring-0";
 
@@ -13,43 +15,35 @@ export default function ContactSection() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [projectType, setProjectType] = useState("");
+  const [projectLocation, setProjectLocation] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const [submitError, setSubmitError] = useState<"rejected" | "unconfirmed" | "duplicate" | null>(null);
   const [website, setWebsite] = useState("");
   const [lastSubmittedSignature, setLastSubmittedSignature] = useState("");
   const [lastSubmittedAt, setLastSubmittedAt] = useState(0);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    if (isSubmitting) return;
     event.preventDefault();
+    if (isSubmitting) return;
     if (website) return;
+    setShowQuoteDialog(false);
+    setSubmitError(null);
 
-    const submissionSignature = JSON.stringify({ name: name.trim(), phone: phone.trim(), email: email.trim(), projectType, message: message.trim() });
+    const submissionSignature = JSON.stringify({ name: name.trim(), phone: phone.trim(), email: email.trim(), projectType, projectLocation: projectLocation.trim(), message: message.trim() });
     const now = Date.now();
     if (submissionSignature === lastSubmittedSignature && now - lastSubmittedAt < 60000) {
-      setSubmitError("This request was already sent. Please wait a minute before sending the same message again.");
+      setSubmitError("duplicate");
       return;
     }
 
     setIsSubmitting(true);
-    setShowQuoteDialog(false);
-    setSubmitError("");
 
     try {
-      const response = await fetch("https://formsubmit.co/ajax/tauropaintingutah@gmail.com", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        body: JSON.stringify({
-          name, phone, email, projectType, message,
-          submittedFrom: `${window.location.origin}${window.location.pathname}`,
-          _subject: `New Tauro Painting lead — ${name || "Website Form"}`,
-          _replyto: email,
-          _template: "table",
-        }),
-      });
-
-      if (!response.ok) throw new Error("Form submission failed");
+      await submitLeadInquiry(
+        { name, phone, email, projectType, projectLocation, message },
+        `${window.location.origin}${window.location.pathname}`,
+      );
 
       try {
         const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
@@ -67,10 +61,10 @@ export default function ContactSection() {
       setPhone("");
       setEmail("");
       setProjectType("");
+      setProjectLocation("");
       setMessage("");
     } catch (error) {
-      console.error("Contact form error:", error);
-      setSubmitError("There was a problem sending your request. Please try again.");
+      setSubmitError(error instanceof LeadSubmissionError ? error.outcome : "unconfirmed");
     } finally {
       setIsSubmitting(false);
     }
@@ -103,20 +97,21 @@ export default function ContactSection() {
         <div className="bg-white px-6 py-9 sm:px-9 sm:py-10 lg:col-span-6 lg:col-start-7 lg:px-10">
           <p className="text-xs font-semibold uppercase tracking-[0.24em] text-[#9a6a25]">Project inquiry</p>
           <h3 className="mt-5 text-3xl font-semibold tracking-[-0.035em] text-slate-950">Request a Walkthrough</h3>
-          <p className="mt-4 max-w-xl leading-7 text-slate-600">A few useful details are enough to begin. We&apos;ll follow up to discuss the project, timing, and finish requirements.</p>
+          <p className="mt-4 max-w-xl leading-7 text-slate-600">Share the project city or ZIP along with the scope and timing. Walkthroughs take place at the project site.</p>
 
           {showQuoteDialog ? <div role="status" aria-live="polite" className="mt-8 border-l-2 border-[#9a6a25] bg-[#f5f3ee] px-5 py-4 text-slate-700">Request received successfully. We&apos;ll reach out shortly.</div> : null}
-          {submitError ? <div role="alert" className="mt-8 border-l-2 border-[#a64036] bg-red-50 px-5 py-4 text-red-800">{submitError}</div> : null}
+          {submitError ? <SubmissionError outcome={submitError} /> : null}
 
           <form className="mt-9 space-y-7" onSubmit={handleSubmit}>
-            <div className="hidden"><label htmlFor="home-contact-website">Website</label><input id="home-contact-website" type="text" value={website} onChange={(event) => setWebsite(event.target.value)} autoComplete="off" /></div>
+            <div className="hidden" aria-hidden="true"><label htmlFor="home-contact-website">Website</label><input id="home-contact-website" type="text" value={website} onChange={(event) => setWebsite(event.target.value)} autoComplete="off" tabIndex={-1} /></div>
             <div className="grid gap-7 sm:grid-cols-2">
-              <div><label htmlFor="home-contact-name" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Name</label><Input name="name" id="home-contact-name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" className={`mt-3 ${fieldClass}`} required /></div>
-              <div><label htmlFor="home-contact-phone" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Phone</label><Input name="phone" id="home-contact-phone" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="(801) 000-0000" className={`mt-3 ${fieldClass}`} required /></div>
+              <div><label htmlFor="home-contact-name" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Name</label><Input name="name" id="home-contact-name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" className={`mt-3 ${fieldClass}`} required /></div>
+              <div><label htmlFor="home-contact-phone" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Phone</label><Input name="phone" id="home-contact-phone" type="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="(801) 000-0000" className={`mt-3 ${fieldClass}`} required /></div>
             </div>
-            <div><label htmlFor="home-contact-email" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Email</label><Input name="email" id="home-contact-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@email.com" className={`mt-3 ${fieldClass}`} required /></div>
+            <div><label htmlFor="home-contact-email" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Email</label><Input name="email" id="home-contact-email" type="email" autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@email.com" className={`mt-3 ${fieldClass}`} required /></div>
             <div><label htmlFor="home-contact-project-type" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Project type</label><select name="projectType" id="home-contact-project-type" value={projectType} onChange={(event) => setProjectType(event.target.value)} className={`mt-3 w-full ${fieldClass} text-slate-700 focus:outline-none`} required><option value="">Select a type</option><option value="interior">Interior Painting</option><option value="exterior">Exterior Painting</option><option value="cabinets">Cabinets</option><option value="custom">Custom Home</option><option value="complete">Complete Project</option></select></div>
-            <div><label htmlFor="home-contact-message" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Message</label><Textarea name="message" id="home-contact-message" value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Tell us about your project..." className="mt-3 min-h-32 rounded-none border-0 border-b border-slate-300 bg-transparent px-0 shadow-none focus-visible:border-[#9a6a25] focus-visible:ring-0" required /></div>
+            <div><label htmlFor="home-contact-project-location" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Project city or ZIP</label><Input name="projectLocation" id="home-contact-project-location" value={projectLocation} onChange={(event) => setProjectLocation(event.target.value)} placeholder="City or ZIP code" className={`mt-3 ${fieldClass}`} required /></div>
+            <div><label htmlFor="home-contact-message" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Project details</label><Textarea name="message" id="home-contact-message" value={message} onChange={(event) => setMessage(event.target.value)} placeholder="Project stage, surfaces, timing, and anything else we should know..." className="mt-3 min-h-32 rounded-none border-0 border-b border-slate-300 bg-transparent px-0 shadow-none focus-visible:border-[#9a6a25] focus-visible:ring-0" required /></div>
             <Button type="submit" disabled={isSubmitting} className="min-h-14 w-full rounded-none bg-slate-950 px-6 text-xs font-semibold uppercase tracking-[0.13em] text-white shadow-none hover:bg-[#9a6a25] disabled:opacity-60 sm:w-auto">{isSubmitting ? "Sending..." : "Request a Walkthrough"}<ArrowUpRight aria-hidden="true" className="ml-3 h-4 w-4" /></Button>
           </form>
         </div>

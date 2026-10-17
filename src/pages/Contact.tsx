@@ -4,6 +4,8 @@ import { ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import SubmissionError from "@/components/SubmissionError";
+import { LeadSubmissionError, submitLeadInquiry } from "@/lib/lead-submission";
 
 const contactDetails = [
   { label: "Phone", value: "(801) 928-9520", href: "tel:8019289520" },
@@ -22,24 +24,28 @@ export default function Contact() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [projectType, setProjectType] = useState("");
+  const [projectLocation, setProjectLocation] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const [submitError, setSubmitError] = useState<"rejected" | "unconfirmed" | "duplicate" | null>(null);
   const [website, setWebsite] = useState("");
   const [lastSubmittedSignature, setLastSubmittedSignature] = useState("");
   const [lastSubmittedAt, setLastSubmittedAt] = useState(0);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
-    if (isSubmitting) return;
     event.preventDefault();
+    if (isSubmitting) return;
 
     if (website) return;
+    setShowSuccess(false);
+    setSubmitError(null);
 
     const submissionSignature = JSON.stringify({
       name: name.trim(),
       phone: phone.trim(),
       email: email.trim(),
       projectType,
+      projectLocation: projectLocation.trim(),
       message: message.trim(),
     });
     const now = Date.now();
@@ -48,40 +54,17 @@ export default function Contact() {
       submissionSignature === lastSubmittedSignature &&
       now - lastSubmittedAt < 60000
     ) {
-      setSubmitError(
-        "This request was already sent. Please wait a minute before sending the same message again.",
-      );
+      setSubmitError("duplicate");
       return;
     }
 
     setIsSubmitting(true);
-    setShowSuccess(false);
-    setSubmitError("");
 
     try {
-      const response = await fetch(
-        "https://formsubmit.co/ajax/tauropaintingutah@gmail.com",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Accept: "application/json",
-          },
-          body: JSON.stringify({
-            name,
-            phone,
-            email,
-            projectType,
-            message,
-            submittedFrom: `${window.location.origin}${window.location.pathname}`,
-            _subject: `New Tauro Painting lead — ${name || "Website Form"}`,
-            _replyto: email,
-            _template: "table",
-          }),
-        },
+      await submitLeadInquiry(
+        { name, phone, email, projectType, projectLocation, message },
+        `${window.location.origin}${window.location.pathname}`,
       );
-
-      if (!response.ok) throw new Error("Form submission failed");
 
       try {
         const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
@@ -103,10 +86,10 @@ export default function Contact() {
       setPhone("");
       setEmail("");
       setProjectType("");
+      setProjectLocation("");
       setMessage("");
     } catch (error) {
-      console.error("Contact form error:", error);
-      setSubmitError("There was a problem sending your request. Please try again.");
+      setSubmitError(error instanceof LeadSubmissionError ? error.outcome : "unconfirmed");
     } finally {
       setIsSubmitting(false);
     }
@@ -206,8 +189,7 @@ export default function Contact() {
               Tell us about the work.
             </h2>
             <p className="mt-5 max-w-xl leading-7 text-slate-600">
-              A few useful details are enough to begin. We&apos;ll follow up to schedule
-              a walkthrough and discuss the finish requirements.
+              Share the project city or ZIP along with the scope and timing. Walkthroughs take place at the project site.
             </p>
 
             {showSuccess ? (
@@ -215,11 +197,7 @@ export default function Contact() {
                 Request received successfully. We&apos;ll reach out shortly.
               </div>
             ) : null}
-            {submitError ? (
-              <div role="alert" className="mt-8 border-l-2 border-[#a64036] bg-red-50 px-5 py-4 text-red-800">
-                {submitError}
-              </div>
-            ) : null}
+            {submitError ? <SubmissionError outcome={submitError} /> : null}
 
             <form className="mt-10 space-y-7" onSubmit={handleSubmit}>
               <div className="sr-only" aria-hidden="true">
@@ -267,6 +245,11 @@ export default function Contact() {
                   <option value="custom">Custom Home</option>
                   <option value="complete">Complete Project</option>
                 </select>
+              </div>
+
+              <div>
+                <label htmlFor="contact-project-location" className={labelClass}>Project city or ZIP</label>
+                <Input id="contact-project-location" name="projectLocation" value={projectLocation} onChange={(event) => setProjectLocation(event.target.value)} placeholder="City or ZIP code" className={fieldClass} required />
               </div>
 
               <div>
