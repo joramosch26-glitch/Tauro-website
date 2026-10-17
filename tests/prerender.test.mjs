@@ -279,6 +279,10 @@ test("phone is optional and email remains required on both inquiry forms", async
   await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
   const page = await context.newPage();
   const submissions = await mockFormSubmit(page, { body: { success: "true", message: "Submission accepted." } });
+  const destinations = [];
+  page.on("request", (request) => {
+    if (request.url().includes("formsubmit.co") && request.method() === "POST") destinations.push(request.url());
+  });
 
   for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
     await page.goto(url, { waitUntil: "domcontentloaded" });
@@ -297,6 +301,10 @@ test("phone is optional and email remains required on both inquiry forms", async
   assert.equal(submissions.length, 2);
   assert.equal(submissions[0].phone, "");
   assert.equal(submissions[1].phone, "");
+  assert.deepEqual(destinations, [
+    "https://formsubmit.co/ajax/office@tauropainting.com",
+    "https://formsubmit.co/ajax/office@tauropainting.com",
+  ]);
   await context.close();
 });
 
@@ -467,7 +475,7 @@ test("a hanging FormSubmit request times out accessibly, preserves fields, and c
     const nativeFetch = window.fetch.bind(window);
     window.__formSubmitMockPosts = [];
     window.fetch = (input, init) => {
-      if (String(input) === "https://formsubmit.co/ajax/tauropaintingutah@gmail.com") {
+      if (String(input) === "https://formsubmit.co/ajax/office@tauropainting.com") {
         window.__formSubmitMockPosts.push(JSON.parse(String(init?.body ?? "{}")));
         return new Promise((_, reject) => {
           init?.signal?.addEventListener("abort", () => {
