@@ -70,10 +70,10 @@ export default function ProjectsSection({
           </div>
           <div className="flex gap-5 lg:col-span-4 lg:justify-end">
             <Link
-              to="/projects"
+              to={pageHeading ? "/contact" : "/projects"}
               className="inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.14em] text-slate-900"
             >
-              Portfolio <ArrowUpRight className="h-4 w-4" />
+              {pageHeading ? "Discuss a project" : "Portfolio"} <ArrowUpRight aria-hidden="true" className="h-4 w-4" />
             </Link>
             <a
               href="https://www.instagram.com/tauropainting"

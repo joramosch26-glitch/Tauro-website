@@ -417,17 +417,19 @@ function App() {
                   href="https://www.instagram.com/tauropainting"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Visit Tauro Painting on Instagram"
                   className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-[#9a6a25] transition-colors"
                 >
-                  <Instagram className="w-5 h-5" />
+                  <Instagram aria-hidden="true" className="w-5 h-5" />
                 </a>
                 <a
                   href="https://www.facebook.com/tauropainting"
                   target="_blank"
                   rel="noopener noreferrer"
+                  aria-label="Visit Tauro Painting on Facebook"
                   className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center hover:bg-[#9a6a25] transition-colors"
                 >
-                  <Facebook className="w-5 h-5" />
+                  <Facebook aria-hidden="true" className="w-5 h-5" />
                 </a>
               </div>
             </div>

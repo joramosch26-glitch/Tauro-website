@@ -85,7 +85,7 @@ async function mockFormSubmit(page, { status = 200, body, rawBody, contentType =
 
 async function fillInquiryForm(form) {
   await form.getByLabel("Name", { exact: true }).fill("Morgan Test");
-  await form.getByLabel("Phone", { exact: true }).fill("8015550100");
+  await form.getByLabel("Phone (optional)", { exact: true }).fill("8015550100");
   await form.getByLabel("Email", { exact: true }).fill("morgan@example.test");
   await form.getByLabel("Project type", { exact: true }).selectOption("interior");
   await form.getByLabel("Project city or ZIP (optional)", { exact: true }).fill("Provo, UT");
@@ -203,11 +203,29 @@ test("desktop and mobile service area navigation works without horizontal overfl
 
   await page.setViewportSize({ width: 1440, height: 900 });
   await page.goto(`${origin}${vitePreviewPath("/locations")}`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Two markets. One exacting finish standard." }).waitFor();
+  assert.match(await page.locator("body").innerText(), /painting and finishing work in Midway and Park City/i);
+  assert.doesNotMatch(await page.locator("body").innerText(), /premium location pages are ready/i);
   await page.getByRole("link", { name: "Service Areas", exact: true }).first().click();
   assert.equal(new URL(page.url()).pathname, "/locations");
   for (const cityPath of expectedCityPaths) {
     assert.ok(await page.locator(`a[href="${cityPath}"]`).count(), `missing navigation link: ${cityPath}`);
   }
+
+  await page.goto(`${origin}${vitePreviewPath("/locations/lehi")}`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("heading", { name: "Interior, exterior, and custom-home painting." }).waitFor();
+  assert.match(await page.locator("body").innerText(), /interior and exterior painting, cabinetry, and wood finishes/i);
+  assert.match(await page.title(), /Custom Home Painters in Lehi/);
+
+  await page.goto(`${origin}${vitePreviewPath("/projects")}`, { waitUntil: "domcontentloaded" });
+  await page.getByRole("link", { name: "Discuss a project" }).waitFor();
+  assert.equal(await page.locator('a[href="/projects"]').filter({ hasText: "Portfolio" }).count(), 0);
+
+  await page.goto(origin, { waitUntil: "domcontentloaded" });
+  assert.equal(await page.locator('a[href="/projects"]').filter({ hasText: "Portfolio" }).count(), 1);
+  const footer = page.locator("footer");
+  assert.equal(await footer.getByRole("link", { name: "Visit Tauro Painting on Instagram" }).count(), 1);
+  assert.equal(await footer.getByRole("link", { name: "Visit Tauro Painting on Facebook" }).count(), 1);
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth));
 
   await page.setViewportSize({ width: 390, height: 844 });
@@ -253,6 +271,32 @@ test("contact form keeps required fields and never sends a real inquiry", async 
   assert.equal(await form.evaluate((element) => element.checkValidity()), false);
   await form.getByRole("button", { name: "Request a Walkthrough" }).click();
   assert.deepEqual(externalPosts, []);
+  await context.close();
+});
+
+test("phone is optional and email remains required on both inquiry forms", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  const submissions = await mockFormSubmit(page, { body: { success: "true", message: "Submission accepted." } });
+
+  for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
+    await page.goto(url, { waitUntil: "domcontentloaded" });
+    const form = page.locator("form").first();
+    const phone = form.getByLabel("Phone (optional)", { exact: true });
+    const email = form.getByLabel("Email", { exact: true });
+    assert.equal(await phone.evaluate((element) => element.required), false);
+    assert.equal(await email.evaluate((element) => element.required), true);
+    await fillInquiryForm(form);
+    await phone.fill("");
+    assert.equal(await form.evaluate((element) => element.checkValidity()), true);
+    await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+    await page.getByRole("status").waitFor({ state: "visible" });
+  }
+
+  assert.equal(submissions.length, 2);
+  assert.equal(submissions[0].phone, "");
+  assert.equal(submissions[1].phone, "");
   await context.close();
 });
 

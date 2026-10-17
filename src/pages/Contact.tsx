@@ -222,8 +222,8 @@ export default function Contact() {
                   <Input id="contact-name" name="name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" className={fieldClass} required />
                 </div>
                 <div>
-                  <label htmlFor="contact-phone" className={labelClass}>Phone</label>
-                  <Input id="contact-phone" name="phone" type="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="(801) 000-0000" className={fieldClass} required />
+                  <label htmlFor="contact-phone" className={labelClass}>Phone (optional)</label>
+                  <Input id="contact-phone" name="phone" type="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="(801) 000-0000" className={fieldClass} />
                 </div>
               </div>
 
