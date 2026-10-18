@@ -14,6 +14,7 @@ import Services from "./pages/Services";
 import Projects from "./pages/Projects";
 import About from "./pages/About";
 import Contact from "./pages/Contact";
+import Privacy from "./pages/Privacy";
 import HomeRoute from "./pages/HomeRoute";
 import Orem from "./pages/Orem";
 import Provo from "./pages/Provo"
@@ -376,6 +377,7 @@ function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<Privacy />} />
           <Route path="*" element={<NotFound />} />
           <Route path="/locations/orem" element={<Orem />} />
           <Route path="/locations/provo" element={<Provo />} />
@@ -447,6 +449,7 @@ function App() {
                     </Link>
                   </li>
                 ))}
+                <li><Link className="text-slate-400 hover:text-white transition-colors" to="/privacy">Privacy</Link></li>
               </ul>
             </div>
 
@@ -466,9 +469,9 @@ function App() {
                   <Mail className="w-4 h-4 text-[#c5a374]" />
                   <a
                     className="hover:text-white transition-colors"
-                    href="mailto:tauropaintingutah@gmail.com"
+                    href="mailto:office@tauropainting.com"
                   >
-                    tauropaintingutah@gmail.com
+                    office@tauropainting.com
                   </a>
                 </li>
               </ul>

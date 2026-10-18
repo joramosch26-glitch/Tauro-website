@@ -12,6 +12,7 @@
     { "route": "/projects", "title": "Custom Home Painting Portfolio | Tauro Painting Utah", "description": "Explore real Tauro Painting work across custom home interiors, exteriors, cabinetry, doors, stain, and architectural wood finishes in Utah.", "canonical": "https://www.tauropainting.com/projects" },
     { "route": "/about", "title": "About Tauro Painting | Utah County", "description": "Learn about Tauro Painting—craftsmanship, premium materials, and a refined process built for premium finishes across Utah County.", "canonical": "https://www.tauropainting.com/about" },
     { "route": "/contact", "title": "Request a Walkthrough | Tauro Painting", "description": "Tell Tauro Painting where your project stands, what finishes are involved, and when you need us on site. Start a custom-home project conversation.", "canonical": "https://www.tauropainting.com/contact" },
+    { "route": "/privacy", "title": "Privacy | Tauro Painting", "description": "Learn what information Tauro Painting's public website and project inquiry forms handle, and how the site measures visits.", "canonical": "https://www.tauropainting.com/privacy" },
     { "route": "/locations", "title": "Custom Home Painting Service Areas in Utah | Tauro Painting", "description": "Explore Tauro Painting's premium Utah markets, including Midway and Park City / Deer Valley, plus custom-home finishing coverage across Utah County.", "canonical": "https://www.tauropainting.com/locations" },
     { "route": "/locations/orem", "title": "Custom Home Painting & Finishing in Orem, UT | Tauro Painting", "description": "Serving Orem and Utah County, Tauro Painting delivers custom-home painting, cabinetry, stain, wood finishes, and detailed interior and exterior finishing.", "canonical": "https://www.tauropainting.com/locations/orem" },
     { "route": "/locations/provo", "title": "Exterior Painting & Custom Home Finishing in Provo, UT | Tauro Painting", "description": "Exterior painting, premium interior finishes, cabinetry, stain, and architectural woodwork for custom homes and residential projects in Provo, Utah.", "canonical": "https://www.tauropainting.com/locations/provo" },
@@ -44,7 +45,7 @@
     "image": "https://www.tauropainting.com/og.jpg",
     "logo": "https://www.tauropainting.com/tauro/logo-tauro.png",
     "telephone": "+18019289520",
-    "email": "tauropaintingutah@gmail.com",
+    "email": "office@tauropainting.com",
     "openingHoursSpecification": [
       { "@type": "OpeningHoursSpecification", "dayOfWeek": ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], "opens": "08:00", "closes": "18:00" },
       { "@type": "OpeningHoursSpecification", "dayOfWeek": "Saturday", "opens": "09:00", "closes": "14:00" }
