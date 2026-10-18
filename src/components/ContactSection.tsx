@@ -87,7 +87,7 @@ export default function ContactSection() {
 
           <dl className="mt-12 border-t border-slate-300">
             <div className="grid gap-2 border-b border-slate-300 py-5 sm:grid-cols-[8rem_1fr] sm:gap-6"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a6a25]">Phone</dt><dd><a href="tel:8019289520" className="transition-colors hover:text-[#9a6a25]">(801) 928-9520</a></dd></div>
-            <div className="grid gap-2 border-b border-slate-300 py-5 sm:grid-cols-[8rem_1fr] sm:gap-6"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a6a25]">Email</dt><dd><a href="mailto:tauropaintingutah@gmail.com" className="break-words transition-colors hover:text-[#9a6a25]">tauropaintingutah@gmail.com</a></dd></div>
+            <div className="grid gap-2 border-b border-slate-300 py-5 sm:grid-cols-[8rem_1fr] sm:gap-6"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a6a25]">Email</dt><dd><a href="mailto:office@tauropainting.com" className="break-words transition-colors hover:text-[#9a6a25]">office@tauropainting.com</a></dd></div>
             <div className="grid gap-2 border-b border-slate-300 py-5 sm:grid-cols-[8rem_1fr] sm:gap-6"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a6a25]">Service area</dt><dd>Orem, Utah County &amp; surrounding communities</dd></div>
             <div className="grid gap-2 border-b border-slate-300 py-5 sm:grid-cols-[8rem_1fr] sm:gap-6"><dt className="text-[10px] font-semibold uppercase tracking-[0.18em] text-[#9a6a25]">Hours</dt><dd>Mon–Fri: 8AM–6PM · Sat: 9AM–2PM</dd></div>
           </dl>

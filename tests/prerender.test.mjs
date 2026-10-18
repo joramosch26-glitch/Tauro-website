@@ -154,7 +154,9 @@ test("renders only the public SEO allowlist and controlled 404", () => {
       assert.ok(!html.includes('name="tauro-preview"'), "preview marker leaked into a non-preview build");
     }
     assert.match(html, /<script id="ld-json-business" type="application\/ld\+json">/);
-    assert.ok(!/paint guide/i.test(html), `${meta.route} contains private guide content`);
+    if (meta.route !== "/privacy") {
+      assert.ok(!/paint guide/i.test(html), `${meta.route} contains private guide content`);
+    }
 
     if (seo.pageSchemas[meta.route]) {
       assert.match(html, /<script id="ld-json-page" type="application\/ld\+json">/);
@@ -287,6 +289,7 @@ test("phone is optional and email remains required on both inquiry forms", async
   for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
     await page.goto(url, { waitUntil: "domcontentloaded" });
     const form = page.locator("form").first();
+    assert.equal(await form.getByRole("checkbox").count(), 0, "the inquiry form does not offer promotional enrollment");
     const phone = form.getByLabel("Phone (optional)", { exact: true });
     const email = form.getByLabel("Email", { exact: true });
     assert.equal(await phone.evaluate((element) => element.required), false);
@@ -301,6 +304,10 @@ test("phone is optional and email remains required on both inquiry forms", async
   assert.equal(submissions.length, 2);
   assert.equal(submissions[0].phone, "");
   assert.equal(submissions[1].phone, "");
+  for (const submission of submissions) {
+    assert.equal(Object.hasOwn(submission, "marketingEmailOptIn"), false);
+    assert.equal(Object.hasOwn(submission, "marketingConsentCapturedAt"), false);
+  }
   assert.deepEqual(destinations, [
     "https://formsubmit.co/ajax/office@tauropainting.com",
     "https://formsubmit.co/ajax/office@tauropainting.com",
@@ -509,5 +516,28 @@ test("a hanging FormSubmit request times out accessibly, preserves fields, and c
   const timers = await submissionTimeoutRecords(page);
   assert.equal(timers.created.length, 1);
   assert.deepEqual(timers.cleared, timers.created);
+  await context.close();
+});
+
+test("privacy notice is routed, discoverable, and scoped to public inquiry pages", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("https://www.googletagmanager.com/**", (route) => route.abort());
+  const page = await context.newPage();
+  await page.goto(origin, { waitUntil: "domcontentloaded" });
+  await page.locator("footer").getByRole("link", { name: "Privacy", exact: true }).click();
+  assert.equal(new URL(page.url()).pathname, "/privacy");
+  await page.waitForFunction(() => document.querySelector('link[rel="canonical"]')?.getAttribute("href") === "https://www.tauropainting.com/privacy");
+  assert.equal(await page.locator('link[rel="canonical"]').getAttribute("href"), "https://www.tauropainting.com/privacy");
+  const privacyText = await page.locator("main").innerText();
+  assert.match(privacyText, /when you submit a project inquiry[\s\S]*FormSubmit[\s\S]*office@tauropainting\.com/i);
+  assert.match(privacyText, /does not cover the separate Paint Guide customer portal or information entered there/i);
+  assert.doesNotMatch(privacyText, /promotional emails|marketing opt.in|opt.out/i);
+  assert.match(privacyText, /Google Analytics 4, which collects page addresses and interactions/i);
+  assert.match(privacyText, /custom inquiry event does not include your name, email, phone number, or project details/i);
+  assert.match(privacyText, /Google Analytics may use first-party cookies/i);
+  assert.match(privacyText, /without displaying a cookie preference prompt or sending consent signals/i);
+  assert.match(privacyText, /Advertising personalization is disabled/i);
+  assert.match(privacyText, /For questions or privacy requests[\s\S]*office@tauropainting\.com/i);
+  assert.match(fs.readFileSync(path.join(root, "public/sitemap.xml"), "utf8"), /<loc>https:\/\/www\.tauropainting\.com\/privacy<\/loc>/);
   await context.close();
 });

@@ -7,7 +7,7 @@ export const content = {
 
   contact: {
     phone: "(801) 928-9520",
-    email: "tauropaintingutah@gmail.com",
+    email: "office@tauropainting.com",
     areas: ["Utah County", "Salt Lake County", "Park City"],
   },
 
