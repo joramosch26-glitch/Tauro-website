@@ -1,0 +1,5 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": { "noEmit": false, "outDir": "./dist/inquiry-tests" },
+  "include": ["src/lib/inquiry-screening.ts", "src/lib/lead-submission.ts", "tests/inquiry-screening.test.ts", "tests/lead-submission.test.ts"]
+}

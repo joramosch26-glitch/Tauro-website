@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && node scripts/postbuild-prerender.mjs",
-    "test": "npm run build && node --test tests/prerender.test.mjs",
+    "test:inquiries": "tsc -p tsconfig.inquiry-tests.json && node --test dist/inquiry-tests/tests/inquiry-screening.test.js dist/inquiry-tests/tests/lead-submission.test.js",
+    "test": "npm run test:inquiries && npm run build && node --test tests/prerender.test.mjs",
     "typecheck:server": "tsc -p tsconfig.server.json --noEmit",
     "test:paint-guide-functional": "node --test tests/paint-guide-functional.test.mjs",
     "test:paint-guide-browser": "node --test tests/paint-guide-browser.test.mjs",
