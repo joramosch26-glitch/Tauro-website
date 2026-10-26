@@ -118,6 +118,13 @@ before(async () => {
 
   const executablePath = process.env.CHROMIUM_PATH || "/usr/bin/chromium";
   browser = await chromium.launch({ headless: true, executablePath });
+  // Default-deny external requests; page-level provider mocks override this locally.
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (options) => {
+    const context = await newContext(options);
+    await context.route("**/*", route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    return context;
+  };
 });
 
 after(async () => {
@@ -540,4 +547,101 @@ test("privacy notice is routed, discoverable, and scoped to public inquiry pages
   assert.match(privacyText, /For questions or privacy requests[\s\S]*office@tauropainting\.com/i);
   assert.match(fs.readFileSync(path.join(root, "public/sitemap.xml"), "utf8"), /<loc>https:\/\/www\.tauropainting\.com\/privacy<\/loc>/);
   await context.close();
+});
+
+// Synthetic pitches remain recoverable without becoming lead conversions.
+for (const [label, message, projectType] of [
+  ["Wikipedia", "We offer Wikipedia page creation and editing for your company.", "complete"],
+  ["financing", "We provide business financing and working capital. Interested in our services?", "cabinets"],
+  ["web development", "We offer web development services for your painting business.", "cabinets"],
+]) {
+  test(`both forms send ${label} offers to review without lead conversion`, async () => {
+    const context = await browser.newContext({ reducedMotion: "reduce" });
+    await context.route("**/*", route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+    const page = await context.newPage();
+    const submissions = await mockFormSubmit(page, { body: { success: true } });
+    try {
+      for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
+        await page.goto(url, { waitUntil: "domcontentloaded" });
+        const form = page.locator("form").first();
+        await fillInquiryForm(form);
+        await form.getByLabel("Project type", { exact: true }).selectOption(projectType);
+        await form.getByLabel("Project details", { exact: true }).fill(message);
+        await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+        await page.getByRole("status").waitFor({ state: "visible" });
+        const conversions = await page.evaluate(() => (window.dataLayer ?? []).filter(args => args[0] === "event" && args[1] === "generate_lead").length);
+        assert.equal(conversions, 0);
+        assert.equal(await form.getByLabel("Name", { exact: true }).inputValue(), "");
+      }
+      assert.equal(submissions.length, 2);
+      for (const submission of submissions) {
+        assert.equal(submission.message, message);
+        assert.equal(submission.projectType, projectType);
+        assert.equal(submission.inquiryScreening, "possible_solicitation");
+        assert.equal(submission.opportunityStatus, "unqualified");
+        assert.equal(submission.automationAction, "manual_review");
+        assert.match(submission._subject, /^\[REVIEW REQUIRED\]/);
+      }
+    } finally { await context.close(); }
+  });
+}
+
+test("both forms preserve genuine financing questions, short requests and plan links with normal inquiry analytics", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("**/*", route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  const page = await context.newPage();
+  const submissions = await mockFormSubmit(page, { body: { success: true } });
+  try {
+    for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
+      for (const message of [
+        "Do you offer financing for cabinet painting?",
+        "We are a web development company and need our office walls painted.",
+        "Necesito una cotización. Planos: https://example.test/plans.pdf",
+        "Please call me.",
+      ]) {
+        await page.goto(url, { waitUntil: "domcontentloaded" });
+        const form = page.locator("form").first();
+        await fillInquiryForm(form);
+        await form.getByLabel("Phone (optional)", { exact: true }).fill("");
+        await form.getByLabel("Project city or ZIP (optional)", { exact: true }).fill("");
+        await form.getByLabel("Project details", { exact: true }).fill(message);
+        const countConversions = () => page.evaluate(() => (window.dataLayer ?? []).filter(args => args[0] === "event" && args[1] === "generate_lead").length);
+        const before = await countConversions();
+        await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+        await page.getByRole("status").waitFor({ state: "visible" });
+        assert.equal(await countConversions(), before + 1);
+        const submission = submissions.at(-1);
+        assert.equal(submission.message, message);
+        assert.equal(submission.inquiryScreening, "unverified_inquiry");
+        assert.equal(submission.opportunityStatus, "unqualified");
+        assert.equal(submission.phone, "");
+        assert.equal(submission.projectLocation, "");
+      }
+    }
+    assert.equal(submissions.length, 8);
+  } finally { await context.close(); }
+});
+
+test("both honeypots prevent delivery and conversion without clearing the customer's text", async () => {
+  const context = await browser.newContext({ reducedMotion: "reduce" });
+  await context.route("**/*", route => new URL(route.request().url()).origin === origin ? route.continue() : route.abort());
+  const page = await context.newPage();
+  const submissions = await mockFormSubmit(page, { body: { success: true } });
+  try {
+    for (const url of [`${origin}/#contact`, `${origin}${vitePreviewPath("/contact")}`]) {
+      await page.goto(url, { waitUntil: "domcontentloaded" });
+      const form = page.locator("form").first();
+      await fillInquiryForm(form);
+      // Test a bot filling the CSS-hidden field via a real input event.
+      await form.locator('input[name="_honey"]').evaluate(input => {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(input, "https://bot.example.test");
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+      });
+      await form.getByRole("button", { name: "Request a Walkthrough" }).click();
+      assert.equal(await page.getByRole("status").count(), 0);
+      assert.equal(await form.getByLabel("Name", { exact: true }).inputValue(), "Morgan Test");
+      assert.equal(await page.evaluate(() => (window.dataLayer ?? []).filter(args => args[0] === "event" && args[1] === "generate_lead").length), 0);
+    }
+    assert.equal(submissions.length, 0);
+  } finally { await context.close(); }
 });

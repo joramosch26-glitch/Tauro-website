@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import SubmissionError from "@/components/SubmissionError";
-import { LeadSubmissionError, submitLeadInquiry } from "@/lib/lead-submission";
+import { LeadSubmissionError, shouldRecordLeadConversion, submitLeadInquiry } from "@/lib/lead-submission";
 
 const contactDetails = [
   { label: "Phone", value: "(801) 928-9520", href: "tel:8019289520" },
@@ -64,6 +64,7 @@ export default function Contact() {
       const outcome = await submitLeadInquiry(
         { name, phone, email, projectType, projectLocation, message },
         `${window.location.origin}${window.location.pathname}`,
+        { honeypot: website },
       );
       if (outcome === "submitted_unconfirmed") {
         setSubmitError(outcome);
@@ -72,7 +73,7 @@ export default function Contact() {
 
       try {
         const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
-        if (typeof gtag === "function") {
+        if (shouldRecordLeadConversion(outcome) && typeof gtag === "function") {
           gtag("event", "generate_lead", {
             form_location: "contact_page",
             project_type: projectType,
@@ -208,6 +209,7 @@ export default function Contact() {
                 <label htmlFor="contact-website">Website</label>
                 <input
                   id="contact-website"
+                  name="_honey"
                   type="text"
                   value={website}
                   onChange={(event) => setWebsite(event.target.value)}

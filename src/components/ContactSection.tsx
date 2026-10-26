@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import SubmissionError from "@/components/SubmissionError";
-import { LeadSubmissionError, submitLeadInquiry } from "@/lib/lead-submission";
+import { LeadSubmissionError, shouldRecordLeadConversion, submitLeadInquiry } from "@/lib/lead-submission";
 
 const fieldClass = "h-12 rounded-none border-0 border-b border-slate-300 bg-transparent px-0 shadow-none focus-visible:border-[#9a6a25] focus-visible:ring-0";
 
@@ -43,6 +43,7 @@ export default function ContactSection() {
       const outcome = await submitLeadInquiry(
         { name, phone, email, projectType, projectLocation, message },
         `${window.location.origin}${window.location.pathname}`,
+        { honeypot: website },
       );
       if (outcome === "submitted_unconfirmed") {
         setSubmitError(outcome);
@@ -51,7 +52,7 @@ export default function ContactSection() {
 
       try {
         const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
-        if (typeof gtag === "function") {
+        if (shouldRecordLeadConversion(outcome) && typeof gtag === "function") {
           gtag("event", "generate_lead", { form_location: "home", project_type: projectType, page_path: window.location.pathname });
         }
       } catch {
@@ -107,7 +108,7 @@ export default function ContactSection() {
           {submitError ? <SubmissionError outcome={submitError} /> : null}
 
           <form className="mt-9 space-y-7" onSubmit={handleSubmit}>
-            <div className="hidden" aria-hidden="true"><label htmlFor="home-contact-website">Website</label><input id="home-contact-website" type="text" value={website} onChange={(event) => setWebsite(event.target.value)} autoComplete="off" tabIndex={-1} /></div>
+            <div className="hidden" aria-hidden="true"><label htmlFor="home-contact-website">Website</label><input id="home-contact-website" name="_honey" type="text" value={website} onChange={(event) => setWebsite(event.target.value)} autoComplete="off" tabIndex={-1} /></div>
             <div className="grid gap-7 sm:grid-cols-2">
               <div><label htmlFor="home-contact-name" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Name</label><Input name="name" id="home-contact-name" autoComplete="name" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your name" className={`mt-3 ${fieldClass}`} required /></div>
               <div><label htmlFor="home-contact-phone" className="block text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-600">Phone (optional)</label><Input name="phone" id="home-contact-phone" type="tel" autoComplete="tel" value={phone} onChange={(event) => setPhone(event.target.value)} placeholder="(801) 000-0000" className={`mt-3 ${fieldClass}`} /></div>

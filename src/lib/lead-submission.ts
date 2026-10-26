@@ -1,3 +1,5 @@
+import { INQUIRY_SCREENING_VERSION, screenInquiryMessage } from "./inquiry-screening.js";
+
 export interface LeadInquiry {
   name: string;
   phone: string;
@@ -8,7 +10,7 @@ export interface LeadInquiry {
 }
 
 export type LeadSubmissionOutcome = "rejected" | "unconfirmed" | "duplicate" | "timed_out" | "submitted_unconfirmed";
-export type LeadSubmissionResult = "accepted" | "submitted_unconfirmed";
+export type LeadSubmissionResult = "accepted" | "accepted_for_review" | "submitted_unconfirmed";
 export const LEAD_SUBMISSION_TIMEOUT_MS = 15_000;
 
 export class LeadSubmissionError extends Error {
@@ -26,7 +28,11 @@ interface FormSubmitResponse {
 export async function submitLeadInquiry(
   inquiry: LeadInquiry,
   submittedFrom: string,
+  options: { honeypot?: string } = {},
 ): Promise<LeadSubmissionResult> {
+  if (options.honeypot) throw new LeadSubmissionError("rejected");
+  const screening = screenInquiryMessage(inquiry.message);
+  const requiresReview = screening.disposition === "possible_solicitation";
   const controller = new AbortController();
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   const timeout = new Promise<never>((_, reject) => {
@@ -44,9 +50,23 @@ export async function submitLeadInquiry(
         Accept: "application/json",
       },
       body: JSON.stringify({
-        ...inquiry,
+        // Explicit fields prevent caller-supplied control/qualification fields leaking through.
+        name: inquiry.name,
+        phone: inquiry.phone,
+        email: inquiry.email,
+        projectType: inquiry.projectType,
+        projectLocation: inquiry.projectLocation,
+        message: inquiry.message,
         submittedFrom,
-        _subject: `New Tauro Painting lead — ${inquiry.name || "Website Form"}`,
+        inquiryScreening: screening.disposition,
+        screeningReasons: screening.reasons.join(", ") || "none_detected",
+        screeningVersion: INQUIRY_SCREENING_VERSION,
+        opportunityStatus: "unqualified",
+        automationAction: "manual_review",
+        _honey: options.honeypot ?? "",
+        _subject: requiresReview
+          ? "[REVIEW REQUIRED] Tauro Painting inquiry — possible solicitation"
+          : "New Tauro Painting inquiry — unverified",
         _replyto: inquiry.email,
         _template: "table",
       }),
@@ -66,7 +86,7 @@ export async function submitLeadInquiry(
     }
 
     if (result.success === true || result.success === "true") {
-      return "accepted";
+      return requiresReview ? "accepted_for_review" : "accepted";
     }
 
     if (
@@ -92,4 +112,9 @@ export async function submitLeadInquiry(
       clearTimeout(timeoutId);
     }
   }
+}
+
+/** A provider acknowledgment is not sales qualification. Exclude review and unknown outcomes. */
+export function shouldRecordLeadConversion(result: LeadSubmissionResult): boolean {
+  return result === "accepted";
 }
