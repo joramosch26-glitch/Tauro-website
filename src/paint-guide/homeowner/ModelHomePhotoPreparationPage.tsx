@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
-import { createStaffPhotoClient, parseStaffPhotoListResponse, type PhotoPlacementKind, type StaffPhotoPlacement } from "../staff/photo-client";
+import { createStaffPhotoClient, parseStaffPhotoListResponse, StaffPhotoRequestError, type PhotoPlacementKind, type StaffPhotoPlacement } from "../staff/photo-client";
 import { requestStaffAccess } from "../staff/access-client";
 
 const ACTOR_ID = "e8fa431f-ea5c-46fb-b92c-6d5d213531bc";
@@ -100,7 +100,12 @@ export function ModelHomePhotoPreparationPage() {
     if (!client) return;
     setBusyKey("refresh");
     try { const rows = await client.list(GUIDE_ID); setPhotos(rows); setMessage(`Loaded ${rows.length} model-home photo placement(s).`); }
-    catch { setMessage("Could not list model-home photos; server scope checks remain in force."); }
+    catch (error) {
+      const detail = error instanceof StaffPhotoRequestError
+        ? `${error.code}${error.status ? ` (${error.status})` : ""}`
+        : "unexpected response";
+      setMessage(`Could not list model-home photos (${detail}); existing saved photos are unchanged.`);
+    }
     finally { setBusyKey(null); }
   };
 
