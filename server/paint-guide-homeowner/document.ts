@@ -76,33 +76,43 @@ function photosValue(
   const photos: NonNullable<HomeownerGuideDocumentData["photos"]> = [];
   for (const valueItem of value) {
     const item = exactObject(valueItem, ["slot_id", "version_id", "placement_kind", "location_id", "paint_record_id"]);
-    if (!item || !uuid(item.slot_id) || !uuid(item.version_id)
-      || (item.placement_kind !== "residence_cover" && item.placement_kind !== "location" && item.placement_kind !== "record_context" && item.placement_kind !== "record_formula_label")
-      || !(item.location_id === null || uuid(item.location_id))
-      || !(item.paint_record_id === null || uuid(item.paint_record_id))) return null;
+    if (!item) return null;
+    const slotId = item.slot_id;
+    const versionId = item.version_id;
+    const placementKind = item.placement_kind;
+    const locationId = item.location_id;
+    const paintRecordId = item.paint_record_id;
+    if (!uuid(slotId) || !uuid(versionId)
+      || (placementKind !== "residence_cover" && placementKind !== "location" && placementKind !== "record_context" && placementKind !== "record_formula_label")
+      || !(locationId === null || uuid(locationId))
+      || !(paintRecordId === null || uuid(paintRecordId))) return null;
 
-    const placementMatches = item.placement_kind === "residence_cover"
-      ? item.location_id === null && item.paint_record_id === null
-      : item.placement_kind === "location"
-        ? item.location_id !== null && item.paint_record_id === null && locationIds.has(item.location_id)
-        : item.placement_kind === "record_context"
-          ? item.location_id !== null && item.paint_record_id !== null && locationIds.has(item.location_id)
-            && recordIds.has(item.paint_record_id) && assignmentKeys.has(`${item.paint_record_id}:${item.location_id}`)
-          : item.location_id === null && item.paint_record_id !== null && recordIds.has(item.paint_record_id);
+    const photoLocationId = locationId as string | null;
+    const photoPaintRecordId = paintRecordId as string | null;
+
+    const placementMatches = placementKind === "residence_cover"
+      ? photoLocationId === null && photoPaintRecordId === null
+      : placementKind === "location"
+        ? photoLocationId !== null && photoPaintRecordId === null && locationIds.has(photoLocationId)
+        : placementKind === "record_context"
+          ? photoLocationId !== null && photoPaintRecordId !== null && locationIds.has(photoLocationId)
+            && recordIds.has(photoPaintRecordId) && assignmentKeys.has(`${photoPaintRecordId}:${photoLocationId}`)
+          : photoLocationId === null && photoPaintRecordId !== null && recordIds.has(photoPaintRecordId);
     if (!placementMatches) return null;
     photos.push({
-      slot_id: item.slot_id,
-      version_id: item.version_id,
-      placement_kind: item.placement_kind,
-      location_id: item.location_id as string | null,
-      paint_record_id: item.paint_record_id as string | null,
+      slot_id: slotId,
+      version_id: versionId,
+      placement_kind: placementKind,
+      location_id: photoLocationId,
+      paint_record_id: photoPaintRecordId,
     });
   }
   return photos;
 }
 
 export function validateHomeownerGuideDocument(value: unknown): HomeownerGuideDocumentData | null {
-  const hasPhotos = Boolean(value && typeof value === "object" && !Array.isArray(value) && Object.hasOwn(value, "photos"));
+  const hasPhotos = Boolean(value && typeof value === "object" && !Array.isArray(value)
+    && Object.prototype.hasOwnProperty.call(value, "photos"));
   const document = exactObject(value, hasPhotos
     ? ["schema_version", "guide", "locations", "records", "assignments", "photos"]
     : ["schema_version", "guide", "locations", "records", "assignments"]);
