@@ -56,7 +56,13 @@ export async function readSyntheticReleasePhotos(environment: HomeownerServerEnv
         || (placement_kind === "record_context" && (location_id === null || paint_record_id === null))
         || (placement_kind === "location" && (location_id === null || paint_record_id !== null))
         || (placement_kind === "residence_cover" && (location_id !== null || paint_record_id !== null))) return null;
-      slots.push({ id, placement_kind, location_id, paint_record_id, current_version_id });
+      slots.push({
+        id: id as string,
+        placement_kind: placement_kind as SyntheticReleasePhoto["placement_kind"],
+        location_id: location_id as string | null,
+        paint_record_id: paint_record_id as string | null,
+        current_version_id: current_version_id as string,
+      });
     }
     if (!slots.length) return [];
     const versionIds = [...new Set(slots.map((slot) => slot.current_version_id))];

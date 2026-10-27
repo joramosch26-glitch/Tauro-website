@@ -264,12 +264,12 @@ function currentPhotoSlots(value: unknown, guideId: string): CurrentPhotoSlot[] 
       || typeof item.current_version_id !== "string" || !UUID.test(item.current_version_id)
       || (item.placement_kind === "record_formula_label" && (item.location_id !== null || item.paint_record_id === null))) return null;
     slots.push({
-      id: item.id,
-      guide_id: item.guide_id,
-      placement_kind: item.placement_kind,
-      location_id: item.location_id,
-      paint_record_id: item.paint_record_id,
-      current_version_id: item.current_version_id,
+      id: item.id as string,
+      guide_id: item.guide_id as string,
+      placement_kind: item.placement_kind as CurrentPhotoSlot["placement_kind"],
+      location_id: item.location_id as string | null,
+      paint_record_id: item.paint_record_id as string | null,
+      current_version_id: item.current_version_id as string,
     });
   }
   return slots;
