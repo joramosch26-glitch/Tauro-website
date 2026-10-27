@@ -4,7 +4,7 @@ export type HomeownerGuideDocumentData = {
   locations: Array<{ id: string; parent_id: string | null; name: string; sort_order: number; created_at: string }>;
   records: Array<{ id: string; section: "primary" | "exception" | "additional"; surface: string; brand: string | null; product: string | null; color_name: string; color_code: string | null; sheen: string | null; notes: string | null; sort_order: number; created_at: string }>;
   assignments: Array<{ paint_record_id: string; location_id: string }>;
-  /** Present only for the exact synthetic guide in the protected Preview. */
+  /** Current ready photo descriptors returned by the authenticated document RPC. */
   photos?: Array<{ slot_id: string; version_id: string; placement_kind: "residence_cover" | "location" | "record_context" | "record_formula_label"; location_id: string | null; paint_record_id: string | null }>;
 };
 
@@ -63,12 +63,58 @@ function assignmentsValue(value: unknown): HomeownerGuideDocumentData["assignmen
   return assignments;
 }
 
+function photosValue(
+  value: unknown,
+  locations: HomeownerGuideDocumentData["locations"],
+  records: HomeownerGuideDocumentData["records"],
+  assignments: HomeownerGuideDocumentData["assignments"],
+): NonNullable<HomeownerGuideDocumentData["photos"]> | null {
+  if (!Array.isArray(value)) return null;
+  const locationIds = new Set(locations.map((location) => location.id));
+  const recordIds = new Set(records.map((record) => record.id));
+  const assignmentKeys = new Set(assignments.map(({ paint_record_id, location_id }) => `${paint_record_id}:${location_id}`));
+  const photos: NonNullable<HomeownerGuideDocumentData["photos"]> = [];
+  for (const valueItem of value) {
+    const item = exactObject(valueItem, ["slot_id", "version_id", "placement_kind", "location_id", "paint_record_id"]);
+    if (!item || !uuid(item.slot_id) || !uuid(item.version_id)
+      || (item.placement_kind !== "residence_cover" && item.placement_kind !== "location" && item.placement_kind !== "record_context" && item.placement_kind !== "record_formula_label")
+      || !(item.location_id === null || uuid(item.location_id))
+      || !(item.paint_record_id === null || uuid(item.paint_record_id))) return null;
+
+    const placementMatches = item.placement_kind === "residence_cover"
+      ? item.location_id === null && item.paint_record_id === null
+      : item.placement_kind === "location"
+        ? item.location_id !== null && item.paint_record_id === null && locationIds.has(item.location_id)
+        : item.placement_kind === "record_context"
+          ? item.location_id !== null && item.paint_record_id !== null && locationIds.has(item.location_id)
+            && recordIds.has(item.paint_record_id) && assignmentKeys.has(`${item.paint_record_id}:${item.location_id}`)
+          : item.location_id === null && item.paint_record_id !== null && recordIds.has(item.paint_record_id);
+    if (!placementMatches) return null;
+    photos.push({
+      slot_id: item.slot_id,
+      version_id: item.version_id,
+      placement_kind: item.placement_kind,
+      location_id: item.location_id as string | null,
+      paint_record_id: item.paint_record_id as string | null,
+    });
+  }
+  return photos;
+}
+
 export function validateHomeownerGuideDocument(value: unknown): HomeownerGuideDocumentData | null {
-  const document = exactObject(value, ["schema_version", "guide", "locations", "records", "assignments"]);
+  const hasPhotos = Boolean(value && typeof value === "object" && !Array.isArray(value) && Object.hasOwn(value, "photos"));
+  const document = exactObject(value, hasPhotos
+    ? ["schema_version", "guide", "locations", "records", "assignments", "photos"]
+    : ["schema_version", "guide", "locations", "records", "assignments"]);
   if (!document || document.schema_version !== 1) return null;
   const guide = guideValue(document.guide);
   const locations = locationsValue(document.locations);
   const records = recordsValue(document.records);
   const assignments = assignmentsValue(document.assignments);
-  return guide && locations && records && assignments ? { guide, locations, records, assignments } : null;
+  const photos = hasPhotos && locations && records && assignments
+    ? photosValue(document.photos, locations, records, assignments)
+    : undefined;
+  if (!guide || !locations || !records || !assignments || (hasPhotos && photos === null)) return null;
+  return { guide, locations, records, assignments, ...(hasPhotos ? { photos: photos as NonNullable<HomeownerGuideDocumentData["photos"]> } : {}) };
 }
+
