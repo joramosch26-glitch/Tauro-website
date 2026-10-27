@@ -4,6 +4,8 @@ export type HomeownerGuideDocumentData = {
   locations: Array<{ id: string; parent_id: string | null; name: string; sort_order: number; created_at: string }>;
   records: Array<{ id: string; section: "primary" | "exception" | "additional"; surface: string; brand: string | null; product: string | null; color_name: string; color_code: string | null; sheen: string | null; notes: string | null; sort_order: number; created_at: string }>;
   assignments: Array<{ paint_record_id: string; location_id: string }>;
+  /** Present only for the exact synthetic guide in the protected Preview. */
+  photos?: Array<{ slot_id: string; version_id: string; placement_kind: "residence_cover" | "location" | "record_context" | "record_formula_label"; location_id: string | null; paint_record_id: string | null }>;
 };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

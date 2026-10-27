@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { loadHomeownerServerEnvironment, loadPaintGuideServerEnvironment } from '../../server/paint-guide-homeowner/env.js';
-import { permitsSyntheticReleaseDocument, permitsSyntheticReleaseToken } from '../../server/paint-guide-homeowner/release-gate.js';
+import { permitsSyntheticReleaseDocument, permitsSyntheticReleaseToken, readSyntheticReleasePhotos } from '../../server/paint-guide-homeowner/release-gate.js';
 import { createStaffAccessHandler } from '../../server/paint-guide-staff/access.js';
 import type { HomeownerGuideDocumentData } from '../../server/paint-guide-homeowner/document.js';
 import { createHomeownerExchangeHandler } from '../../server/paint-guide-homeowner/exchange.js';
@@ -66,6 +66,65 @@ test('release document rejects foreign/empty data and verifies record and locati
   assert.equal(await permitsSyntheticReleaseDocument(environment,{...doc,locations:[{...doc.locations[0],id:OTHER}]},fetcher),false);
   assert.equal(await permitsSyntheticReleaseDocument(environment,{...doc,records:[],locations:[]},fetcher),false);
   assert.equal(await permitsSyntheticReleaseDocument(environment,{...doc,guide:{...doc.guide,residence_name:'OTHER'}},fetcher),false);
+});
+test('synthetic Preview document photo metadata is pinned to the configured guide and current ready slot only',async()=>{
+  const version='73000000-0000-4000-8000-000000000202';
+  const slot='73000000-0000-4000-8000-000000000203';
+  const record='73000000-0000-4000-8000-000000000204';
+  const preview={...environment,environment:'preview' as const};
+  let calls=0;
+  const fetcher:typeof fetch=async(input)=>{
+    calls++;
+    const url=new URL(String(input));
+    if(url.pathname.endsWith('/paint_guide_photo_slots')){
+      assert.equal(url.searchParams.get('guide_id'),'eq.'+GUIDE);
+      assert.equal(url.searchParams.get('select'),'id,placement_kind,location_id,paint_record_id,current_version_id');
+      return Response.json([{id:slot,placement_kind:'record_formula_label',location_id:null,paint_record_id:record,current_version_id:version}]);
+    }
+    assert.ok(url.pathname.endsWith('/paint_guide_photo_versions'));
+    assert.ok(url.searchParams.get('id')?.includes(version));
+    assert.equal(url.searchParams.get('state'),'eq.ready');
+    return Response.json([{id:version,slot_id:slot,state:'ready'}]);
+  };
+  assert.equal(await readSyntheticReleasePhotos(environment,fetcher),null);
+  assert.equal(calls,0);
+  assert.deepEqual(await readSyntheticReleasePhotos(preview,fetcher),[{slot_id:slot,version_id:version,
+    placement_kind:'record_formula_label',location_id:null,paint_record_id:record}]);
+  assert.equal(calls,2);
+});
+test('homeowner Preview document handler attaches photo metadata only after synthetic-document approval',async()=>{
+  const session=createHomeownerSessionBearer(1);
+  const preview={...environment,environment:'preview' as const};
+  const handlerDocument:HomeownerGuideDocumentData={guide:{residence_name:'Synthetic',primary_scope_note:null},
+    locations:[{id:ACTOR,parent_id:null,name:'Synthetic Room',sort_order:0,created_at:'2026-10-17T00:00:00Z'}],
+    records:[{id:GUIDE,section:'primary',surface:'Wall',brand:'Synthetic',product:'Test',color_name:'Synthetic',color_code:null,sheen:null,notes:null,sort_order:0,created_at:'2026-10-17T00:00:00Z'}],
+    assignments:[{paint_record_id:GUIDE,location_id:ACTOR}]};
+  const photo={slot_id:'73000000-0000-4000-8000-000000000203',version_id:'73000000-0000-4000-8000-000000000202',
+    placement_kind:'record_formula_label' as const,location_id:null,paint_record_id:'73000000-0000-4000-8000-000000000204'};
+  let photoReads=0;
+  const handler=createHomeownerDocumentHandler({loadEnvironment:()=>preview,
+    readDocument:async()=>({kind:'document',document:handlerDocument}),
+    permitsReleaseDocument:async()=>true,
+    readSyntheticPhotos:async()=>{photoReads++;return [photo];}});
+  const response=await handler(new Request('https://www.tauropainting.com/api/paint-guide/homeowner/document',
+    {headers:{cookie:'tauro_paint_guide_session='+session.canonical}}));
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),{...handlerDocument,photos:[photo]});
+  assert.equal(photoReads,1);
+});
+test('production homeowner document handler does not query the synthetic Preview photo path',async()=>{
+  const session=createHomeownerSessionBearer(1);
+  const handlerDocument:HomeownerGuideDocumentData={guide:{residence_name:'Existing',primary_scope_note:null},records:[],locations:[],assignments:[]};
+  let photoReads=0;
+  const handler=createHomeownerDocumentHandler({loadEnvironment:()=>environment,
+    readDocument:async()=>({kind:'document',document:handlerDocument}),
+    permitsReleaseDocument:async()=>true,
+    readSyntheticPhotos:async()=>{photoReads++;return [];}});
+  const response=await handler(new Request('https://www.tauropainting.com/api/paint-guide/homeowner/document',
+    {headers:{cookie:'tauro_paint_guide_session='+session.canonical}}));
+  assert.equal(response.status,200);
+  assert.deepEqual(await response.json(),handlerDocument);
+  assert.equal(photoReads,0);
 });
 test('allowed synthetic actor and guide reach the existing RPC, not a parallel authorization path',async()=>{
   let calls=0;

@@ -7,6 +7,7 @@ import {
 } from "../src/paint-guide/homeowner/bootstrap.js";
 import { exchangeHomeownerToken, fetchHomeownerDocument } from "../src/paint-guide/homeowner/client.js";
 import { parseHomeownerGuideDocument } from "../src/paint-guide/homeowner/document.js";
+import { buildHomeownerPhotoSources } from "../src/paint-guide/homeowner/photo-sources.js";
 import { captureHomeownerFragment } from "../src/paint-guide/homeowner/fragment.js";
 import type { HomeownerGuideDocumentData } from "../src/paint-guide/presentation/types.js";
 
@@ -15,6 +16,20 @@ const fixture = (residenceName: string): HomeownerGuideDocumentData => ({
   locations: [], records: [], assignments: [],
 });
 const transportFixture = fixture("Test Residence");
+
+test("homeowner formula-label descriptors map to the protected full-size photo route", () => {
+  const slotId = "73000000-0000-4000-8000-000000000101";
+  const versionId = "73000000-0000-4000-8000-000000000102";
+  const recordId = "73000000-0000-4000-8000-000000000103";
+  const parsed = parseHomeownerGuideDocument({
+    guide: { residence_name: "Synthetic QA", primary_scope_note: null },
+    locations: [], records: [], assignments: [],
+    photos: [{ slot_id: slotId, version_id: versionId, placement_kind: "record_formula_label", location_id: null, paint_record_id: recordId }],
+  });
+  assert.ok(parsed);
+  assert.deepEqual(buildHomeownerPhotoSources(parsed.photos).formulaLabelPhotoUrls[recordId],
+    [`/api/paint-guide/homeowner/photos/${versionId}`]);
+});
 
 type FakeLocation = { pathname: string; search: string; hash: string };
 
