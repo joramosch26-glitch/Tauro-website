@@ -1,7 +1,10 @@
 import { supabase } from "../lib/supabase";
 import type { GuideLocation, GuideLocationType } from "./types";
+import { roomNotesFieldToPersist } from "../presentation/homeowner-features";
+import { assertHomeownerDesignSchemaAvailable, normalizeHomeownerDesignDatabaseError, queryWithLegacyDesignColumns } from "./homeowner-design-schema";
 
-const COLUMNS = "id, guide_id, parent_id, location_type, name, sort_order, created_at, updated_at";
+const COLUMNS = "id, guide_id, parent_id, location_type, name, room_notes, sort_order, created_at, updated_at";
+const LEGACY_COLUMNS = "id, guide_id, parent_id, location_type, name, sort_order, created_at, updated_at";
 
 function client() {
   if (!supabase) throw new Error("Paint Guide is not configured.");
@@ -17,24 +20,34 @@ export type CreateGuideLocationInput = {
 };
 
 export async function listGuideLocations(guideId: string): Promise<GuideLocation[]> {
-  const { data, error } = await client().from("guide_locations").select(COLUMNS).eq("guide_id", guideId).order("sort_order", { ascending: true }).order("created_at", { ascending: true }).order("id", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as GuideLocation[];
+  const db = client();
+  const { result, designFieldsAvailable } = await queryWithLegacyDesignColumns(
+    () => db.from("guide_locations").select(COLUMNS).eq("guide_id", guideId).order("sort_order", { ascending: true }).order("created_at", { ascending: true }).order("id", { ascending: true }),
+    () => db.from("guide_locations").select(LEGACY_COLUMNS).eq("guide_id", guideId).order("sort_order", { ascending: true }).order("created_at", { ascending: true }).order("id", { ascending: true }),
+  );
+  const { data, error } = result;
+  if (error) throw normalizeHomeownerDesignDatabaseError(error);
+  const locations = (data ?? []).map((location) => ({ ...location, homeowner_design_fields_available: designFieldsAvailable })) as GuideLocation[] & { homeowner_design_fields_available?: boolean };
+  locations.homeowner_design_fields_available = designFieldsAvailable;
+  return locations;
 }
 
 export async function createGuideLocation(input: CreateGuideLocationInput): Promise<GuideLocation> {
+  await assertHomeownerDesignSchemaAvailable(client());
   const { data, error } = await client().from("guide_locations").insert({ guide_id: input.guideId, parent_id: input.parentId, location_type: input.locationType, name: input.name, sort_order: input.sortOrder }).select(COLUMNS).single();
   if (error || !data) throw error ?? new Error("Could not add location.");
   return data as GuideLocation;
 }
 
-export async function updateGuideLocation(guideId: string, locationId: string, input: { name: string; locationType: GuideLocationType }): Promise<GuideLocation> {
-  const { data, error } = await client().from("guide_locations").update({ name: input.name, location_type: input.locationType }).eq("id", locationId).eq("guide_id", guideId).select(COLUMNS).maybeSingle();
-  if (error || !data) throw error ?? new Error("Could not save location.");
+export async function updateGuideLocation(guideId: string, locationId: string, input: { name: string; locationType: GuideLocationType; roomNotes?: string }): Promise<GuideLocation> {
+  await assertHomeownerDesignSchemaAvailable(client());
+  const { data, error } = await client().from("guide_locations").update({ name: input.name, location_type: input.locationType, ...(input.roomNotes === undefined ? {} : { room_notes: roomNotesFieldToPersist(input.roomNotes) }) }).eq("id", locationId).eq("guide_id", guideId).select(COLUMNS).maybeSingle();
+  if (error || !data) throw error ? normalizeHomeownerDesignDatabaseError(error) : new Error("Could not save location.");
   return data as GuideLocation;
 }
 
 export async function deleteGuideLocation(guideId: string, locationId: string): Promise<void> {
+  await assertHomeownerDesignSchemaAvailable(client());
   const { data, error } = await client().from("guide_locations").delete().eq("id", locationId).eq("guide_id", guideId).select("id");
-  if (error || !data?.length) throw error ?? new Error("Could not delete location.");
+  if (error || !data?.length) throw error ? normalizeHomeownerDesignDatabaseError(error) : new Error("Could not delete location.");
 }

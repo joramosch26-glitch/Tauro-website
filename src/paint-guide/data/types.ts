@@ -15,8 +15,12 @@ export type PaintGuide = {
   residence_name: string;
   status: PaintGuideStatus;
   primary_scope_note: string | null;
+  city?: string | null;
+  state?: string | null;
+  property_type?: string | null;
   created_at: string;
   updated_at: string;
+  homeowner_design_fields_available?: boolean;
 };
 
 export type GuideLocation = {
@@ -25,9 +29,11 @@ export type GuideLocation = {
   parent_id: string | null;
   location_type: GuideLocationType;
   name: string;
+  room_notes?: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
+  homeowner_design_fields_available?: boolean;
 };
 
 export type PaintRecord = {
@@ -39,11 +45,14 @@ export type PaintRecord = {
   product: string | null;
   color_name: string;
   color_code: string | null;
+  swatch_hex?: string | null;
+  swatch_provenance?: string | null;
   sheen: string | null;
   notes: string | null;
   sort_order: number;
   created_at: string;
   updated_at: string;
+  homeowner_design_fields_available?: boolean;
 };
 
 export type PaintRecordLocation = {

@@ -50,18 +50,44 @@ export function parseProjectReference(value: string) {
   return value;
 }
 
+const TEST_SUPABASE_ORIGIN_NAME = "VITE_TAURO_PG_TEST_SUPABASE_ORIGIN";
+
+function isPrivateTestSupabaseOrigin(value: string) {
+  try {
+    const origin = new URL(value);
+    return origin.protocol === "https:" && origin.origin === value
+      && origin.hostname !== "supabase.co" && !origin.hostname.endsWith(".supabase.co");
+  } catch { return false; }
+}
+
+function configuredTestSupabaseOrigin(source: ConfigurationSource, environment: PaintGuideEnvironment) {
+  const value = source[TEST_SUPABASE_ORIGIN_NAME];
+  if (value === undefined) return undefined;
+  // This opt-in is for a private reverse proxy in an isolated test only. Do
+  // not let it name a hosted Supabase project, a path, or a credential URL.
+  if (environment !== "test" || !isPrivateTestSupabaseOrigin(value)) throw new PaintGuideConfigurationError();
+  return value;
+}
+
 export function isHttpLoopbackOrigin(value: string) {
   const match = /^http:\/\/(?:localhost|127\.0\.0\.1):([1-9][0-9]*)$/.exec(value);
   return match !== null && Number(match[1]) <= 65535 && Number(match[1]) !== 80;
 }
 
-export function parseProjectUrl(value: string, reference: string, environment: PaintGuideEnvironment) {
+export function parseProjectUrl(
+  value: string,
+  reference: string,
+  environment: PaintGuideEnvironment,
+  exactTestOrigin?: string,
+) {
   parseProjectReference(reference);
   const hosted = (environment === "preview" || environment === "production")
     && (value === `https://${reference}.supabase.co` || value === `https://${reference}.supabase.co/`);
   const local = (environment === "development" || environment === "test")
     && isHttpLoopbackOrigin(value.endsWith("/") ? value.slice(0, -1) : value);
-  if (!hosted && !local) throw new PaintGuideConfigurationError();
+  const privateTestProxy = environment === "test" && exactTestOrigin !== undefined
+    && isPrivateTestSupabaseOrigin(exactTestOrigin) && value === exactTestOrigin;
+  if (!hosted && !local && !privateTestProxy) throw new PaintGuideConfigurationError();
   return new URL(value);
 }
 
@@ -90,10 +116,14 @@ const BROWSER_NAMES = ["VITE_SUPABASE_URL", "VITE_SUPABASE_PUBLISHABLE_KEY",
   "VITE_TAURO_PG_EXPECTED_PROJECT_REF", "VITE_TAURO_PG_ENVIRONMENT"] as const;
 
 export function loadBrowserConfiguration(source: ConfigurationSource) {
-  if (BROWSER_NAMES.every((name) => !source[name])) return null;
+  if (BROWSER_NAMES.every((name) => !source[name])) {
+    if (source[TEST_SUPABASE_ORIGIN_NAME] !== undefined) throw new PaintGuideConfigurationError();
+    return null;
+  }
   const environment = parsePaintGuideEnvironment(requiredConfiguration(source, BROWSER_NAMES[3]));
+  const exactTestOrigin = configuredTestSupabaseOrigin(source, environment);
   const reference = parseProjectReference(requiredConfiguration(source, BROWSER_NAMES[2]));
-  const url = parseProjectUrl(requiredConfiguration(source, BROWSER_NAMES[0]), reference, environment);
+  const url = parseProjectUrl(requiredConfiguration(source, BROWSER_NAMES[0]), reference, environment, exactTestOrigin);
   const key = requiredConfiguration(source, BROWSER_NAMES[1]);
   validateBrowserKey(key, reference, url.protocol === "http:");
   return { environment, reference, url, key };
@@ -114,8 +144,9 @@ export function validateBrowserServerAgreement(source: ConfigurationSource, requ
   }
   const reference = parseProjectReference(requiredConfiguration(source, "TAURO_PG_EXPECTED_PROJECT_REF"));
   const environment = parsePaintGuideEnvironment(requiredConfiguration(source, "TAURO_PG_ENVIRONMENT"));
+  const exactTestOrigin = configuredTestSupabaseOrigin(source, environment);
   validateDeploymentEnvironment(source, environment);
-  const url = parseProjectUrl(requiredConfiguration(source, "TAURO_PG_SUPABASE_URL"), reference, environment);
+  const url = parseProjectUrl(requiredConfiguration(source, "TAURO_PG_SUPABASE_URL"), reference, environment, exactTestOrigin);
   if (browser.reference !== reference || browser.environment !== environment || browser.url.href !== url.href) {
     throw new PaintGuideConfigurationError();
   }

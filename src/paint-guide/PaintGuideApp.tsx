@@ -8,6 +8,7 @@ import { GuideLocations } from "./pages/GuideLocations";
 import { GuideColors } from "./pages/GuideColors";
 import { GuidePreview } from "./pages/GuidePreview";
 import { GuideAccess } from "./pages/GuideAccess";
+import { GuidePhotos } from "./pages/GuidePhotos";
 
 type PaintGuideScreenProps = {
   title: string;
@@ -111,6 +112,7 @@ export default function PaintGuideApp() {
           }
         />
         <Route path="/paint-guide/g/:guideId/access" element={<GuideRoute><GuideAccess /></GuideRoute>} />
+        <Route path="/paint-guide/g/:guideId/photos" element={<GuideRoute><GuidePhotos /></GuideRoute>} />
       </Route>
       <Route path="/paint-guide/p" element={<PaintGuideScreen title="Paint Guide Client" />} />
       <Route path="/paint-guide/*" element={<PaintGuideNotFound />} />

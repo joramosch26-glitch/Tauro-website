@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from "react";
 import { HomeownerGuideDocument } from "../components/HomeownerGuideDocument.js";
 import { getHomeownerNavigationController, type HomeownerBootstrapState } from "./bootstrap.js";
+import { buildHomeownerPhotoSources } from "./photo-sources.js";
 
 function HomeownerShell({ children }: { children: React.ReactNode }) { return <main className="min-h-screen bg-[#f5f1e8] px-4 py-6 text-[#20211f] sm:px-8 sm:py-10"><div className="mx-auto w-full max-w-6xl">{children}</div></main>; }
 function LoadingGuide() { return <HomeownerShell><section className="border border-[#20211f]/15 bg-[#fffdf8] px-6 py-16 sm:px-10"><p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#9b6b36]">Tauro Painting</p><h1 className="mt-6 font-serif text-4xl sm:text-5xl">Paint Color Guide</h1><p className="mt-5 text-[#20211f]/65">Loading your paint guide…</p></section></HomeownerShell>; }
@@ -11,5 +12,6 @@ export function HomeownerPage() {
   const state: HomeownerBootstrapState | null = snapshot.state;
   if (state === null) return <LoadingGuide />;
   if (state.kind === "unavailable") return <UnavailableGuide />;
-  return <HomeownerShell><HomeownerGuideDocument data={state.document} /></HomeownerShell>;
+  const photoSources = buildHomeownerPhotoSources(state.document.photos);
+  return <HomeownerShell><HomeownerGuideDocument data={state.document} {...photoSources} /></HomeownerShell>;
 }

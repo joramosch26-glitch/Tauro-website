@@ -22,6 +22,7 @@ import type {
   PaintRecordLocation,
   PaintRecordSection,
 } from "../data/types";
+import { homeownerDesignErrorMessage } from "../data/homeowner-design-schema";
 
 const sections: PaintRecordSection[] = ["primary", "exception", "additional"];
 const sectionOrder: Record<PaintRecordSection, number> = {
@@ -46,6 +47,8 @@ type TextField =
   | "brand"
   | "product"
   | "colorCode"
+  | "swatchHex"
+  | "swatchProvenance"
   | "sheen";
 
 function sectionHeading(section: PaintRecordSection) {
@@ -54,7 +57,7 @@ function sectionHeading(section: PaintRecordSection) {
   return "Additional";
 }
 
-function blankRecord(): PaintRecordInput {
+function blankRecord(designFieldsAvailable = true): PaintRecordInput {
   return {
     section: "primary",
     surface: "",
@@ -62,7 +65,10 @@ function blankRecord(): PaintRecordInput {
     brand: "",
     product: "",
     colorCode: "",
+    swatchHex: "",
+    swatchProvenance: "",
     sheen: "",
+    homeowner_design_fields_available: designFieldsAvailable,
     notes: "",
     sortOrder: 0,
   };
@@ -76,7 +82,10 @@ function recordInput(record: PaintRecord): PaintRecordInput {
     brand: record.brand ?? "",
     product: record.product ?? "",
     colorCode: record.color_code ?? "",
+    swatchHex: record.swatch_hex ?? "",
+    swatchProvenance: record.swatch_provenance ?? "",
     sheen: record.sheen ?? "",
+    homeowner_design_fields_available: record.homeowner_design_fields_available,
     notes: record.notes ?? "",
     sortOrder: record.sort_order,
   };
@@ -170,12 +179,13 @@ function PaintRecordForm({
   const [error, setError] = useState("");
 
   function field(key: TextField, label: string, required = false) {
+    const newDesignField = key === "swatchHex" || key === "swatchProvenance";
     return (
       <label className="text-sm font-semibold">
         {label}
         <input
           className="mt-1 w-full border border-[#20211f]/25 px-3 py-2 disabled:bg-[#20211f]/5"
-          disabled={pending}
+          disabled={pending || (newDesignField && value.homeowner_design_fields_available === false)}
           onChange={(event) =>
             setValue((current) => ({
               ...current,
@@ -194,6 +204,10 @@ function PaintRecordForm({
 
     if (!value.surface.trim() || !value.colorName.trim()) {
       setError("Surface and Color Name are required.");
+      return;
+    }
+    if (Boolean(value.swatchHex.trim()) !== Boolean(value.swatchProvenance.trim()) || (value.swatchHex.trim() && !/^#[\da-f]{6}$/i.test(value.swatchHex.trim()))) {
+      setError("A verified swatch needs a six-digit hex value and its source. Leave both blank when unknown.");
       return;
     }
 
@@ -236,6 +250,8 @@ function PaintRecordForm({
       {field("brand", "Brand")}
       {field("product", "Product")}
       {field("colorCode", "Color Code")}
+      {field("swatchHex", "Verified digital color (hex; optional)")}
+      {field("swatchProvenance", "Swatch source / verification (optional)")}
       {field("sheen", "Sheen")}
       <label className="text-sm font-semibold sm:col-span-2">
         Notes
@@ -308,6 +324,8 @@ export function GuideColors() {
     string | null
   >(null);
   const [assignmentStateTrusted, setAssignmentStateTrusted] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [designDataError, setDesignDataError] = useState("");
 
   useEffect(() => {
     mountedRef.current = true;
@@ -358,8 +376,8 @@ export function GuideColors() {
         setLocations(nextLocations);
         setAssignments(nextAssignments);
         setState("ready");
-      } catch {
-        if (active) setState("error");
+      } catch (error) {
+        if (active) { setLoadError(homeownerDesignErrorMessage(error, "Please try again.")); setState("error"); }
       }
     }
 
@@ -374,7 +392,7 @@ export function GuideColors() {
     createPending ||
     editPendingId !== null ||
     deletePendingId !== null ||
-    assignmentPendingId !== null;
+    assignmentPendingId !== null || guide?.homeowner_design_fields_available === false;
   const interactionActive =
     adding ||
     editingId !== null ||
@@ -519,7 +537,8 @@ export function GuideColors() {
       upsertRecord(next);
       setAdding(false);
       return true;
-    } catch {
+    } catch (error) {
+      setDesignDataError(homeownerDesignErrorMessage(error, ""));
       return false;
     } finally {
       setCreatePending(false);
@@ -549,7 +568,8 @@ export function GuideColors() {
       upsertRecord(next);
       setEditingId(null);
       return true;
-    } catch {
+    } catch (error) {
+      setDesignDataError(homeownerDesignErrorMessage(error, ""));
       return false;
     } finally {
       setEditPendingId(null);
@@ -567,8 +587,8 @@ export function GuideColors() {
         current.filter((assignment) => assignment.paint_record_id !== id),
       );
       setDeletingId(null);
-    } catch {
-      setDeleteFailure(deleteError);
+    } catch (error) {
+      setDeleteFailure(homeownerDesignErrorMessage(error, deleteError));
     } finally {
       setDeletePendingId(null);
     }
@@ -605,7 +625,7 @@ export function GuideColors() {
       <StaffPageShell title="Paint Guide">
         <section className="py-12">
           <h2 className="font-serif text-3xl">Could not load colors.</h2>
-          <p className="mt-3 text-[#20211f]/65">Please try again.</p>
+          <p className="mt-3 text-[#20211f]/65" role="alert">{loadError || "Please try again."}</p>
           <Link
             className="mt-6 inline-flex border border-[#20211f] px-4 py-3 text-xs font-semibold uppercase tracking-[0.12em]"
             to="/paint-guide"
@@ -620,6 +640,8 @@ export function GuideColors() {
   return (
     <StaffPageShell title={guide?.residence_name ?? "Paint Guide"}>
       <GuideEditorNav active="colors" />
+      {guide?.homeowner_design_fields_available === false ? <p className="mt-5 border border-[#9c2f2f]/25 bg-[#fff7f3] p-4 text-sm text-[#792c25]" role="status">Digital swatches are unavailable until the reviewed database migration is applied. Existing paint records are shown; writes are paused to avoid dropping fields.</p> : null}
+      {designDataError ? <p className="mt-5 border border-[#9c2f2f]/30 bg-[#fff7f3] p-4 text-sm text-[#792c25]" role="alert">{designDataError}</p> : null}
       <section className="py-10">
         <div className="flex flex-wrap items-end justify-between gap-5">
           <div>
@@ -652,7 +674,7 @@ export function GuideColors() {
         {adding ? (
           <PaintRecordForm
             failureMessage={createError}
-            initial={blankRecord()}
+            initial={blankRecord(guide?.homeowner_design_fields_available !== false)}
             onCancel={() => setAdding(false)}
             onSave={createRecord}
             pending={createPending}
@@ -909,3 +931,4 @@ export function GuideColors() {
     </StaffPageShell>
   );
 }
+

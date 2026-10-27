@@ -8,8 +8,15 @@ export type HomeownerFragmentCapture = {
   token: string | null;
 };
 
+export type PaintGuideEntry = "homeowner" | "preview_restricted" | "staff";
+
 export function isHomeownerPath(pathname: string) {
   return pathname === HOMEOWNER_PATHNAME;
+}
+
+export function resolvePaintGuideEntry(pathname: string, environment: string | undefined): PaintGuideEntry {
+  if (isHomeownerPath(pathname)) return "homeowner";
+  return environment === "preview" ? "preview_restricted" : "staff";
 }
 
 export function captureHomeownerFragment(

@@ -1,3 +1,6 @@
+import { ChevronRight, ImageOff, Layers3 } from "lucide-react";
+import { useEffect, useState } from "react";
+import { GuideLanding } from "./GuideLanding";
 import {
   buildHomeownerGuidePresentation,
   locationLabel,
@@ -8,6 +11,107 @@ import type {
   HomeownerGuideDocumentData,
   HomeownerPaintRecord,
 } from "../presentation/types";
+import { verifiedRoomSwatchFor, type VerifiedRoomSwatch } from "../presentation/room-presentation";
+import { verifiedSwatchForRecord } from "../presentation/homeowner-features";
+
+function RoomContextPhoto({
+  photoUrl,
+  locationId,
+  data,
+}: {
+  photoUrl?: string;
+  locationId: string;
+  data: HomeownerGuideDocumentData;
+}) {
+  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
+  const src = photoUrl?.trim() || null;
+  useEffect(() => setFailedPhotoUrl(null), [data, locationId, src]);
+  return src && failedPhotoUrl !== src ? (
+    <div className="pg-room-paint-context" aria-hidden="true">
+      <img src={src} alt="" onError={() => setFailedPhotoUrl(src)} />
+    </div>
+  ) : (
+    <div className="pg-room-paint-context pg-room-paint-context--empty" aria-hidden="true">
+      <ImageOff size={19} strokeWidth={1} />
+      <span>Photo not added</span>
+    </div>
+  );
+}
+
+function RoomPaintCard({
+  record,
+  data,
+  locationId,
+  photoUrl,
+  formulaLabelPhotoUrls,
+  verifiedSwatches,
+}: {
+  record: HomeownerPaintRecord;
+  data: HomeownerGuideDocumentData;
+  locationId: string;
+  photoUrl?: string;
+  formulaLabelPhotoUrls: readonly string[];
+  verifiedSwatches: readonly VerifiedRoomSwatch[];
+}) {
+  const recordSwatchValue = verifiedSwatchForRecord(record);
+  const recordSwatch = recordSwatchValue
+    ? [{ recordId: record.id, ...recordSwatchValue }]
+    : [];
+  const swatch = verifiedRoomSwatchFor(record.id, [...verifiedSwatches, ...recordSwatch]);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  return (
+    <article className="pg-room-paint-card" data-paint-record-id={record.id}>
+      <RoomContextPhoto data={data} locationId={locationId} photoUrl={photoUrl} />
+      <div className="pg-room-paint-main">
+        <div className="pg-room-paint-top">
+          <div className="pg-room-paint-title">
+            <h3 className="pg-room-paint-surface">{record.surface}</h3>
+            <p className="pg-room-paint-color">{record.color_name}</p>
+          </div>
+          <div className="pg-room-swatch-block">
+            <span
+              className={swatch ? "pg-room-swatch" : "pg-room-swatch pg-room-swatch--unknown"}
+              style={swatch ? { backgroundColor: swatch.hex.trim() } : undefined}
+              role="img"
+              aria-label={swatch ? `Staff-recorded digital swatch for ${record.color_name}` : `Unverified swatch for ${record.color_name}`}
+            >{swatch ? null : <span>Not<br />verified</span>}</span>
+            <span className="pg-room-swatch-status">{swatch ? "Staff-recorded color" : "Swatch not verified"}</span>
+          </div>
+        </div>
+        <dl className="pg-room-paint-visible-facts">
+          <div><dt>Sheen</dt><dd>{record.sheen || "Not recorded"}</dd></div>
+          <div><dt>Product</dt><dd>{record.product || "Not recorded"}</dd></div>
+        </dl>
+        <button className="pg-record-details-toggle" type="button" aria-expanded={detailsOpen} aria-label={`${detailsOpen ? "Hide" : "View"} details for ${record.surface}`} onClick={() => setDetailsOpen(open => !open)}>
+          <span>{detailsOpen ? "Less details" : "More details"}</span><ChevronRight className={detailsOpen ? "pg-record-chevron pg-record-chevron--open" : "pg-record-chevron"} size={16} aria-hidden="true" />
+        </button>
+        {detailsOpen ? <div className="pg-record-details">
+        {swatch ? <p className="pg-room-swatch-provenance">Staff-recorded color reference: {swatch.provenance}</p> : null}
+        <dl className="pg-room-paint-facts">
+          <div><dt>Brand</dt><dd>{record.brand || "Not recorded"}</dd></div>
+          <div><dt>Color code</dt><dd>{record.color_code || "Not recorded"}</dd></div>
+        </dl>
+        {record.notes ? <div className="pg-room-record-note"><p>Paint note</p><span>{record.notes}</span></div> : null}
+        <section className="pg-formula-labels" aria-label={`Formula label photos for ${record.color_name}`}>
+          <h4>Paint-can formula label photo</h4>
+          <FormulaLabelPhotos record={record} urls={formulaLabelPhotoUrls} />
+        </section>
+        </div> : null}
+      </div>
+    </article>
+  );
+}
+
+function FormulaLabelPhotos({ record, urls }: { record: HomeownerPaintRecord; urls: readonly string[] }) {
+  return urls.length ? <div className="pg-formula-label-list">
+    {urls.map((url, index) => <figure key={`${url}-${index}`}>
+      <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Open formula label photo ${index + 1} for ${record.color_name} full size`}>
+        <img src={url} loading="lazy" alt={`Formula-label image for ${record.color_name}, photo ${index + 1}`} />
+      </a>
+      <figcaption><a href={url} target="_blank" rel="noopener noreferrer">Open full-size label photo</a></figcaption>
+    </figure>)}
+  </div> : <p className="pg-formula-label-pending" role="status">Formula label photo pending. A clear photo of the real can sticker will be added here.</p>;
+}
 
 function PaintRecordDetails({
   record,
@@ -127,7 +231,7 @@ function ExceptionLocationCard({
   );
 }
 
-export function HomeownerGuideDocument({ data }: { data: HomeownerGuideDocumentData }) {
+function GuideSpecifications({ data }: { data: HomeownerGuideDocumentData }) {
   const { guide, locations } = data;
   const {
     primaryRecords,
@@ -148,9 +252,9 @@ export function HomeownerGuideDocument({ data }: { data: HomeownerGuideDocumentD
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#d7b87b]">
           Tauro Painting
         </p>
-        <h1 className="mt-6 max-w-3xl font-serif text-4xl leading-tight sm:text-6xl">
+        <h2 className="mt-6 max-w-3xl font-serif text-4xl leading-tight sm:text-6xl">
           {guide.residence_name}
-        </h1>
+        </h2>
         <p className="mt-5 text-sm font-semibold uppercase tracking-[0.16em] text-[#f5f1e8]/65">
           Paint Color Guide
         </p>
@@ -277,12 +381,48 @@ export function HomeownerGuideDocument({ data }: { data: HomeownerGuideDocumentD
             <a className="underline decoration-[#9b6b36] underline-offset-4" href="tel:+18019289520">
               (801) 928-9520
             </a>
-            <a className="underline decoration-[#9b6b36] underline-offset-4" href="mailto:tauropaintingutah@gmail.com">
-              tauropaintingutah@gmail.com
+            <a className="underline decoration-[#9b6b36] underline-offset-4" href="mailto:office@tauropainting.com">
+              office@tauropainting.com
             </a>
           </div>
         </footer>
       </div>
     </article>
   );
+}
+
+export type HomeownerGuideDocumentProps = {
+  data: HomeownerGuideDocumentData;
+  /** Explicitly authorized image source; omitted for the existing placeholder. */
+  heroImageUrl?: string | null;
+  /** Optional presentation-only room photographs; never read from or persisted to the DTO. */
+  roomPhotoUrls?: Readonly<Record<string, string>>;
+  /** Optional presentation-only photo for the exact record and location, before room-level fallback. */
+  recordPhotoUrls?: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** Protected full-resolution formula label photos, separate from all room/context imagery. */
+  formulaLabelPhotoUrls?: Readonly<Record<string, readonly string[]>>;
+  /** Explicit verified color values with provenance, keyed to exact record identity. */
+  verifiedSwatches?: readonly VerifiedRoomSwatch[];
+};
+
+export function HomeownerGuideDocument({ data, heroImageUrl, roomPhotoUrls, recordPhotoUrls, formulaLabelPhotoUrls = {}, verifiedSwatches = [] }: HomeownerGuideDocumentProps) {
+  return <GuideLanding
+    data={data}
+    heroImageUrl={heroImageUrl}
+    roomPhotoUrls={roomPhotoUrls}
+    renderSpecifications={document => <GuideSpecifications data={document} />}
+    renderRoomPaints={(records, locationId) => {
+      return <div className="pg-room-paint-list">
+        {records.map(record => <RoomPaintCard
+          key={record.id}
+          data={data}
+          locationId={locationId}
+          photoUrl={recordPhotoUrls?.[locationId]?.[record.id]?.trim() || roomPhotoUrls?.[locationId]}
+          formulaLabelPhotoUrls={formulaLabelPhotoUrls[record.id] ?? []}
+          record={record}
+          verifiedSwatches={verifiedSwatches}
+        />)}
+      </div>;
+    }}
+  />;
 }

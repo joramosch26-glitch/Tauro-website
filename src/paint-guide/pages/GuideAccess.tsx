@@ -4,8 +4,9 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useAuth } from "../auth/useAuth";
 import { GuideEditorNav } from "../components/GuideEditorNav";
 import { StaffPageShell } from "../components/StaffPageShell";
+import { isCurrentAccessOperation, isCurrentQrPreviewRequest, nextQrPreviewGeneration } from "../staff/qr-preview-lifecycle";
 import { accessAvailabilityMessage, accessControls, copyStaffPrivateUrl, requestStaffAccess, StaffAccessClientError, type StaffAccessOperation, type StaffAccessStatus } from "../staff/access-client";
-import { createQrPng, createQrPreview, createQrSvg, downloadQr, qrDownloadStillCurrent, qrValueStillCurrent, QR_PNG_FILENAME, QR_SVG_FILENAME } from "../staff/qr-code";
+import { createQrPng, createQrPreview, createQrSvg, downloadQr, qrDownloadStillCurrent, QR_PNG_FILENAME, QR_SVG_FILENAME } from "../staff/qr-code";
 
 type LoadState = "loading" | "ready" | "not_found" | "error";
 type Confirmation = "rotate" | "revoke" | null;
@@ -22,9 +23,14 @@ export function GuideAccess() {
   const [status, setStatus] = useState<StaffAccessStatus | null>(null);
   const [privateUrl, setPrivateUrl] = useState<string | null>(null);
   const [qrPreview, setQrPreview] = useState<string | null>(null);
+  const [qrPreviewRevision, setQrPreviewRevision] = useState(0);
   const [qrError, setQrError] = useState("");
   const privateUrlRef = useRef<string | null>(null);
   const qrGenerationRef = useRef(0);
+  const qrPreviewGenerationRef = useRef(0);
+  const accessOperationGenerationRef = useRef(0);
+  const statusRequestGenerationRef = useRef(0);
+  const componentActiveRef = useRef(true);
   const [pending, setPending] = useState<StaffAccessOperation | null>(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -32,37 +38,83 @@ export function GuideAccess() {
   const setRevealedPrivateUrl = useCallback((value: string | null) => {
     privateUrlRef.current = value;
     qrGenerationRef.current += 1;
+    qrPreviewGenerationRef.current = nextQrPreviewGeneration(qrPreviewGenerationRef.current);
+    setQrPreviewRevision(qrPreviewGenerationRef.current);
     setQrPreview(null);
     setQrError("");
     setPrivateUrl(value);
   }, []);
   const invalidateQrDownloads = useCallback(() => { qrGenerationRef.current += 1; }, []);
+  useEffect(() => {
+    componentActiveRef.current = true;
+    return () => {
+      componentActiveRef.current = false;
+      accessOperationGenerationRef.current += 1;
+      statusRequestGenerationRef.current += 1;
+      privateUrlRef.current = null;
+      qrGenerationRef.current += 1;
+      qrPreviewGenerationRef.current = nextQrPreviewGeneration(qrPreviewGenerationRef.current);
+    };
+  }, []);
+  useEffect(() => {
+    accessOperationGenerationRef.current += 1;
+    statusRequestGenerationRef.current += 1;
+    setPending(null);
+    return () => {
+      accessOperationGenerationRef.current += 1;
+      statusRequestGenerationRef.current += 1;
+    };
+  }, [guideId]);
   const loadStatus = useCallback(async (keepMessage = false) => {
+    const requestGeneration = ++statusRequestGenerationRef.current;
+    const requestIsCurrent = () => componentActiveRef.current && requestGeneration === statusRequestGenerationRef.current;
     setState("loading");
     setRevealedPrivateUrl(null);
     if (!keepMessage) {
       setMessage("");
       setError("");
     }
-    try { const response = await requestStaffAccess("status", session?.access_token, { guideId }); setStatus(response); setState("ready"); }
-    catch (reason) { const clientError = reason instanceof StaffAccessClientError ? reason : new StaffAccessClientError("network"); setState(clientError.status === 404 ? "not_found" : "error"); setError(errorMessage(clientError.status)); }
+    try {
+      const response = await requestStaffAccess("status", session?.access_token, { guideId });
+      if (!requestIsCurrent()) return;
+      setStatus(response); setState("ready");
+    } catch (reason) {
+      if (!requestIsCurrent()) return;
+      const clientError = reason instanceof StaffAccessClientError ? reason : new StaffAccessClientError("network");
+      setState(clientError.status === 404 ? "not_found" : "error"); setError(errorMessage(clientError.status));
+    }
   }, [guideId, session?.access_token, setRevealedPrivateUrl]);
   useEffect(() => { let active = true; setRevealedPrivateUrl(null); setMessage(""); setError(""); setState("loading"); void requestStaffAccess("status", session?.access_token, { guideId }).then((response) => { if (active) { setStatus(response); setState("ready"); } }).catch((reason) => { if (!active) return; const clientError = reason instanceof StaffAccessClientError ? reason : new StaffAccessClientError("network"); setState(clientError.status === 404 ? "not_found" : "error"); setError(errorMessage(clientError.status)); }); return () => { active = false; }; }, [guideId, session?.access_token, setRevealedPrivateUrl]);
-  useEffect(() => () => { privateUrlRef.current = null; qrGenerationRef.current += 1; }, []);
   useEffect(() => {
     let active = true;
+    const requestGeneration = qrPreviewGenerationRef.current;
     setQrPreview(null);
     setQrError("");
     if (!privateUrl) return () => { active = false; };
-    void createQrPreview(privateUrl).then((preview) => { if (active && qrValueStillCurrent(privateUrl, privateUrlRef.current)) setQrPreview(preview); }).catch(() => { if (active && qrValueStillCurrent(privateUrl, privateUrlRef.current)) setQrError("QR preview could not be generated. The private link remains available to copy."); });
+    void createQrPreview(privateUrl).then((preview) => {
+      if (isCurrentQrPreviewRequest(requestGeneration, qrPreviewGenerationRef.current, privateUrl, privateUrlRef.current, active)) setQrPreview(preview);
+    }).catch(() => {
+      if (isCurrentQrPreviewRequest(requestGeneration, qrPreviewGenerationRef.current, privateUrl, privateUrlRef.current, active)) setQrError("QR preview could not be generated. The private link remains available to copy.");
+    });
     return () => { active = false; };
-  }, [privateUrl]);
+  }, [privateUrl, qrPreviewRevision]);
   async function perform(operation: Exclude<StaffAccessOperation, "status">) {
     if (!status || pending) return;
+    const requestGeneration = ++accessOperationGenerationRef.current;
+    const requestIsCurrent = () => isCurrentAccessOperation(requestGeneration, accessOperationGenerationRef.current, componentActiveRef.current);
     setConfirmation(null); invalidateQrDownloads(); setPending(operation); setError(""); setMessage("");
-    try { const response = await requestStaffAccess(operation, session?.access_token, { guideId, expectedTokenGeneration: status.tokenGeneration ?? undefined, expectedSessionEpoch: status.sessionEpoch ?? undefined }); setStatus(response); setRevealedPrivateUrl(response.privateUrl ?? null); setMessage(operation === "issue" ? "Homeowner access was created. Copy the private link now." : operation === "recover" ? "The current private link has been recovered." : operation === "rotate" ? "A new private link was created. The previous link and homeowner sessions no longer work." : "Homeowner access was revoked. An owner can restore it later by rotating access."); }
-    catch (reason) { const clientError = reason instanceof StaffAccessClientError ? reason : new StaffAccessClientError("network"); if (clientError.status === 409) { setRevealedPrivateUrl(null); setError(errorMessage(409)); await loadStatus(true); } else setError(errorMessage(clientError.status)); }
-    finally { setPending(null); }
+    try {
+      const response = await requestStaffAccess(operation, session?.access_token, { guideId, expectedTokenGeneration: status.tokenGeneration ?? undefined, expectedSessionEpoch: status.sessionEpoch ?? undefined });
+      if (!requestIsCurrent()) return;
+      setStatus(response); setRevealedPrivateUrl(response.privateUrl ?? null); setMessage(operation === "issue" ? "Homeowner access was created. Copy the private link now." : operation === "recover" ? "The current private link has been recovered." : operation === "rotate" ? "A new private link was created. The previous link and homeowner sessions no longer work." : "Homeowner access was revoked. An owner can restore it later by rotating access.");
+    } catch (reason) {
+      if (!requestIsCurrent()) return;
+      const clientError = reason instanceof StaffAccessClientError ? reason : new StaffAccessClientError("network");
+      if (clientError.status === 409) { setRevealedPrivateUrl(null); setError(errorMessage(409)); await loadStatus(true); }
+      else setError(errorMessage(clientError.status));
+    } finally {
+      if (requestIsCurrent()) setPending(null);
+    }
   }
   async function copyPrivateUrl() { if (!privateUrl) return; setError(""); if (await copyStaffPrivateUrl(privateUrl)) setMessage("Private link copied."); else setError("The private link could not be copied. Select it and copy it manually."); }
   async function downloadQrCode(format: "png" | "svg") {

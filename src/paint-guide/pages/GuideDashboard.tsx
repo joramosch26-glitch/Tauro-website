@@ -4,6 +4,7 @@ import { GuideStatusBadge } from "../components/GuideStatusBadge";
 import { StaffPageShell } from "../components/StaffPageShell";
 import { listPaintGuides } from "../data/guides";
 import type { PaintGuide } from "../data/types";
+import { homeownerDesignErrorMessage } from "../data/homeowner-design-schema";
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
@@ -16,6 +17,8 @@ function formatDate(value: string) {
 export function GuideDashboard() {
   const [guides, setGuides] = useState<PaintGuide[]>([]);
   const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [loadError, setLoadError] = useState("");
+  const [designFieldsAvailable, setDesignFieldsAvailable] = useState(true);
 
   useEffect(() => {
     let active = true;
@@ -24,10 +27,12 @@ export function GuideDashboard() {
       .then((nextGuides) => {
         if (!active) return;
         setGuides(nextGuides);
+        setDesignFieldsAvailable(nextGuides.homeowner_design_fields_available !== false);
         setState("ready");
       })
-      .catch(() => {
+      .catch((error) => {
         if (!active) return;
+        setLoadError(homeownerDesignErrorMessage(error, "Please try again."));
         setState("error");
       });
 
@@ -48,6 +53,7 @@ export function GuideDashboard() {
   return (
     <StaffPageShell action={newGuideAction} title="Paint Guides">
       <section className="py-10 sm:py-14">
+        {!designFieldsAvailable ? <p className="mb-6 border border-[#9c2f2f]/25 bg-[#fff7f3] p-4 text-sm text-[#792c25]" role="status">Homeowner metadata, room notes, and swatches are unavailable until the reviewed database migration is applied. Existing Paint Guide listings remain available.</p> : null}
         {state === "loading" ? (
           <p aria-live="polite" className="text-sm uppercase tracking-[0.14em] text-[#20211f]/60">
             Loading Paint Guides…
@@ -57,7 +63,7 @@ export function GuideDashboard() {
         {state === "error" ? (
           <div className="border border-[#9c2f2f]/25 bg-white p-6">
             <p className="font-serif text-2xl">Could not load Paint Guides.</p>
-            <p className="mt-2 text-[#20211f]/65">Please try again.</p>
+            <p className="mt-2 text-[#20211f]/65" role="alert">{loadError || "Please try again."}</p>
           </div>
         ) : null}
 

@@ -2,6 +2,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { StaffPageShell } from "../components/StaffPageShell";
 import { createPaintGuide } from "../data/guides";
+import { homeownerDesignErrorMessage } from "../data/homeowner-design-schema";
 
 export function NewGuide() {
   const navigate = useNavigate();
@@ -36,9 +37,9 @@ export function NewGuide() {
       });
       if (!mounted.current) return;
       navigate(`/paint-guide/g/${guide.id}`);
-    } catch {
+    } catch (error) {
       if (!mounted.current) return;
-      setSubmitError("Could not create Paint Guide. Please try again.");
+      setSubmitError(homeownerDesignErrorMessage(error, "Could not create Paint Guide. Please try again."));
       setIsSubmitting(false);
     }
   }
