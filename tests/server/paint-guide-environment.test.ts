@@ -9,6 +9,7 @@ import { loadHomeownerServerEnvironment, loadPaintGuideServerEnvironment } from 
 import { clearHomeownerSessionCookie, serializeHomeownerSessionCookie } from "../../server/paint-guide-homeowner/cookies.js";
 import { createHomeownerSessionBearer } from "../../server/paint-guide-homeowner/sessions.js";
 import { hasAllowedHomeownerOrigin } from "../../server/paint-guide-homeowner/origin.js";
+import { syntheticReleaseAllowsGuide } from "../../server/paint-guide-homeowner/synthetic-release.js";
 
 import { createStaffAccessHandler } from "../../server/paint-guide-staff/access.js";
 import { createPaintGuideStaffAuthorizer } from "../../server/paint-guide-staff/auth.js";
@@ -54,6 +55,41 @@ test("same project supports preview builds and production runtime; preview runti
     }
     assert.equal(loadBrowserConfiguration(config)?.key, publicKey);
   }
+});
+
+test("Preview synthetic release admits only the pinned Dev diagnostic and model guides", () => {
+  const preview = {
+    VITE_SUPABASE_URL: "https://hgfgnfhfqqetxjhasbbe.supabase.co",
+    VITE_SUPABASE_PUBLISHABLE_KEY: "sb_publishable_synthetic_only",
+    VITE_TAURO_PG_EXPECTED_PROJECT_REF: "hgfgnfhfqqetxjhasbbe",
+    VITE_TAURO_PG_ENVIRONMENT: "preview",
+    TAURO_PG_SUPABASE_URL: "https://hgfgnfhfqqetxjhasbbe.supabase.co",
+    TAURO_PG_EXPECTED_PROJECT_REF: "hgfgnfhfqqetxjhasbbe",
+    TAURO_PG_ENVIRONMENT: "preview",
+    TAURO_PG_SUPABASE_SECRET_KEY: "synthetic_backend_only",
+    TAURO_PG_HOMEOWNER_ACCESS_ENABLED: "true",
+    TAURO_PG_ALLOWED_ORIGINS: "https://tauro-paint-guide-v1-qa-git-pgv1-jose-ramos-projects-4c64cbba.vercel.app",
+    TAURO_PG_CUSTOMER_ACCESS_ENABLED: "false",
+    TAURO_PG_PREVIEW_SYNTHETIC_RELEASE_ENABLED: "true",
+    TAURO_PG_SYNTHETIC_RELEASE_GUIDE_ID: "b28d3dd5-eb34-46a2-99de-7af143de80db",
+    TAURO_PG_SYNTHETIC_RELEASE_ACTOR_ID: "e8fa431f-ea5c-46fb-b92c-6d5d213531bc",
+    VERCEL: "1", VERCEL_ENV: "preview", VERCEL_TARGET_ENV: "preview",
+    VERCEL_GIT_COMMIT_REF: "pgv1", VERCEL_BRANCH_URL: "tauro-paint-guide-v1-qa-git-pgv1-jose-ramos-projects-4c64cbba.vercel.app",
+  };
+  const environment = loadPaintGuideServerEnvironment(preview);
+  assert.equal(syntheticReleaseAllowsGuide(environment, "b28d3dd5-eb34-46a2-99de-7af143de80db"), true);
+  assert.equal(syntheticReleaseAllowsGuide(environment, "2a35d308-45a7-4b08-8d8d-83ddb16f0e29"), true);
+  assert.equal(syntheticReleaseAllowsGuide(environment, "11111111-1111-4111-8111-111111111111"), false);
+  assert.throws(() => loadPaintGuideServerEnvironment({ ...preview, TAURO_PG_EXPECTED_PROJECT_REF: reference, TAURO_PG_SUPABASE_URL: url }));
+  for (const overrides of [
+    { VERCEL_TARGET_ENV: "production" }, { VERCEL_GIT_COMMIT_REF: "main" },
+    { VERCEL_BRANCH_URL: "another-project.vercel.app" },
+    { TAURO_PG_ALLOWED_ORIGINS: "https://*.vercel.app" },
+    { TAURO_PG_SYNTHETIC_RELEASE_GUIDE_ID: "11111111-1111-4111-8111-111111111111" },
+    { TAURO_PG_SYNTHETIC_RELEASE_ACTOR_ID: "11111111-1111-4111-8111-111111111111" },
+  ]) assert.throws(() => loadPaintGuideServerEnvironment({ ...preview, ...overrides }));
+  const production = loadPaintGuideServerEnvironment(source);
+  assert.equal(production.syntheticRelease, undefined);
 });
 
 test("project, URL and environment disagreements fail at build and server startup", async (t) => {
@@ -283,3 +319,4 @@ test("actual browser SDK adapter disables Preview and keeps Production enabled",
     } finally { await server.close(); }
   }
 });
+

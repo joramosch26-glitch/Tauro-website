@@ -17,6 +17,11 @@ if (entry === "homeowner") {
   void import("./homeowner/SyntheticPreviewTestPage").then(({ SyntheticPreviewTestPage }) => {
     root.render(<React.StrictMode><SyntheticPreviewTestPage /></React.StrictMode>);
   });
+} else if (entry === "preview_restricted" && syntheticStaffTestEnabled
+  && window.location.pathname === "/paint-guide/qa-model-home") {
+  void import("./homeowner/ModelHomePhotoPreparationPage").then(({ ModelHomePhotoPreparationPage }) => {
+    root.render(<React.StrictMode><ModelHomePhotoPreparationPage /></React.StrictMode>);
+  });
 } else if (entry === "preview_restricted") {
   root.render(<main className="flex min-h-screen items-center justify-center bg-[#f5f1e8] px-6 py-16 text-[#20211f]">
     <section className="w-full max-w-2xl border border-[#20211f]/15 bg-white p-8 sm:p-12">

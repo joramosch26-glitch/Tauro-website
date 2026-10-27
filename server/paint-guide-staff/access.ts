@@ -2,6 +2,7 @@ import { loadHomeownerServerEnvironment, loadPaintGuideServerEnvironment } from 
 import { hasAllowedHomeownerOrigin } from "../paint-guide-homeowner/origin.js";
 import { homeownerJsonResponse } from "../paint-guide-homeowner/responses.js";
 import type { HomeownerServerEnvironment, PaintGuideServerEnvironment } from "../paint-guide-homeowner/types.js";
+import { syntheticReleaseAllowsGuide } from "../paint-guide-homeowner/synthetic-release.js";
 import { requirePaintGuideStaff, paintGuideStaffFailureResponse } from "./auth.js";
 import {
   callStaffAccessMaterial, callStaffAccessRevoke, callStaffAccessStatus, isStaffAccessGuideId,
@@ -83,7 +84,7 @@ export function createStaffAccessHandler(operation: StaffAccessOperation, depend
       const input = await parseAccessRequest(request, operation);
       if (input === null) return unavailable(400);
       const { guideId } = input;
-      if (environment.syntheticRelease && (guideId !== environment.syntheticRelease.guideId
+      if (environment.syntheticRelease && (!syntheticReleaseAllowsGuide(environment, guideId)
         || staff.staff.userId !== environment.syntheticRelease.actorId)) return unavailable(403);
       const cas = mutating ? input as { guideId: string } & StaffAccessCas : undefined;
       const client = createClient(environment);
@@ -132,3 +133,4 @@ export function createStaffAccessHandler(operation: StaffAccessOperation, depend
     } catch { return unavailable(503); }
   };
 }
+

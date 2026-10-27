@@ -13,9 +13,6 @@ import {
 } from "../../src/paint-guide/lib/environment.js";
 
 const CANONICAL_PRODUCTION_ORIGIN = "https://www.tauropainting.com";
-// This dedicated QA branch is the only Preview deployment allowed to reach the
-// synthetic release. VERCEL_BRANCH_URL is platform supplied and distinct from
-// the immutable deployment URL in VERCEL_URL; compare it to this exact host.
 export const PAINT_GUIDE_ISOLATED_PREVIEW_BRANCH = "pgv1";
 export const PAINT_GUIDE_ISOLATED_PREVIEW_HOST = "tauro-paint-guide-v1-qa-git-pgv1-jose-ramos-projects-4c64cbba.vercel.app";
 export const PAINT_GUIDE_ISOLATED_PREVIEW_ORIGIN = `https://${PAINT_GUIDE_ISOLATED_PREVIEW_HOST}`;
@@ -28,6 +25,12 @@ const ALLOWED_ENVIRONMENTS = new Set<HomeownerEnvironment>([
 const PROJECT_REF_PATTERN = /^[a-z0-9]{20}$/;
 const KEY_VERSION_PATTERN = /^[1-9][0-9]*$/;
 const MAX_SMALLINT = 32767;
+// A second synthetic-only guide used to prepare the fictional model home in Dev.
+// It is intentionally hard-pinned here and only admitted in the exact QA project.
+const QA_MODEL_GUIDE_ID = "2a35d308-45a7-4b08-8d8d-83ddb16f0e29";
+const QA_DEV_PROJECT_REF = "hgfgnfhfqqetxjhasbbe";
+const QA_DIAGNOSTIC_GUIDE_ID = "b28d3dd5-eb34-46a2-99de-7af143de80db";
+const QA_SYNTHETIC_ACTOR_ID = "e8fa431f-ea5c-46fb-b92c-6d5d213531bc";
 
 export class HomeownerEnvironmentError extends Error {
   constructor() {
@@ -87,16 +90,10 @@ function parseAllowedOrigins(value: string, environment: HomeownerEnvironment) {
   return origins;
 }
 
-function assertIsolatedPreviewOrigin(
-  source: EnvironmentSource,
-  environment: HomeownerEnvironment,
-  origins: ReadonlySet<string>,
-) {
+function assertIsolatedPreviewOrigin(source: EnvironmentSource, environment: HomeownerEnvironment,
+  origins: ReadonlySet<string>) {
   if (environment !== "preview") return;
-  // Preview is pinned to one branch URL. Never derive CORS trust from request
-  // Host/Origin headers, and fail closed if Vercel omits or changes its value.
-  if (source.VERCEL !== "1" || source.VERCEL_ENV !== "preview"
-    || source.VERCEL_TARGET_ENV !== "preview"
+  if (source.VERCEL !== "1" || source.VERCEL_ENV !== "preview" || source.VERCEL_TARGET_ENV !== "preview"
     || source.VERCEL_GIT_COMMIT_REF !== PAINT_GUIDE_ISOLATED_PREVIEW_BRANCH
     || source.VERCEL_BRANCH_URL !== PAINT_GUIDE_ISOLATED_PREVIEW_HOST
     || origins.size !== 1 || !origins.has(PAINT_GUIDE_ISOLATED_PREVIEW_ORIGIN)) {
@@ -203,7 +200,9 @@ export function loadPaintGuideServerEnvironment(
     const actorId = requiredValue(source, "TAURO_PG_SYNTHETIC_RELEASE_ACTOR_ID");
     const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
     if (!uuid.test(guideId) || !uuid.test(actorId) || guideId === actorId) throw new HomeownerEnvironmentError();
-    syntheticRelease = { guideId, actorId };
+    if (expectedProjectRef !== QA_DEV_PROJECT_REF || guideId !== QA_DIAGNOSTIC_GUIDE_ID
+      || actorId !== QA_SYNTHETIC_ACTOR_ID) throw new HomeownerEnvironmentError();
+    syntheticRelease = { guideId, actorId, additionalGuideIds: [QA_MODEL_GUIDE_ID] };
   } else if (source.TAURO_PG_PREVIEW_SYNTHETIC_RELEASE_ENABLED !== undefined) {
     throw new HomeownerEnvironmentError();
   }
@@ -246,3 +245,4 @@ export function loadHomeownerServerEnvironment(
     ),
   };
 }
+

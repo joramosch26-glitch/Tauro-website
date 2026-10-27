@@ -4,13 +4,14 @@ import { homeownerJsonResponse, homeownerUnavailableResponse } from "./responses
 import { readHomeownerDocument, type HomeownerDocumentReadInput, type HomeownerDocumentReadResult } from "./rpc.js";
 import { deriveSessionHmac, parseHomeownerSessionBearer } from "./sessions.js";
 import type { HomeownerServerEnvironment } from "./types.js";
+import type { HomeownerGuideDocumentData } from "./document.js";
 import { permitsSyntheticReleaseDocument, readSyntheticReleasePhotos, type SyntheticReleasePhoto } from "./release-gate.js";
 
 type HomeownerDocumentDependencies = {
   loadEnvironment?: () => HomeownerServerEnvironment;
   readDocument?: (environment: HomeownerServerEnvironment, input: HomeownerDocumentReadInput) => Promise<HomeownerDocumentReadResult>;
   permitsReleaseDocument?: typeof permitsSyntheticReleaseDocument;
-  readSyntheticPhotos?: (environment: HomeownerServerEnvironment) => Promise<SyntheticReleasePhoto[] | null>;
+  readSyntheticPhotos?: (environment: HomeownerServerEnvironment, document: HomeownerGuideDocumentData) => Promise<SyntheticReleasePhoto[] | null>;
 };
 
 function unavailableWithClearedSession(environment: HomeownerServerEnvironment) {
@@ -43,8 +44,8 @@ export function createHomeownerDocumentHandler(dependencies: HomeownerDocumentDe
         || !await (dependencies.permitsReleaseDocument ?? permitsSyntheticReleaseDocument)(environment, outcome.document)) {
         return unavailableWithClearedSession(environment);
       }
-      if (environment.environment === "preview" && environment.syntheticRelease) {
-        const photos = await (dependencies.readSyntheticPhotos ?? readSyntheticReleasePhotos)(environment);
+      if (environment.environment === "preview" && environment.syntheticRelease && outcome.document.photos === undefined) {
+        const photos = await (dependencies.readSyntheticPhotos ?? readSyntheticReleasePhotos)(environment, outcome.document);
         if (photos === null) return unavailableWithClearedSession(environment);
         return homeownerJsonResponse({ ...outcome.document, photos });
       }
@@ -54,3 +55,4 @@ export function createHomeownerDocumentHandler(dependencies: HomeownerDocumentDe
     }
   };
 }
+

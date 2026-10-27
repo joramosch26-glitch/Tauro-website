@@ -6,6 +6,7 @@ import { readHomeownerSessionCookie } from "../paint-guide-homeowner/cookies.js"
 import { deriveSessionHmac, parseHomeownerSessionBearer } from "../paint-guide-homeowner/sessions.js";
 import { homeownerJsonResponse, homeownerNoContentResponse } from "../paint-guide-homeowner/responses.js";
 import type { HomeownerServerEnvironment, PaintGuideServerEnvironment } from "../paint-guide-homeowner/types.js";
+import { syntheticReleaseAllowsGuide } from "../paint-guide-homeowner/synthetic-release.js";
 import { requirePaintGuideStaff, paintGuideStaffFailureResponse, type PaintGuideStaffRole } from "../paint-guide-staff/auth.js";
 import { normalizeFormulaLabel, normalizePhoto, FORMULA_LABEL_LIMITS, PHOTO_LIMITS, PhotoInputError, verifyNormalizedWebp } from "./images.js";
 
@@ -38,12 +39,12 @@ function syntheticStaffAllowed(environment: PhotoEnv, staff: { userId: string; r
   if (environment.environment === "preview" && !environment.syntheticRelease) return false;
   const release = environment.syntheticRelease;
   return !release || (staff.role === "owner" && staff.userId === release.actorId
-    && (guideId === undefined || guideId === release.guideId));
+    && (guideId === undefined || syntheticReleaseAllowsGuide(environment, guideId)));
 }
 
 function syntheticGuideAllowed(environment: PhotoEnv, guideId: string) {
   if (environment.environment === "preview" && !environment.syntheticRelease) return false;
-  return !environment.syntheticRelease || guideId === environment.syntheticRelease.guideId;
+  return syntheticReleaseAllowsGuide(environment, guideId);
 }
 
 function createPhotoAdminClient(environment: PhotoEnv) {
@@ -525,3 +526,4 @@ export function createPhotoCleanupHandler(dependencies: HandlerDeps = {}) {
     return homeownerJsonResponse({ swept: count, claimed: jobs.length });
   };
 }
+

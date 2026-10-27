@@ -16,7 +16,7 @@ export type PaintGuideServerEnvironment = {
   environment: HomeownerEnvironment;
   allowedOrigins: ReadonlySet<string>;
   // Server-only, temporary canonical acceptance restriction. Never browser input.
-  syntheticRelease?: { guideId: string; actorId: string };
+  syntheticRelease?: { guideId: string; actorId: string; additionalGuideIds?: readonly string[] };
 };
 
 export type HomeownerServerEnvironment = PaintGuideServerEnvironment & {
@@ -26,3 +26,4 @@ export type HomeownerServerEnvironment = PaintGuideServerEnvironment & {
 };
 
 export type EnvironmentSource = Readonly<Record<string, string | undefined>>;
+
