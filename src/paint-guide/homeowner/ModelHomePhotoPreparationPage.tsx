@@ -24,12 +24,16 @@ const RECORDS = [
   { id: "dab05ce9-292c-42e3-8364-7b903df7e1f4", name: "Theater Walls - Kendall Charcoal, Matte", color: "#4a4a45" },
   { id: "713099a8-c0e3-475c-a815-6a76ad8374bc", name: "Garage Walls - Pure White, Satin", color: "#f5f5ef" },
   { id: "5154f6a0-8f4b-4b0c-b0b2-196dc0712de1", name: "Front Door - Iron Ore, Matte", color: "#3d3e3e" },
+  { id: "0a535e9f-e7b7-4bcc-ac70-0274185a30ba", name: "Theater Trim - Kendall Charcoal, Matte", color: "#4a4a45" },
+  { id: "36bd5f19-4276-41a7-b297-a8d20737618b", name: "Theater Interior Doors - Kendall Charcoal, Matte", color: "#4a4a45" },
 ] as const;
 const ASSIGNMENTS = [
   [RECORDS[0], LOCATIONS[0]], [RECORDS[0], LOCATIONS[1]], [RECORDS[0], LOCATIONS[2]],
   [RECORDS[1], LOCATIONS[0]], [RECORDS[1], LOCATIONS[1]], [RECORDS[1], LOCATIONS[2]],
-  ...LOCATIONS.map((location) => [RECORDS[2], location] as const),
-  ...LOCATIONS.slice(0, 5).map((location) => [RECORDS[3], location] as const),
+  ...LOCATIONS.filter((_, index) => index !== 3).map((location) => [RECORDS[2], location] as const),
+  [RECORDS[7], LOCATIONS[3]],
+  ...LOCATIONS.filter((_, index) => index !== 3 && index !== 5).map((location) => [RECORDS[3], location] as const),
+  [RECORDS[8], LOCATIONS[3]],
   [RECORDS[4], LOCATIONS[3]], [RECORDS[5], LOCATIONS[4]], [RECORDS[6], LOCATIONS[5]],
 ] as const;
 
@@ -160,7 +164,7 @@ export function ModelHomePhotoPreparationPage() {
       </form> : <div className="mt-6 grid gap-5">
         <div className="flex flex-wrap gap-3"><button className="border px-4 py-3 text-sm font-semibold" disabled={busyKey !== null} onClick={() => void refresh()}>Refresh all model photos</button><button className="border px-4 py-3 text-sm font-semibold" disabled={busyKey !== null} onClick={() => void issueHomeownerLink()}>Issue private model-home link</button><button className="border px-4 py-3 text-sm font-semibold" disabled={busyKey !== null} onClick={() => void signOut()}>Sign out</button></div>
         {privateLink ? <button className="w-fit border border-[#9b6b36] bg-[#9b6b36] px-5 py-3 text-sm font-semibold text-white" onClick={() => { const link = privateLink; setPrivateLink(null); window.location.assign(link); }}>Open private homeowner guide</button> : null}
-        <p className="text-sm font-semibold">Photo checklist ({TARGETS.length} slots): one cover, six room overviews, twenty assignment-specific painted-surface details, and seven clearly synthetic sample labels.</p>
+        <p className="text-sm font-semibold">Photo checklist ({TARGETS.length} slots): one cover, six room overviews, twenty assignment-specific painted-surface details, and nine clearly synthetic sample labels.</p>
         <div className="grid gap-3">{TARGETS.map((target) => {
           const current = photos.find((photo) => photo.placement === target.placement && photo.locationId === (target.locationId ?? null) && photo.recordId === (target.recordId ?? null))?.photo;
           return <article className="grid gap-2 border border-[#20211f]/15 p-4 sm:grid-cols-[1fr_auto] sm:items-center" key={target.key}>
