@@ -36,7 +36,7 @@ globalThis.fetch=async (url,options)=>{
 qa.release=()=>{qa.holdWrites=false;qa.held.splice(0).forEach(fn=>fn());};
 qa.from=table=>{
  let op='select',payload,one=false,filters=[];
- const q={select(){return q;},order(){return q;},eq(k,v){filters.push(row=>row[k]===v);return q;},in(k,v){filters.push(row=>v.includes(row[k]));return q;},maybeSingle(){one=true;return q;},single(){one=true;return q;},insert(p){op='insert';payload=p;return q;},update(p){op='update';payload=p;return q;},delete(){op='delete';return q;},then(resolve,reject){
+ const q={select(){return q;},order(){return q;},eq(k,v){filters.push(row=>row[k]===v);return q;},in(k,v){filters.push(row=>v.includes(row[k]));return q;},limit(){return Promise.resolve({data:[],error:null});},maybeSingle(){one=true;return q;},single(){one=true;return q;},insert(p){op='insert';payload=p;return q;},update(p){op='update';payload=p;return q;},delete(){op='delete';return q;},then(resolve,reject){
   qa.calls.push({table,op});
   const execute=()=>{
    const match=row=>filters.every(f=>f(row));
@@ -116,7 +116,8 @@ test('color catalog search is brand scoped, selection fills only the color ident
   await p.getByLabel('Brand',{exact:true}).fill('Sherwin-Williams');
   await p.getByLabel('Product',{exact:true}).fill('SuperPaint');
   await p.getByLabel('Sheen',{exact:true}).fill('Satin');
-  await p.getByLabel('Color-origin brand',{exact:true}).selectOption('benjamin-moore');
+  const catalogBrand=p.getByLabel('Color-origin brand');
+  await catalogBrand.selectOption('benjamin-moore');
   await p.getByLabel('Search name or code',{exact:true}).fill('White Dove');
   await p.getByRole('button',{name:'Search',exact:true}).click();
   await p.getByRole('list',{name:'Color reference results'}).waitFor();
@@ -130,7 +131,7 @@ test('color catalog search is brand scoped, selection fills only the color ident
   assert.equal(await p.getByLabel('Brand',{exact:true}).inputValue(),'Sherwin-Williams');
   assert.equal(await p.getByLabel('Product',{exact:true}).inputValue(),'SuperPaint');
   assert.equal(await p.getByLabel('Sheen',{exact:true}).inputValue(),'Satin');
-  assert.match(await p.getByRole('status').allTextContents().then(text=>text.join(' ')),/Approximate swatch #EFEEE5/);
+  assert.match(await p.getByRole('status').allTextContents().then(text=>text.join(' ')),/Selected approximate swatch #EFEEE5/);
 }));
 test('late color create cannot contaminate B or keep its create button pending',async()=>pageAt('/paint-guide/g/A/colors',async p=>{
   await readyColor(p);await p.getByRole('button',{name:'Add Paint Record',exact:true}).click();

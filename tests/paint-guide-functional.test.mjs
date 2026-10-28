@@ -10,22 +10,28 @@ const slot = '__tauroPilotFunctionalClient';
 function setup(responses) {
   planned = [...responses]; calls = [];
   globalThis[slot] = { from(table) {
-    const response = planned.shift();
-    assert.ok(response, 'Unexpected database operation');
-    assert.equal(table, response.table);
-    const trace = { table, steps: [] }; calls.push(trace);
+    const trace = { table, steps: [] };
+    let isSchemaProbe = false;
     const query = {};
     for (const method of ['select', 'insert', 'update', 'delete', 'eq', 'in', 'order', 'single', 'maybeSingle']) {
       query[method] = (...args) => { trace.steps.push([method, ...args]); return query; };
     }
-    query.then = (resolve, reject) => Promise.resolve(response.result).then(resolve, reject);
+    query.limit = (count) => { trace.steps.push(['limit', count]); isSchemaProbe = true; return query; };
+    query.then = (resolve, reject) => {
+      if (isSchemaProbe) return Promise.resolve({ error: null }).then(resolve, reject);
+      const response = planned.shift();
+      assert.ok(response, 'Unexpected database operation');
+      assert.equal(table, response.table);
+      calls.push(trace);
+      return Promise.resolve(response.result).then(resolve, reject);
+    };
     return query;
   } };
 }
 const result = (table, data, error = null) => ({ table, result: { data, error } });
 const steps = (method) => calls.flatMap(c => c.steps.filter(s => s[0] === method));
 const guideId = 'synthetic-guide', recordId = 'synthetic-record';
-const recordInput = { section: 'exception', surface: ' Walls ', colorName: ' White ', brand: ' ', product: ' Primer ', colorCode: '', sheen: ' Satin ', notes: ' ', sortOrder: 10 };
+const recordInput = { section: 'exception', surface: ' Walls ', colorName: ' White ', brand: ' ', product: ' Primer ', colorCode: '', swatchHex: '', swatchProvenance: '', colorOriginBrand: '', colorReferenceHex: '', colorReferenceProvider: '', colorReferenceId: '', colorReferenceUrl: '', colorReferenceRetrievedAt: '', sheen: ' Satin ', notes: ' ', sortOrder: 10 };
 before(async () => {
   server = await createServer({ configFile: false, envFile: false, optimizeDeps: { noDiscovery: true, include: [] },
     server: { middlewareMode: true, watch: null }, plugins: [{ name: 'synthetic-pilot-client', enforce: 'pre',
@@ -46,9 +52,9 @@ test('guide create/edit persist draft, status, optional note and exact guide ide
   setup([result('paint_guides', created), result('paint_guides', edited), result('paint_guides', edited)]);
   assert.deepEqual(await guides.createPaintGuide({ residenceName: created.residence_name, primaryScopeNote: '' }), created);
   assert.deepEqual(await guides.updatePaintGuide(guideId, { residenceName: created.residence_name, primaryScopeNote: 'Walls only', status: 'published' }), edited);
-  assert.deepEqual(await guides.getPaintGuide(guideId), edited);
+  assert.deepEqual(await guides.getPaintGuide(guideId), { ...edited, homeowner_design_fields_available: true });
   assert.deepEqual(steps('insert'), [['insert', { residence_name: 'Synthetic home', primary_scope_note: null, status: 'draft' }]]);
-  assert.deepEqual(steps('update'), [['update', { residence_name: 'Synthetic home', primary_scope_note: 'Walls only', status: 'published' }]]);
+  assert.deepEqual(steps('update'), [['update', { residence_name: 'Synthetic home', primary_scope_note: 'Walls only', status: 'published', city: null, state: null, property_type: null }]]);
   assert.deepEqual(steps('eq'), [['eq', 'id', guideId], ['eq', 'id', guideId]]);
   assert.equal(planned.length, 0);
 });
@@ -57,7 +63,7 @@ test('guide absent/empty results and denied writes do not become successful save
   const denied = new Error('Synthetic permission denied');
   setup([result('paint_guides', null), result('paint_guides', null), result('paint_guides', null, denied), result('paint_guides', null)]);
   assert.equal(await guides.getPaintGuide(guideId), null);
-  assert.deepEqual(await guides.listPaintGuides(), []);
+  assert.equal((await guides.listPaintGuides()).length, 0);
   await assert.rejects(guides.createPaintGuide({ residenceName: 'Synthetic', primaryScopeNote: '' }), e => e === denied);
   await assert.rejects(guides.updatePaintGuide(guideId, { residenceName: 'Synthetic', primaryScopeNote: '', status: 'draft' }), /Could not save/);
 });
@@ -79,7 +85,7 @@ test('paint record writes normalize text and null optionals while preserving sec
   await records.createPaintRecord(guideId, recordInput);
   await records.updatePaintRecord(guideId, recordId, { ...recordInput, section: 'additional' });
   await records.deletePaintRecord(guideId, recordId);
-  const expected = { section: 'exception', surface: 'Walls', color_name: 'White', brand: null, product: 'Primer', color_code: null, sheen: 'Satin', notes: null, sort_order: 10 };
+  const expected = { section: 'exception', surface: 'Walls', color_name: 'White', brand: null, product: 'Primer', color_code: null, swatch_hex: null, swatch_provenance: null, sheen: 'Satin', notes: null, sort_order: 10 };
   assert.deepEqual(steps('insert'), [['insert', { guide_id: guideId, ...expected }]]);
   assert.deepEqual(steps('update'), [['update', { ...expected, section: 'additional' }]]);
   for (const call of calls.slice(1)) assert.deepEqual(call.steps.filter(s => s[0] === 'eq'), [['eq', 'id', recordId], ['eq', 'guide_id', guideId]]);

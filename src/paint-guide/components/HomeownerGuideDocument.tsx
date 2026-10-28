@@ -1,5 +1,5 @@
 import { ChevronRight, ImageOff, Layers3 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { GuideLanding } from "./GuideLanding";
 import {
   buildHomeownerGuidePresentation,
@@ -14,22 +14,17 @@ import type {
 import { verifiedRoomSwatchFor, type VerifiedRoomSwatch } from "../presentation/room-presentation";
 import { approximateCatalogSwatchForRecord, verifiedSwatchForRecord } from "../presentation/homeowner-features";
 import { ColorReferenceRows } from "./ColorReferenceRows.js";
+import { HomeownerPrivateImage } from "./HomeownerPrivateImage.js";
 
 function RoomContextPhoto({
   photoUrl,
-  locationId,
-  data,
 }: {
   photoUrl?: string;
-  locationId: string;
-  data: HomeownerGuideDocumentData;
 }) {
-  const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   const src = photoUrl?.trim() || null;
-  useEffect(() => setFailedPhotoUrl(null), [data, locationId, src]);
-  return src && failedPhotoUrl !== src ? (
-    <div className="pg-room-paint-context" aria-hidden="true">
-      <img src={src} alt="" onError={() => setFailedPhotoUrl(src)} />
+  return src ? (
+    <div className="pg-room-paint-context">
+      <HomeownerPrivateImage src={src} alt="" loading="lazy" />
     </div>
   ) : (
     <div className="pg-room-paint-context pg-room-paint-context--empty" aria-hidden="true">
@@ -41,15 +36,11 @@ function RoomContextPhoto({
 
 function RoomPaintCard({
   record,
-  data,
-  locationId,
   photoUrl,
   formulaLabelPhotoUrls,
   verifiedSwatches,
 }: {
   record: HomeownerPaintRecord;
-  data: HomeownerGuideDocumentData;
-  locationId: string;
   photoUrl?: string;
   formulaLabelPhotoUrls: readonly string[];
   verifiedSwatches: readonly VerifiedRoomSwatch[];
@@ -64,7 +55,7 @@ function RoomPaintCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   return (
     <article className="pg-room-paint-card" data-paint-record-id={record.id}>
-      <RoomContextPhoto data={data} locationId={locationId} photoUrl={photoUrl} />
+      <RoomContextPhoto photoUrl={photoUrl} />
       <div className="pg-room-paint-main">
         <div className="pg-room-paint-top">
           <div className="pg-room-paint-title">
@@ -107,9 +98,7 @@ function RoomPaintCard({
 function FormulaLabelPhotos({ record, urls }: { record: HomeownerPaintRecord; urls: readonly string[] }) {
   return urls.length ? <div className="pg-formula-label-list">
     {urls.map((url, index) => <figure key={`${url}-${index}`}>
-      <a href={url} target="_blank" rel="noopener noreferrer" aria-label={`Open formula label photo ${index + 1} for ${record.color_name} full size`}>
-        <img src={url} loading="lazy" alt={`Formula-label image for ${record.color_name}, photo ${index + 1}`} />
-      </a>
+      <HomeownerPrivateImage src={url} loading="lazy" alt={`Formula-label image for ${record.color_name}, photo ${index + 1}`} />
       <figcaption><a href={url} target="_blank" rel="noopener noreferrer">Open full-size label photo</a></figcaption>
     </figure>)}
   </div> : <p className="pg-formula-label-pending" role="status">Formula label photo pending. A clear photo of the real can sticker will be added here.</p>;
@@ -406,8 +395,6 @@ export function HomeownerGuideDocument({ data, heroImageUrl, roomPhotoUrls, reco
       return <div className="pg-room-paint-list">
         {records.map(record => <RoomPaintCard
           key={record.id}
-          data={data}
-          locationId={locationId}
           photoUrl={recordPhotoUrls?.[locationId]?.[record.id]?.trim() || roomPhotoUrls?.[locationId]}
           formulaLabelPhotoUrls={formulaLabelPhotoUrls[record.id] ?? []}
           record={record}

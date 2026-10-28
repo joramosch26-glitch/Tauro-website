@@ -7,6 +7,7 @@ import { deriveSessionHmac, parseHomeownerSessionBearer } from "../paint-guide-h
 import { homeownerJsonResponse, homeownerNoContentResponse } from "../paint-guide-homeowner/responses.js";
 import type { HomeownerServerEnvironment, PaintGuideServerEnvironment } from "../paint-guide-homeowner/types.js";
 import { syntheticReleaseAllowsGuide } from "../paint-guide-homeowner/synthetic-release.js";
+import { validateHomeownerGuideDocument } from "../paint-guide-homeowner/document.js";
 import { requirePaintGuideStaff, paintGuideStaffFailureResponse, type PaintGuideStaffRole } from "../paint-guide-staff/auth.js";
 import { normalizeFormulaLabel, normalizePhoto, FORMULA_LABEL_LIMITS, PHOTO_LIMITS, PhotoInputError, verifyNormalizedWebp } from "./images.js";
 
@@ -16,6 +17,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const PHOTO_CLEANUP_BATCH_SIZE = 10;
 const PHOTO_CLEANUP_CONCURRENCY = 5;
 const PHOTO_UPLOAD_BODY_TIMEOUT_MS = 20_000;
+const homeownerPhotoSessionChecks = new Map<string, Promise<{ data: unknown; error: unknown }>>();
 
 type PhotoEnv = PaintGuideServerEnvironment | HomeownerServerEnvironment;
 type HandlerDeps = {
@@ -400,6 +402,50 @@ async function fetchImage(client: SupabaseClient, metadata: PhotoMetadata, varia
   return bytes;
 }
 
+type HomeownerImageRead = { kind: "ready"; bytes: Buffer } | { kind: "missing" } | { kind: "temporary" };
+async function fetchHomeownerImage(client: SupabaseClient, metadata: PhotoMetadata, variant: string): Promise<HomeownerImageRead> {
+  const bucket = variant === "full" || variant === "thumb" ? PHOTO_BUCKET : null;
+  const maximumBytes = variant === "full" ? FORMULA_LABEL_LIMITS.fullBytes : PHOTO_LIMITS.thumbBytes;
+  if (!bucket || metadata.content_length > maximumBytes) return { kind: "missing" };
+  try {
+    const result = await client.storage.from(bucket).download(metadata.object_key);
+    if (result.error) {
+      const status = "statusCode" in result.error ? String(result.error.statusCode) : "";
+      return status === "404" ? { kind: "missing" } : { kind: "temporary" };
+    }
+    if (!result.data) return { kind: "missing" };
+    const bytes = Buffer.from(await result.data.arrayBuffer());
+    if (bytes.length !== metadata.content_length || bytes.length > maximumBytes) return { kind: "missing" };
+    return { kind: "ready", bytes };
+  } catch { return { kind: "temporary" }; }
+}
+
+function homeownerPhotoUnavailableSession() {
+  // Do not clear the shared session cookie from an image response. A late 401
+  // for an old request could otherwise erase a newer session cookie set by an
+  // exchange that completed while this photo request was in flight.
+  return homeownerJsonResponse({ available: false }, { status: 401 });
+}
+
+async function checkHomeownerPhotoSession(
+  environment: HomeownerServerEnvironment,
+  client: SupabaseClient,
+  sessionKeyVersion: number,
+  sessionHmac: Buffer,
+) {
+  const checkKey = `${environment.environment}:${environment.expectedProjectRef}:${sessionKeyVersion}:${sessionHmac.toString("hex")}`;
+  let check = homeownerPhotoSessionChecks.get(checkKey);
+  if (!check) {
+    check = Promise.resolve(client.rpc("paint_guide_homeowner_document_read", {
+      p_session_key_version: sessionKeyVersion,
+      p_session_hmac: `\\x${sessionHmac.toString("hex")}`,
+    })).then(({ data, error }) => ({ data, error }));
+    homeownerPhotoSessionChecks.set(checkKey, check);
+  }
+  try { return await check; }
+  finally { if (homeownerPhotoSessionChecks.get(checkKey) === check) homeownerPhotoSessionChecks.delete(checkKey); }
+}
+
 function versionIdFromRequest(request: Request) {
   const match = /\/photos\/([0-9a-f-]{36})\/?$/i.exec(new URL(request.url).pathname);
   return match && UUID.test(match[1]) ? match[1] : null;
@@ -445,24 +491,42 @@ export function createHomeownerPhotoReadHandler(dependencies: HandlerDeps = {}) 
     let variant = "full";
     try {
       const raw = readHomeownerSessionCookie(request);
-      if (!raw) return unavailable();
-      const bearer = parseHomeownerSessionBearer(raw);
+      if (!raw) return homeownerPhotoUnavailableSession();
+      let bearer;
+      try { bearer = parseHomeownerSessionBearer(raw); }
+      catch { return homeownerPhotoUnavailableSession(); }
       version = versionIdFromRequest(request);
       variant = new URL(request.url).searchParams.get("variant") ?? "full";
       if (!version || !["full", "thumb"].includes(variant)) return unavailable();
-      const hmac = deriveSessionHmac(bearer, environment.expectedProjectRef, environment.sessionHmacKeys);
+      let hmac: Buffer;
+      try { hmac = deriveSessionHmac(bearer, environment.expectedProjectRef, environment.sessionHmacKeys); }
+      catch { return unavailable(503); }
       const client = createClient(environment);
       const { data, error } = await client.rpc("paint_guide_homeowner_photo_read", {
         p_session_key_version: bearer.sessionKeyVersion, p_session_hmac: `\\x${hmac.toString("hex")}`,
         p_version: version, p_variant: variant,
       });
-      const metadata = error ? null : metadataRow(data);
-      if (!metadata || !syntheticGuideAllowed(environment, metadata.guide_id)) return unavailable();
+      if (error) return unavailable(503);
+      const metadata = metadataRow(data);
+      if (!metadata) {
+        const emptyPhotoResult = data === null || (Array.isArray(data) && data.length === 0);
+        if (!emptyPhotoResult) return unavailable(503);
+        // The photo RPC intentionally returns no row for both an invalid private
+        // session and a stale photo ID. Resolve that ambiguity only on this error
+        // path; never return document contents or extend the session.
+        const sessionCheck = await checkHomeownerPhotoSession(environment, client, bearer.sessionKeyVersion, hmac);
+        if (sessionCheck.error) return unavailable(503);
+        if (sessionCheck.data === null) return homeownerPhotoUnavailableSession();
+        if (!validateHomeownerGuideDocument(sessionCheck.data)) return unavailable(503);
+        return unavailable(404);
+      }
+      if (!syntheticGuideAllowed(environment, metadata.guide_id)) return unavailable(404);
       if (request.method === "HEAD") return imageResponse(request, metadata);
-      const bytes = await fetchImage(client, metadata, variant);
-      if (!bytes) return unavailable();
-      return imageResponse(request, metadata, bytes);
-    } catch { return unavailable(); }
+      const image = await fetchHomeownerImage(client, metadata, variant);
+      if (image.kind === "temporary") return unavailable(503);
+      if (image.kind === "missing") return unavailable(404);
+      return imageResponse(request, metadata, image.bytes);
+    } catch { return unavailable(503); }
   };
 }
 

@@ -8,6 +8,7 @@ import {
 import { exchangeHomeownerToken, fetchHomeownerDocument } from "../src/paint-guide/homeowner/client.js";
 import { parseHomeownerGuideDocument } from "../src/paint-guide/homeowner/document.js";
 import { buildHomeownerPhotoSources } from "../src/paint-guide/homeowner/photo-sources.js";
+import { fetchHomeownerPhotoBlob, HomeownerPhotoError } from "../src/paint-guide/homeowner/private-photo-client.js";
 import { buildStaffPreviewPhotoSources, loadStaffPreviewPhotosProgressively } from "../src/paint-guide/staff/preview-photo-sources.js";
 import { loadGuidePreviewData } from "../src/paint-guide/staff/guide-preview-loader.js";
 import { captureHomeownerFragment } from "../src/paint-guide/homeowner/fragment.js";
@@ -437,4 +438,31 @@ test("homeowner client accepts SQL-null catalog reference fields beside a select
   assert.equal(parsed?.records.length, 2);
   assert.equal(parsed?.records[0].color_reference_hex, "#EFEEE5");
   assert.equal(parsed?.records[1].color_origin_brand, null);
+});
+
+test("private homeowner photo loader distinguishes ended sessions, absent photos, and temporary failures", async () => {
+  const controller = new AbortController();
+  let requested = "";
+  const ok = await fetchHomeownerPhotoBlob("/api/paint-guide/homeowner/photos/synthetic", controller.signal, async (input, init) => {
+    requested = String(input);
+    assert.equal(init?.credentials, "same-origin");
+    assert.equal(init?.cache, "no-store");
+    assert.equal(init?.referrerPolicy, "no-referrer");
+    assert.equal(init?.redirect, "error");
+    assert.equal(init?.priority, "high");
+    return new Response(new Blob(["synthetic-image"]), { headers: { "content-type": "image/webp" } });
+  }, "high");
+  assert.equal(requested, "/api/paint-guide/homeowner/photos/synthetic");
+  assert.equal(await ok.text(), "synthetic-image");
+
+  for (const [status, kind] of [[401, "session_unavailable"], [404, "missing"], [503, "temporary"]] as const) {
+    await assert.rejects(
+      fetchHomeownerPhotoBlob("/synthetic", controller.signal, async () => new Response(null, { status })),
+      error => error instanceof HomeownerPhotoError && error.kind === kind,
+    );
+  }
+  await assert.rejects(
+    fetchHomeownerPhotoBlob("/synthetic", controller.signal, async () => new Response("not-image", { headers: { "content-type": "text/html" } })),
+    error => error instanceof HomeownerPhotoError && error.kind === "temporary",
+  );
 });
