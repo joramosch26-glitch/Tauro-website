@@ -26,7 +26,7 @@ function parseRecord(value: unknown): HomeownerPaintRecord | null {
   const validCatalogHex = colorReferenceHex === undefined || colorReferenceHex === null || /^#[\da-f]{6}$/i.test(colorReferenceHex);
   const catalogFields = ["color_origin_brand", "color_reference_hex", "color_reference_provider", "color_reference_url", "color_reference_retrieved_at"];
   const hasCatalogReference = catalogFields.some((key) => hasOwn(value, key));
-  const validCatalogShape = !hasCatalogReference || catalogFields.every((key) => hasOwn(value, key) && nullableString(value[key]));
+  const validCatalogShape = !hasCatalogReference || catalogFields.every((key) => hasOwn(value, key) && nullableString(value[key]) !== undefined);
   const validCatalogValues = !hasCatalogReference
     || (colorOriginBrand === null && colorReferenceHex === null && colorReferenceProvider === null && colorReferenceUrl === null && colorReferenceRetrievedAt === null)
     || (typeof colorOriginBrand === "string" && ["Sherwin-Williams", "Benjamin Moore", "Farrow & Ball"].includes(colorOriginBrand)
