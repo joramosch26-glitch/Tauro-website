@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { propertyFieldsToPersist, propertyMetadata, roomNotesFieldToPersist, roomNotesForLocation, verifiedSwatchFieldsToPersist, verifiedSwatchForRecord } from "./homeowner-features.ts";
-import { assertHomeownerDesignSchemaAvailable, HomeownerDesignMigrationRequiredError, homeownerDesignErrorMessage, normalizeHomeownerDesignDatabaseError, queryWithLegacyDesignColumns } from "../data/homeowner-design-schema.ts";
+import { propertyFieldsToPersist, propertyMetadata, roomNotesFieldToPersist, roomNotesForLocation, verifiedSwatchFieldsToPersist, verifiedSwatchForRecord } from "../src/paint-guide/presentation/homeowner-features.js";
+import { assertHomeownerDesignSchemaAvailable, HomeownerDesignMigrationRequiredError, homeownerDesignErrorMessage, normalizeHomeownerDesignDatabaseError, queryWithLegacyDesignColumns } from "../src/paint-guide/data/homeowner-design-schema.js";
 
 test("property row uses only configured values and keeps legacy documents empty", () => {
   assert.deepEqual(propertyMetadata({ residence_name: "Sample", primary_scope_note: null }), { place: null, propertyType: null });
@@ -37,7 +37,8 @@ test("missing new design columns fail closed with a migration-required message",
   const error = { code: "42703", message: "column guide_locations.room_notes does not exist" };
   assert.ok(normalizeHomeownerDesignDatabaseError(error) instanceof HomeownerDesignMigrationRequiredError);
   assert.match(homeownerDesignErrorMessage(error, "generic"), /apply the homeowner design migration/i);
-  assert.equal(normalizeHomeownerDesignDatabaseError({ code: "42501", message: "permission denied" }).constructor, Object);
+  const permissionError = { code: "42501", message: "permission denied" };
+  assert.equal(normalizeHomeownerDesignDatabaseError(permissionError), permissionError);
 });
 
 test("schema preflight checks all new columns before a caller can mutate", async () => {
@@ -51,18 +52,20 @@ test("schema preflight checks all new columns before a caller can mutate", async
 
 test("legacy reads retry only missing-column errors and preserve permission failures", async () => {
   let legacyReads = 0;
-  const fallback = await queryWithLegacyDesignColumns(
+  type QueryResult = { data: Array<{ residence_name: string }> | null; error: { code: string; message: string } | null };
+  const fallback = await queryWithLegacyDesignColumns<QueryResult>(
     async () => ({ data: null, error: { code: "42703", message: "column paint_guides.city does not exist" } }),
     async () => { legacyReads++; return { data: [{ residence_name: "Existing synthetic guide" }], error: null }; },
   );
   assert.equal(fallback.designFieldsAvailable, false);
-  assert.equal(fallback.result.data[0].residence_name, "Existing synthetic guide");
+  assert.equal(fallback.result.data?.[0]?.residence_name, "Existing synthetic guide");
   assert.equal(legacyReads, 1);
 
-  const permissionRead = queryWithLegacyDesignColumns(
+  const permissionRead = queryWithLegacyDesignColumns<QueryResult>(
     async () => ({ data: null, error: { code: "42501", message: "permission denied" } }),
     async () => { legacyReads++; return { data: [], error: null }; },
   );
   await assert.rejects(permissionRead, (error: { code?: string }) => error.code === "42501");
   assert.equal(legacyReads, 1);
 });
+

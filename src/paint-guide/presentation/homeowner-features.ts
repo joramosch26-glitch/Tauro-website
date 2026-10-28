@@ -1,4 +1,4 @@
-import type { HomeownerGuide, HomeownerGuideLocation, HomeownerPaintRecord } from "./types";
+import type { HomeownerGuide, HomeownerGuideLocation, HomeownerPaintRecord } from "./types.js";
 
 export function propertyMetadata(guide: HomeownerGuide) {
   const place = [guide.city?.trim(), guide.state?.trim()].filter((value): value is string => Boolean(value));
@@ -36,3 +36,4 @@ export function verifiedSwatchFieldsToPersist(input: { swatchHex: string; swatch
   }
   return { swatch_hex: swatchHex || null, swatch_provenance: swatchProvenance || null };
 }
+

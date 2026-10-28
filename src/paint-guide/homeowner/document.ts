@@ -3,6 +3,9 @@ import type { HomeownerGuideDocumentData, HomeownerGuideLocation, HomeownerGuide
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);
 }
+function hasOwn(value: Record<string, unknown>, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key);
+}
 function requiredString(value: unknown) { return typeof value === "string" ? value : null; }
 function nullableString(value: unknown): string | null | undefined { return typeof value === "string" || value === null ? value : undefined; }
 function finiteNumber(value: unknown) { return typeof value === "number" && Number.isFinite(value) ? value : null; }
@@ -10,7 +13,7 @@ function parseLocation(value: unknown): HomeownerGuideLocation | null {
   if (!isRecord(value)) return null;
   const id = requiredString(value.id); const parentId = nullableString(value.parent_id); const name = requiredString(value.name); const sortOrder = finiteNumber(value.sort_order); const createdAt = requiredString(value.created_at);
   const roomNotes = nullableString(value.room_notes);
-  const validRoomNotesShape = !Object.hasOwn(value, "room_notes") || roomNotes !== undefined;
+  const validRoomNotesShape = !hasOwn(value, "room_notes") || roomNotes !== undefined;
   return id !== null && parentId !== undefined && name !== null && sortOrder !== null && createdAt !== null && validRoomNotesShape ? { id, parent_id: parentId, name, sort_order: sortOrder, created_at: createdAt, ...(roomNotes === undefined ? {} : { room_notes: roomNotes }) } : null;
 }
 function parseRecord(value: unknown): HomeownerPaintRecord | null {
@@ -19,7 +22,7 @@ function parseRecord(value: unknown): HomeownerPaintRecord | null {
   const validSection = section === "primary" || section === "exception" || section === "additional";
   const validHex = swatchHex === undefined || swatchHex === null || /^#[\da-f]{6}$/i.test(swatchHex);
   const validProvenancePair = (swatchHex == null) === (swatchProvenance == null);
-  const validSwatchShape = (!Object.hasOwn(value, "swatch_hex") && !Object.hasOwn(value, "swatch_provenance")) || (swatchHex !== undefined && swatchProvenance !== undefined);
+  const validSwatchShape = (!hasOwn(value, "swatch_hex") && !hasOwn(value, "swatch_provenance")) || (swatchHex !== undefined && swatchProvenance !== undefined);
   return id !== null && validSection && surface !== null && colorName !== null && brand !== undefined && product !== undefined && colorCode !== undefined && validSwatchShape && validHex && validProvenancePair && sheen !== undefined && notes !== undefined && sortOrder !== null && createdAt !== null ? { id, section: section as HomeownerPaintRecordSection, surface, brand, product, color_name: colorName, color_code: colorCode, ...(swatchHex === undefined ? {} : { swatch_hex: swatchHex }), ...(swatchProvenance === undefined ? {} : { swatch_provenance: swatchProvenance }), sheen, notes, sort_order: sortOrder, created_at: createdAt } : null;
 }
 function parseAssignment(value: unknown): HomeownerPaintRecordLocation | null {
@@ -59,3 +62,4 @@ export function parseHomeownerGuideDocument(value: unknown): HomeownerGuideDocum
     ? { guide: { residence_name: residenceName, primary_scope_note: primaryScopeNote, ...(city === undefined ? {} : { city }), ...(state === undefined ? {} : { state }), ...(propertyType === undefined ? {} : { property_type: propertyType }) }, locations, records, assignments, ...(photos === undefined ? {} : { photos }) }
     : null;
 }
+
