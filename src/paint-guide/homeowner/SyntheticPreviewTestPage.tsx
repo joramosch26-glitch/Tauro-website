@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { parseStaffPhotoListResponse, createStaffPhotoClient, type StaffPhotoPlacement } from "../staff/photo-client";
-import { requestStaffAccess } from "../staff/access-client";
+import { requestStaffAccess, StaffAccessClientError, type StaffAccessStatus } from "../staff/access-client";
 
 const ACTOR_ID = "e8fa431f-ea5c-46fb-b92c-6d5d213531bc";
 const GUIDE_ID = "b28d3dd5-eb34-46a2-99de-7af143de80db";
@@ -57,6 +57,7 @@ export function SyntheticPreviewTestPage() {
   const [message, setMessage] = useState("Sign in as the approved synthetic QA actor to test only its guide.");
   const [photos, setPhotos] = useState<StaffPhotoPlacement[]>([]);
   const [privateLink, setPrivateLink] = useState<string | null>(null);
+  const [homeownerAccessStatus, setHomeownerAccessStatus] = useState<StaffAccessStatus | null>(null);
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [lastUpload, setLastUpload] = useState<string | null>(null);
   const imageUrlRef = useRef<string | null>(null);
@@ -178,18 +179,46 @@ export function SyntheticPreviewTestPage() {
     } finally { setBusy(false); }
   };
 
-  const issueHomeownerLink = async () => {
+  const checkHomeownerLinkStatus = async () => {
     if (!accessToken) return;
     setBusy(true);
+    setPrivateLink(null);
+    setHomeownerAccessStatus(null);
     try {
-      const result = await requestStaffAccess("issue", accessToken, { guideId: GUIDE_ID });
+      const current = await requestStaffAccess("status", accessToken, { guideId: GUIDE_ID });
+      setHomeownerAccessStatus(current);
+      setMessage(current.guideStatus !== "published"
+        ? "The synthetic guide is not published. Status was checked only; no homeowner access was issued."
+        : current.accessState === "active"
+          ? "An existing synthetic homeowner link is active. You can recover the same link without issuing or rotating access."
+          : current.accessState === "revoked"
+            ? "Synthetic homeowner access is revoked. Recovery is unavailable; no access was issued."
+            : "No synthetic homeowner link was found. Recovery is disabled; no access was issued.");
+    } catch {
+      setHomeownerAccessStatus(null);
+      setMessage("Could not read synthetic homeowner-link status. No access was issued or changed.");
+    } finally { setBusy(false); }
+  };
+
+  const recoverExistingHomeownerLink = async () => {
+    if (!accessToken || homeownerAccessStatus?.accessState !== "active"
+      || homeownerAccessStatus.guideStatus !== "published" || !homeownerAccessStatus.homeownerExchangeAvailable) return;
+    setBusy(true);
+    setPrivateLink(null);
+    try {
+      const result = await requestStaffAccess("recover", accessToken, { guideId: GUIDE_ID });
       const link = result.privateUrl ? new URL(result.privateUrl) : null;
       if (!link || link.origin !== window.location.origin || link.pathname !== "/paint-guide/p"
         || !/^#tpgh1\.[1-9][0-9]*\.[A-Za-z0-9_-]{43}$/.test(link.hash)) throw new Error("link");
       setPrivateLink(link.href);
-      setMessage("A private homeowner link was issued for the synthetic guide. Open it to test token exchange and document access.");
+      setMessage("Existing synthetic homeowner link recovered in memory. No new link was issued or rotated.");
     } catch (error) {
-      setMessage(messageForStatus(Number((error as { status?: number }).status ?? 0)));
+      const status = error instanceof StaffAccessClientError ? error.status : null;
+      setMessage(status === 404
+        ? "No recoverable synthetic homeowner link exists. No new link was issued."
+        : status === 409
+          ? "Synthetic homeowner access is no longer active. No link was recovered or issued."
+          : "Could not recover the existing synthetic link. No new link was issued.");
     } finally { setBusy(false); }
   };
 
@@ -208,7 +237,8 @@ export function SyntheticPreviewTestPage() {
           <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy} onClick={() => void refreshPhotos()}>List synthetic photos</button>
           <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy} onClick={() => void uploadFormulaLabel()}>{lastUpload ? "Replace formula-label photo" : "Add formula-label photo"}</button>
           <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy || photos.length === 0} onClick={() => void readFormulaLabel()}>Read current private photo</button>
-          <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy} onClick={() => void issueHomeownerLink()}>Issue homeowner link</button>
+          <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy} onClick={() => void checkHomeownerLinkStatus()}>Check homeowner link status</button>
+          <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy || homeownerAccessStatus?.accessState !== "active" || homeownerAccessStatus.guideStatus !== "published" || !homeownerAccessStatus.homeownerExchangeAvailable} onClick={() => void recoverExistingHomeownerLink()}>Recover existing homeowner link</button>
           <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy} onClick={() => void signOut()}>Sign out</button>
         </div>
         {privateLink ? <button className="w-fit border border-[#9b6b36] bg-[#9b6b36] px-5 py-3 text-sm font-semibold text-white" onClick={() => { const link = privateLink; setPrivateLink(null); window.location.assign(link); }}>Open synthetic homeowner guide</button> : null}

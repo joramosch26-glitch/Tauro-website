@@ -9,10 +9,13 @@ const fixture = `
 import React from 'react';
 import {createRoot} from 'react-dom/client';
 import {ModelHomePhotoPreparationPage} from '/src/paint-guide/homeowner/ModelHomePhotoPreparationPage.tsx';
-createRoot(document.getElementById('root')).render(React.createElement(ModelHomePhotoPreparationPage));
+import {SyntheticPreviewTestPage} from '/src/paint-guide/homeowner/SyntheticPreviewTestPage.tsx';
+const Page = location.pathname.endsWith('/qa-synthetic') ? SyntheticPreviewTestPage : ModelHomePhotoPreparationPage;
+createRoot(document.getElementById('root')).render(React.createElement(Page));
 `;
 const actorId = 'e8fa431f-ea5c-46fb-b92c-6d5d213531bc';
-const guideId = '2a35d308-45a7-4b08-8d8d-83ddb16f0e29';
+const modelGuideId = '2a35d308-45a7-4b08-8d8d-83ddb16f0e29';
+const syntheticGuideId = 'b28d3dd5-eb34-46a2-99de-7af143de80db';
 const tokenFragment = `#tpgh1.1.${'A'.repeat(43)}`;
 
 before(async () => {
@@ -39,8 +42,9 @@ before(async () => {
 
 after(async () => { await browser?.close(); await vite?.close(); });
 
-async function signedInPage(accessState, { recoverFailure = false } = {}) {
+async function signedInPage(accessState, { recoverFailure = false, synthetic = false } = {}) {
   const calls = [];
+  const guideId = synthetic ? syntheticGuideId : modelGuideId;
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
   const page = await context.newPage();
   await page.route('**/*', async route => {
@@ -76,10 +80,10 @@ async function signedInPage(accessState, { recoverFailure = false } = {}) {
     if (url.origin === origin) return route.continue();
     return route.abort();
   });
-  await page.goto(`${origin}/paint-guide/qa-model-home`);
-  await page.getByLabel('Test password', { exact: true }).fill('synthetic-test-password');
+  await page.goto(`${origin}/paint-guide/${synthetic ? 'qa-synthetic' : 'qa-model-home'}`);
+  await page.getByLabel(synthetic ? 'Temporary test password' : 'Test password', { exact: true }).fill('synthetic-test-password');
   await page.getByRole('button', { name: 'Sign in to synthetic QA', exact: true }).click();
-  await page.getByRole('button', { name: 'Check existing homeowner link status', exact: true }).waitFor();
+  await page.getByRole('button', { name: synthetic ? 'Check homeowner link status' : 'Check existing homeowner link status', exact: true }).waitFor();
   return { context, page, calls };
 }
 
@@ -93,7 +97,7 @@ for (const state of ['absent', 'revoked']) {
       await page.getByRole('status').filter({ hasText: state === 'absent' ? 'No existing QA homeowner link' : 'revoked' }).waitFor();
       assert.equal(await recover.isDisabled(), true);
       assert.deepEqual(calls.map(call => call.operation), ['status']);
-      assert.ok(calls.every(call => call.body.guideId === guideId));
+      assert.ok(calls.every(call => call.body.guideId === modelGuideId));
     } finally { await context.close(); }
   });
 }
@@ -109,7 +113,7 @@ test('active QA access can recover only the existing link; decryption failure ne
     await page.getByRole('status').filter({ hasText: 'No new link was issued; the stored QA token may not match this Preview' }).waitFor();
     assert.equal(await page.getByRole('button', { name: 'Open recovered homeowner guide', exact: true }).count(), 0);
     assert.deepEqual(calls.map(call => call.operation), ['status', 'recover']);
-    assert.ok(calls.every(call => call.body.guideId === guideId));
+    assert.ok(calls.every(call => call.body.guideId === modelGuideId));
     assert.equal(await page.evaluate(() => JSON.stringify(localStorage) + JSON.stringify(sessionStorage)), '{}{}');
   } finally { await context.close(); }
 });
@@ -127,6 +131,23 @@ test('active QA access keeps a recovered private URL in memory and never renders
     assert.equal(consoleMessages.some(message => message.includes(tokenFragment.slice(1))), false);
     assert.equal(await page.evaluate(() => JSON.stringify(localStorage) + JSON.stringify(sessionStorage)), '{}{}');
     assert.deepEqual(calls.map(call => call.operation), ['status', 'recover']);
-    assert.ok(calls.every(call => call.body.guideId === guideId));
+    assert.ok(calls.every(call => call.body.guideId === modelGuideId));
+  } finally { await context.close(); }
+});
+
+test('the independent synthetic QA guide uses status and recover only; it never issues or rotates access', async () => {
+  const { context, page, calls } = await signedInPage('active', { synthetic: true });
+  try {
+    const recover = page.getByRole('button', { name: 'Recover existing homeowner link', exact: true });
+    assert.equal(await recover.isDisabled(), true);
+    await page.getByRole('button', { name: 'Check homeowner link status', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'An existing synthetic homeowner link is active' }).waitFor();
+    assert.equal(await recover.isEnabled(), true);
+    await recover.click();
+    await page.getByRole('button', { name: 'Open synthetic homeowner guide', exact: true }).waitFor();
+    assert.deepEqual(calls.map(call => call.operation), ['status', 'recover']);
+    assert.ok(calls.every(call => call.body.guideId === syntheticGuideId));
+    assert.equal(await page.getByRole('button', { name: 'Issue homeowner link', exact: true }).count(), 0);
+    assert.equal(await page.getByRole('button', { name: /rotate/i }).count(), 0);
   } finally { await context.close(); }
 });
