@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { FormEvent } from "react";
 import { createStaffPhotoClient, parseStaffPhotoListResponse, StaffPhotoRequestError, type PhotoPlacementKind, type StaffPhotoPlacement } from "../staff/photo-client";
-import { requestStaffAccess } from "../staff/access-client";
+import { requestStaffAccess, StaffAccessClientError, type StaffAccessStatus } from "../staff/access-client";
 
 const ACTOR_ID = "e8fa431f-ea5c-46fb-b92c-6d5d213531bc";
 const GUIDE_ID = "2a35d308-45a7-4b08-8d8d-83ddb16f0e29";
@@ -73,6 +73,7 @@ export function ModelHomePhotoPreparationPage() {
   const [busyKey, setBusyKey] = useState<string | null>(null);
   const [message, setMessage] = useState("Synthetic model-home upload. All uploads are pinned to one fictional guide.");
   const [photos, setPhotos] = useState<StaffPhotoPlacement[]>([]);
+  const [homeownerAccessStatus, setHomeownerAccessStatus] = useState<StaffAccessStatus | null>(null);
   const [privateLink, setPrivateLink] = useState<string | null>(null);
   const client = useMemo(() => accessToken ? createStaffPhotoClient({ getAccessToken: async () => accessToken, parseList: parseStaffPhotoListResponse }) : null, [accessToken]);
 
@@ -128,31 +129,55 @@ export function ModelHomePhotoPreparationPage() {
 
   const signOut = async () => {
     const token = accessToken; setAccessToken(null); setPhotos([]);
-    setPrivateLink(null);
+    setHomeownerAccessStatus(null); setPrivateLink(null);
     if (token && SUPABASE_URL && PUBLISHABLE_KEY) try {
       await fetch(`${SUPABASE_URL.replace(/\/$/, "")}/auth/v1/logout`, { method: "POST", headers: { apikey: PUBLISHABLE_KEY, Authorization: `Bearer ${token}` }, cache: "no-store", referrerPolicy: "no-referrer", redirect: "error" });
     } catch { /* In-memory token is discarded regardless. */ }
     setMessage("Signed out; in-memory access token discarded.");
   };
 
-  const issueHomeownerLink = async () => {
+  const checkHomeownerLinkStatus = async () => {
     if (!accessToken) return;
-    setBusyKey("homeowner-link");
+    setBusyKey("homeowner-status");
+    setPrivateLink(null);
+    setHomeownerAccessStatus(null);
     try {
       const current = await requestStaffAccess("status", accessToken, { guideId: GUIDE_ID });
-      if (current.guideStatus !== "published") throw new Error("draft");
-      if (current.accessState === "revoked") throw new Error("revoked");
-      const operation = current.accessState === "absent" ? "issue" : "recover";
-      const result = await requestStaffAccess(operation, accessToken, { guideId: GUIDE_ID });
+      setHomeownerAccessStatus(current);
+      if (current.guideStatus !== "published") {
+        setMessage("The model guide is not published. Status was checked only; no homeowner access was issued.");
+      } else if (current.accessState === "active") {
+        setMessage("An existing QA homeowner link is active. You can recover that link without issuing or rotating access.");
+      } else if (current.accessState === "revoked") {
+        setMessage("The existing QA homeowner access is revoked. Recovery is unavailable; no access was issued.");
+      } else {
+        setMessage("No existing QA homeowner link was found. Recovery is disabled; no access was issued.");
+      }
+    } catch {
+      setHomeownerAccessStatus(null);
+      setMessage("Could not read the existing QA homeowner-link status. No access was issued or changed.");
+    } finally { setBusyKey(null); }
+  };
+
+  const recoverExistingHomeownerLink = async () => {
+    if (!accessToken || homeownerAccessStatus?.accessState !== "active"
+      || homeownerAccessStatus.guideStatus !== "published" || !homeownerAccessStatus.homeownerExchangeAvailable) return;
+    setBusyKey("homeowner-recover");
+    setPrivateLink(null);
+    try {
+      const result = await requestStaffAccess("recover", accessToken, { guideId: GUIDE_ID });
       const link = result.privateUrl ? new URL(result.privateUrl) : null;
       if (!link || link.origin !== window.location.origin || link.pathname !== "/paint-guide/p"
         || !/^#tpgh1\.[1-9][0-9]*\.[A-Za-z0-9_-]{43}$/.test(link.hash)) throw new Error("link");
       setPrivateLink(link.href);
-      setMessage("Private model-home link issued. The URL contains its bearer token; it stays in this tab and is not logged.");
+      setMessage("Existing QA homeowner link recovered in memory. No new link was issued or rotated.");
     } catch (error) {
-      setMessage((error as Error).message === "draft"
-        ? "The model guide remains draft until its photo checklist is complete and it is explicitly published."
-        : "Could not issue a private model-home link; server scope checks remain in force.");
+      const status = error instanceof StaffAccessClientError ? error.status : null;
+      setMessage(status === 404
+        ? "No recoverable QA homeowner link exists. No new link was issued."
+        : status === 409
+          ? "QA homeowner access is no longer active. No link was recovered or issued."
+          : "Could not recover the existing QA link. No new link was issued; the stored QA token may not match this Preview's keys.");
     } finally { setBusyKey(null); }
   };
 
@@ -167,8 +192,8 @@ export function ModelHomePhotoPreparationPage() {
         <label className="grid gap-1 text-sm font-medium">Test password<input className="border p-3" type="password" autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} /></label>
         <button className="w-fit border bg-[#20211f] px-5 py-3 text-sm font-semibold text-white disabled:opacity-50" disabled={busyKey !== null || !password}>Sign in to synthetic QA</button>
       </form> : <div className="mt-6 grid gap-5">
-        <div className="flex flex-wrap gap-3"><button className="border px-4 py-3 text-sm font-semibold" disabled={busyKey !== null} onClick={() => void refresh()}>Refresh all model photos</button><button className="border px-4 py-3 text-sm font-semibold" disabled={busyKey !== null} onClick={() => void issueHomeownerLink()}>Issue private model-home link</button><button className="border px-4 py-3 text-sm font-semibold" disabled={busyKey !== null} onClick={() => void signOut()}>Sign out</button></div>
-        {privateLink ? <button className="w-fit border border-[#9b6b36] bg-[#9b6b36] px-5 py-3 text-sm font-semibold text-white" onClick={() => { const link = privateLink; setPrivateLink(null); window.location.assign(link); }}>Open private homeowner guide</button> : null}
+        <div className="flex flex-wrap gap-3"><button className="border px-4 py-3 text-sm font-semibold" disabled={busyKey !== null} onClick={() => void refresh()}>Refresh all model photos</button><button className="border px-4 py-3 text-sm font-semibold" disabled={busyKey !== null} onClick={() => void checkHomeownerLinkStatus()}>Check existing homeowner link status</button><button className="border px-4 py-3 text-sm font-semibold" disabled={busyKey !== null || homeownerAccessStatus?.accessState !== "active" || homeownerAccessStatus.guideStatus !== "published" || !homeownerAccessStatus.homeownerExchangeAvailable} onClick={() => void recoverExistingHomeownerLink()}>Recover existing homeowner link</button><button className="border px-4 py-3 text-sm font-semibold" disabled={busyKey !== null} onClick={() => void signOut()}>Sign out</button></div>
+        {privateLink ? <button className="w-fit border border-[#9b6b36] bg-[#9b6b36] px-5 py-3 text-sm font-semibold text-white" onClick={() => { const link = privateLink; setPrivateLink(null); window.location.assign(link); }}>Open recovered homeowner guide</button> : null}
         <p className="text-sm font-semibold">Photo checklist ({TARGETS.length} slots): one cover, six room overviews, twenty assignment-specific painted-surface details, and nine clearly synthetic sample labels.</p>
         <div className="grid gap-3">{TARGETS.map((target) => {
           const current = photos.find((photo) => photo.placement === target.placement && photo.locationId === (target.locationId ?? null) && photo.recordId === (target.recordId ?? null))?.photo;
