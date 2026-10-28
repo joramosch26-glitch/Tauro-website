@@ -9,7 +9,7 @@ import { listPaintRecords } from "../data/paint-records";
 import { useAuth } from "../auth/useAuth";
 import { supabase } from "../lib/supabase";
 import { createStaffPhotoClient, parseStaffPhotoListResponse } from "../staff/photo-client";
-import { buildStaffPreviewPhotoSources, type StaffPreviewPhotoSources } from "../staff/preview-photo-sources";
+import { buildStaffPreviewPhotoSources, loadStaffPreviewPhotosProgressively, type StaffPreviewPhotoSources } from "../staff/preview-photo-sources";
 import type {
   GuideLocation,
   PaintGuide,
@@ -28,7 +28,7 @@ const EMPTY_PHOTO_SOURCES: StaffPreviewPhotoSources = {
 };
 
 function statusLabel(status: PaintGuideStatus) {
-  return `${status.charAt(0).toUpperCase()}${status.slice(1)} � Staff Preview`;
+  return `${status.charAt(0).toUpperCase()}${status.slice(1)} · Staff Preview`;
 }
 
 export function GuidePreview() {
@@ -110,20 +110,21 @@ export function GuidePreview() {
           parseList: parseStaffPhotoListResponse,
         });
         const placements = await photoClient.list(guideId, controller.signal);
-        const current = placements.filter((item) => item.photo);
-        const entries = await Promise.all(current.map(async (item) => {
+        const imageUrlsByVersion = new Map<string, string>();
+        const failures = await loadStaffPreviewPhotosProgressively(placements, async (item, signal) => {
           const photo = item.photo;
-          if (!photo) return null;
+          if (!photo) throw new Error("Photo version is unavailable");
           const variant = item.placement === "location" || item.placement === "record_context" ? "thumb" : "full";
-          const blob = await photoClient.image(photo.versionId, variant, controller.signal);
+          const blob = await photoClient.image(photo.versionId, variant, signal);
           const url = URL.createObjectURL(blob);
           objectUrls.push(url);
-          return [photo.versionId, url] as const;
-        }));
+          return url;
+        }, (versionId, url) => {
+          imageUrlsByVersion.set(versionId, url);
+          setPhotoSources(buildStaffPreviewPhotoSources(placements, imageUrlsByVersion));
+        }, controller.signal, 4);
         if (!active) return;
-        const imageUrlsByVersion = new Map(entries.filter((entry): entry is readonly [string, string] => entry !== null));
-        setPhotoSources(buildStaffPreviewPhotoSources(placements, imageUrlsByVersion));
-        setPhotoLoadState("ready");
+        setPhotoLoadState(failures === 0 ? "ready" : "error");
       } catch {
         if (active) setPhotoLoadState("error");
       }
@@ -141,7 +142,7 @@ export function GuidePreview() {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f1e8] px-6 text-[#20211f]" data-paint-guide-shell="true">
         <p className="text-sm font-semibold uppercase tracking-[0.16em]">
-          Loading Paint Guide Preview.
+          Loading Paint Guide Preview…
         </p>
       </main>
     );
@@ -215,7 +216,7 @@ export function GuidePreview() {
           </span>
         </div>
 
-        {photoLoadState === "loading" ? <p className="mb-4 border border-[#20211f]/15 bg-white px-4 py-3 text-sm" role="status">Loading current guide photos.</p> : null}
+        {photoLoadState === "loading" ? <p className="mb-4 border border-[#20211f]/15 bg-white px-4 py-3 text-sm" role="status">Loading current guide photos…</p> : null}
         {photoLoadState === "error" ? <p className="mb-4 border border-[#9b6b36]/40 bg-white px-4 py-3 text-sm" role="status">Guide details loaded, but photos could not be loaded for this preview.</p> : null}
         <HomeownerGuideDocument
           data={documentData}
@@ -228,4 +229,3 @@ export function GuidePreview() {
     </main>
   );
 }
-

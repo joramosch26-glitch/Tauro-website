@@ -8,7 +8,7 @@ import {
 import { exchangeHomeownerToken, fetchHomeownerDocument } from "../src/paint-guide/homeowner/client.js";
 import { parseHomeownerGuideDocument } from "../src/paint-guide/homeowner/document.js";
 import { buildHomeownerPhotoSources } from "../src/paint-guide/homeowner/photo-sources.js";
-import { buildStaffPreviewPhotoSources } from "../src/paint-guide/staff/preview-photo-sources.js";
+import { buildStaffPreviewPhotoSources, loadStaffPreviewPhotosProgressively } from "../src/paint-guide/staff/preview-photo-sources.js";
 import { captureHomeownerFragment } from "../src/paint-guide/homeowner/fragment.js";
 import type { HomeownerGuideDocumentData } from "../src/paint-guide/presentation/types.js";
 
@@ -55,6 +55,77 @@ test("staff preview maps current authorized photo versions to their exact presen
     recordPhotoUrls: { [room]: { [record]: "blob:staff-preview-2" } },
     formulaLabelPhotoUrls: { [record]: ["blob:staff-preview-3"] },
   });
+});
+
+test("staff preview publishes priority photos progressively with bounded concurrency", async () => {
+  const ids = {
+    cover: "73000000-0000-4000-8000-000000000201",
+    room: "73000000-0000-4000-8000-000000000202",
+    context: "73000000-0000-4000-8000-000000000203",
+    label: "73000000-0000-4000-8000-000000000204",
+    room2: "73000000-0000-4000-8000-000000000205",
+  };
+  const placements = [
+    { id: "label", placement: "record_formula_label" as const, locationId: null, recordId: ids.label, photo: { slotId: ids.label, versionId: ids.label } },
+    { id: "context", placement: "record_context" as const, locationId: ids.room, recordId: ids.context, photo: { slotId: ids.context, versionId: ids.context } },
+    { id: "room", placement: "location" as const, locationId: ids.room, recordId: null, photo: { slotId: ids.room, versionId: ids.room } },
+    { id: "room2", placement: "location" as const, locationId: ids.room2, recordId: null, photo: { slotId: ids.room2, versionId: ids.room2 } },
+    { id: "cover", placement: "residence_cover" as const, locationId: null, recordId: null, photo: { slotId: ids.cover, versionId: ids.cover } },
+    { id: "duplicate-cover", placement: "residence_cover" as const, locationId: null, recordId: null, photo: { slotId: ids.cover, versionId: ids.cover } },
+  ];
+  const controller = new AbortController();
+  const started: string[] = [];
+  const published: string[] = [];
+  let active = 0;
+  let maximumActive = 0;
+  let releaseRoom!: () => void;
+  let roomStarted!: () => void;
+  let releaseLabel!: () => void;
+  let labelStarted!: () => void;
+  let contextStarted!: () => void;
+  const roomGate = new Promise<void>((resolve) => { releaseRoom = resolve; });
+  const roomStart = new Promise<void>((resolve) => { roomStarted = resolve; });
+  const labelGate = new Promise<void>((resolve) => { releaseLabel = resolve; });
+  const labelStart = new Promise<void>((resolve) => { labelStarted = resolve; });
+  const contextStart = new Promise<void>((resolve) => { contextStarted = resolve; });
+  let complete = false;
+
+  const result = loadStaffPreviewPhotosProgressively(placements, async (placement) => {
+    const versionId = placement.photo!.versionId;
+    started.push(versionId);
+    active += 1;
+    maximumActive = Math.max(maximumActive, active);
+    if (versionId === ids.room) roomStarted();
+    if (versionId === ids.context) contextStarted();
+    if (versionId === ids.label) labelStarted();
+    try {
+      if (versionId === ids.room) await roomGate;
+      if (versionId === ids.label) await labelGate;
+      else await Promise.resolve();
+      if (versionId === ids.context) throw new Error("synthetic image failure");
+      return `blob:${versionId}`;
+    } finally {
+      active -= 1;
+    }
+  }, (versionId) => published.push(versionId), controller.signal, 2).then((failures) => {
+    complete = true;
+    return failures;
+  });
+
+  await roomStart;
+  assert.equal(started[0], ids.cover, "hero should have first request priority");
+  assert.equal(started[1], ids.room, "room overviews should precede details and labels");
+  assert.ok(published.includes(ids.cover), "the hero should publish before the slow label finishes");
+  assert.equal(complete, false, "the test holds a lower-priority request open");
+  assert.equal(started.includes(ids.context), false, "details should wait until first-screen photos finish");
+  releaseRoom();
+  await contextStart;
+  await labelStart;
+  releaseLabel();
+  assert.equal(await result, 1, "one failed image should be reported without discarding successes");
+  assert.equal(maximumActive, 2, "the loader should respect its concurrency limit");
+  assert.equal(started.filter((id) => id === ids.cover).length, 1, "a repeated version should be downloaded once");
+  assert.deepEqual(published.sort(), [ids.cover, ids.label, ids.room, ids.room2].sort());
 });
 
 test("staff preview omits photos whose version was not returned by authorized image fetch", () => {
@@ -235,4 +306,3 @@ test("document guard accepts only the presentation-safe response shape", () => {
   assert.equal(parseHomeownerGuideDocument({ ...transportFixture, guide: { ...transportFixture.guide, primary_scope_note: 7 } }), null);
   assert.equal(parseHomeownerGuideDocument({ ...transportFixture, records: {} }), null);
 });
-
