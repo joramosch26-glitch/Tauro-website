@@ -419,3 +419,22 @@ test("homeowner client preserves approximate catalog swatches as distinct from a
   assert.equal(parseHomeownerGuideDocument({ ...transportFixture, records: [{ ...record, color_reference_hex: "ivory" }] }), null);
   assert.equal(parseHomeownerGuideDocument({ ...transportFixture, records: [{ ...record, color_reference_provider: "Unknown Catalog" }] }), null);
 });
+
+test("homeowner client accepts SQL-null catalog reference fields beside a selected color", () => {
+  const selected = {
+    id: "73000000-0000-4000-8000-000000000401", section: "primary", surface: "Walls",
+    brand: "Sherwin-Williams", product: "SuperPaint", color_name: "White Dove", color_code: "OC-17",
+    color_origin_brand: "Benjamin Moore", color_reference_hex: "#EFEEE5", color_reference_provider: "PaintDB",
+    color_reference_url: "https://paintdb.com/colors/benjamin-moore/bm-oc-17-white-dove", color_reference_retrieved_at: "2026-10-28T12:00:00.000Z",
+    sheen: "Satin", notes: null, sort_order: 0, created_at: "2026-10-03T12:00:00.000Z",
+  };
+  const unselected = {
+    ...selected, id: "73000000-0000-4000-8000-000000000402", surface: "Ceilings", color_name: "White Dove",
+    color_origin_brand: null, color_reference_hex: null, color_reference_provider: null,
+    color_reference_url: null, color_reference_retrieved_at: null,
+  };
+  const parsed = parseHomeownerGuideDocument({ ...transportFixture, records: [selected, unselected] });
+  assert.equal(parsed?.records.length, 2);
+  assert.equal(parsed?.records[0].color_reference_hex, "#EFEEE5");
+  assert.equal(parsed?.records[1].color_origin_brand, null);
+});
