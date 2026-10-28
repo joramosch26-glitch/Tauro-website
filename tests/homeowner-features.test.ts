@@ -1,5 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { ColorReferenceRows } from "../src/paint-guide/components/ColorReferenceRows.js";
+import { buildStaffPreviewDocumentData } from "../src/paint-guide/staff/staff-preview-document-data.js";
 import { approximateCatalogSwatchForRecord, propertyFieldsToPersist, propertyMetadata, roomNotesFieldToPersist, roomNotesForLocation, verifiedSwatchFieldsToPersist, verifiedSwatchForRecord } from "../src/paint-guide/presentation/homeowner-features.js";
 import { assertHomeownerDesignSchemaAvailable, HomeownerDesignMigrationRequiredError, homeownerDesignErrorMessage, normalizeHomeownerDesignDatabaseError, queryWithLegacyDesignColumns } from "../src/paint-guide/data/homeowner-design-schema.js";
 
@@ -25,6 +29,49 @@ test("catalog swatch is separately labeled approximate and requires a valid prov
   });
   assert.equal(approximateCatalogSwatchForRecord({ ...record, color_reference_hex: "ivory" }), null);
   assert.equal(approximateCatalogSwatchForRecord({ ...record, color_reference_provider: null }), null);
+});
+
+test("homeowner reference rendering separates catalog brand from coating manufacturer", () => {
+  const record = { brand: "Sherwin-Williams", color_code: "OC-17" };
+  const reference = {
+    hex: "#EFEEE5",
+    brand: "Benjamin Moore",
+    provider: "PaintDB",
+    url: "https://paintdb.com/colors/benjamin-moore/bm-oc-17-white-dove",
+    retrievedAt: "2026-10-28T12:00:00.000Z",
+    provenance: "Approximate digital color reference from PaintDB",
+  };
+  const markup = renderToStaticMarkup(createElement("dl", null, createElement(ColorReferenceRows, { record, reference })));
+  assert.match(markup, /<dt>Coating manufacturer<\/dt><dd>Sherwin-Williams<\/dd>/);
+  assert.match(markup, /<dt>Color reference brand<\/dt><dd>Benjamin Moore<\/dd>/);
+  assert.match(markup, /<dt>Color reference code<\/dt><dd>OC-17<\/dd>/);
+});
+
+test("homeowner manual fallback does not invent a catalog brand", () => {
+  const markup = renderToStaticMarkup(createElement("dl", null, createElement(ColorReferenceRows, {
+    record: { brand: "Sherwin-Williams", color_code: "SW7008" }, reference: null,
+  })));
+  assert.match(markup, /<dt>Coating manufacturer<\/dt><dd>Sherwin-Williams<\/dd>/);
+  assert.match(markup, /<dt>Color code<\/dt><dd>SW7008<\/dd>/);
+  assert.doesNotMatch(markup, /Color reference brand|Benjamin Moore|PaintDB/);
+});
+
+test("staff preview passes selected catalog reference metadata to the homeowner document", () => {
+  const guide = { id: "g1", residence_name: "Synthetic Home", status: "published" as const, primary_scope_note: null, created_at: "2026-01-01", updated_at: "2026-01-01" };
+  const locations = [{ id: "l1", guide_id: "g1", parent_id: null, location_type: "room" as const, name: "Great Room", sort_order: 0, created_at: "2026-01-01", updated_at: "2026-01-01" }];
+  const records = [{
+    id: "r1", guide_id: "g1", section: "primary" as const, surface: "Walls", brand: "Sherwin-Williams", product: null,
+    color_name: "White Dove", color_code: "OC-17", color_origin_brand: "Benjamin Moore", color_reference_hex: "#EFEEE5",
+    color_reference_provider: "PaintDB", color_reference_id: "bm-oc-17", color_reference_url: "https://paintdb.com/colors/benjamin-moore/bm-oc-17-white-dove",
+    color_reference_retrieved_at: "2026-10-28T12:00:00.000Z", sheen: "Satin", notes: null, sort_order: 0, created_at: "2026-01-01", updated_at: "2026-01-01",
+  }];
+  const assignments = [{ guide_id: "g1", paint_record_id: "r1", location_id: "l1" }];
+  const preview = buildStaffPreviewDocumentData(guide, locations, records, assignments);
+  const projected = preview.records[0];
+  assert.equal(projected.color_origin_brand, "Benjamin Moore");
+  assert.equal(projected.color_code, "OC-17");
+  assert.equal(approximateCatalogSwatchForRecord(projected)?.hex, "#EFEEE5");
+  assert.equal("color_reference_id" in projected, false);
 });
 
 test("room notes stay attached to their own location and empty notes stay absent", () => {

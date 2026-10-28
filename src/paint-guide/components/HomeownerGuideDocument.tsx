@@ -13,6 +13,7 @@ import type {
 } from "../presentation/types";
 import { verifiedRoomSwatchFor, type VerifiedRoomSwatch } from "../presentation/room-presentation";
 import { approximateCatalogSwatchForRecord, verifiedSwatchForRecord } from "../presentation/homeowner-features";
+import { ColorReferenceRows } from "./ColorReferenceRows.js";
 
 function RoomContextPhoto({
   photoUrl,
@@ -90,8 +91,7 @@ function RoomPaintCard({
         {detailsOpen ? <div className="pg-record-details">
         {swatch ? <p className="pg-room-swatch-provenance">Staff-recorded color reference: {swatch.provenance}</p> : approximateSwatch ? <p className="pg-room-swatch-provenance">{approximateSwatch.provenance} <a href={approximateSwatch.url} target="_blank" rel="noreferrer">View PaintDB reference</a></p> : null}
         <dl className="pg-room-paint-facts">
-          <div><dt>Brand</dt><dd>{record.brand || "Not recorded"}</dd></div>
-          <div><dt>Color code</dt><dd>{record.color_code || "Not recorded"}</dd></div>
+          <ColorReferenceRows record={record} reference={approximateSwatch} showMissingColorCode />
         </dl>
         {record.notes ? <div className="pg-room-record-note"><p>Paint note</p><span>{record.notes}</span></div> : null}
         <section className="pg-formula-labels" aria-label={`Formula label photos for ${record.color_name}`}>
@@ -141,24 +141,13 @@ function PaintRecordDetails({
         {record.color_name}
         {record.sheen ? ` · ${record.sheen}` : ""}
       </p>
-      {record.brand || record.product || record.color_code || record.notes ? (
+      {record.brand || record.product || record.color_code || record.notes || approximateCatalogSwatchForRecord(record) ? (
         <dl className={compact ? "mt-2 grid gap-x-4 gap-y-1 text-xs leading-5 text-[#20211f]/60 sm:grid-cols-2" : "mt-4 grid gap-2 text-sm leading-6 text-[#20211f]/65 sm:grid-cols-2"}>
-          {record.brand ? (
-            <div>
-              <dt className="font-semibold text-[#20211f]">Brand</dt>
-              <dd>{record.brand}</dd>
-            </div>
-          ) : null}
+          <ColorReferenceRows record={record} reference={approximateCatalogSwatchForRecord(record)} />
           {record.product ? (
             <div>
               <dt className="font-semibold text-[#20211f]">Product</dt>
               <dd>{record.product}</dd>
-            </div>
-          ) : null}
-          {record.color_code ? (
-            <div>
-              <dt className="font-semibold text-[#20211f]">Color Code</dt>
-              <dd>{record.color_code}</dd>
             </div>
           ) : null}
           {record.notes ? (

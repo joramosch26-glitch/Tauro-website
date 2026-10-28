@@ -1,6 +1,7 @@
 {
   "extends": "./tsconfig.server.json",
   "compilerOptions": {
+    "jsx": "react-jsx",
     "noEmit": false,
     "outDir": "./dist/homeowner-design-tests"
   },

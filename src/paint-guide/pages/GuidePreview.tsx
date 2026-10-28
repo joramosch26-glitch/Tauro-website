@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { HomeownerGuideDocument } from "../components/HomeownerGuideDocument";
-import type { HomeownerGuideDocumentData } from "../presentation/types";
+import { buildStaffPreviewDocumentData } from "../staff/staff-preview-document-data";
 import { getPaintGuide } from "../data/guides";
 import { listGuideLocations } from "../data/locations";
 import { listPaintRecordLocations } from "../data/paint-record-locations";
@@ -180,25 +180,7 @@ export function GuidePreview() {
   if (!guide) return null;
 
   // Explicitly project authorized rows: database/security metadata stays in this page.
-  const documentData: HomeownerGuideDocumentData = {
-    guide: {
-      residence_name: guide.residence_name,
-      primary_scope_note: guide.primary_scope_note,
-    },
-    locations: locations.map(({ id, parent_id, name, sort_order, created_at }) => ({
-      id, parent_id, name, sort_order, created_at,
-    })),
-    records: records.map(({
-      id, section, surface, brand, product, color_name, color_code,
-      sheen, notes, sort_order, created_at,
-    }) => ({
-      id, section, surface, brand, product, color_name, color_code,
-      sheen, notes, sort_order, created_at,
-    })),
-    assignments: assignments.map(({ paint_record_id, location_id }) => ({
-      paint_record_id, location_id,
-    })),
-  };
+  const documentData = buildStaffPreviewDocumentData(guide, locations, records, assignments);
 
   return (
     <main className="min-h-screen bg-[#f5f1e8] px-4 py-5 text-[#20211f] sm:px-8 sm:py-10" data-paint-guide-shell="true">
