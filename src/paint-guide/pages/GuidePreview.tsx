@@ -6,6 +6,10 @@ import { getPaintGuide } from "../data/guides";
 import { listGuideLocations } from "../data/locations";
 import { listPaintRecordLocations } from "../data/paint-record-locations";
 import { listPaintRecords } from "../data/paint-records";
+import { useAuth } from "../auth/useAuth";
+import { supabase } from "../lib/supabase";
+import { createStaffPhotoClient, parseStaffPhotoListResponse } from "../staff/photo-client";
+import { buildStaffPreviewPhotoSources, type StaffPreviewPhotoSources } from "../staff/preview-photo-sources";
 import type {
   GuideLocation,
   PaintGuide,
@@ -15,19 +19,29 @@ import type {
 } from "../data/types";
 
 type LoadState = "loading" | "ready" | "not_found" | "error";
+type PhotoLoadState = "idle" | "loading" | "ready" | "error";
+const EMPTY_PHOTO_SOURCES: StaffPreviewPhotoSources = {
+  heroImageUrl: null,
+  roomPhotoUrls: {},
+  recordPhotoUrls: {},
+  formulaLabelPhotoUrls: {},
+};
 
 function statusLabel(status: PaintGuideStatus) {
-  return `${status.charAt(0).toUpperCase()}${status.slice(1)} · Staff Preview`;
+  return `${status.charAt(0).toUpperCase()}${status.slice(1)} � Staff Preview`;
 }
 
 export function GuidePreview() {
   const { guideId = "" } = useParams();
+  const { session } = useAuth();
   const [guide, setGuide] = useState<PaintGuide | null>(null);
   const [records, setRecords] = useState<PaintRecord[]>([]);
   const [locations, setLocations] = useState<GuideLocation[]>([]);
   const [assignments, setAssignments] = useState<PaintRecordLocation[]>([]);
   const [state, setState] = useState<LoadState>("loading");
   const [loadedGuideId, setLoadedGuideId] = useState<string | null>(null);
+  const [photoSources, setPhotoSources] = useState<StaffPreviewPhotoSources>(EMPTY_PHOTO_SOURCES);
+  const [photoLoadState, setPhotoLoadState] = useState<PhotoLoadState>("idle");
 
   useEffect(() => {
     let active = true;
@@ -38,6 +52,8 @@ export function GuidePreview() {
     setLocations([]);
     setAssignments([]);
     setLoadedGuideId(null);
+    setPhotoSources(EMPTY_PHOTO_SOURCES);
+    setPhotoLoadState("idle");
 
     async function load() {
       try {
@@ -74,11 +90,58 @@ export function GuidePreview() {
     };
   }, [guideId]);
 
+  useEffect(() => {
+    if (loadedGuideId !== guideId || !guide) return;
+    const controller = new AbortController();
+    let active = true;
+    const objectUrls: string[] = [];
+
+    async function loadPhotos() {
+      setPhotoLoadState("loading");
+      try {
+        if (!supabase || !session?.user.id) throw new Error("Authentication unavailable");
+        const { data, error } = await supabase.auth.refreshSession();
+        if (error || !data.session?.access_token || data.session.user.id !== session.user.id) {
+          throw new Error("Session refresh failed");
+        }
+        const accessToken = data.session.access_token;
+        const photoClient = createStaffPhotoClient({
+          getAccessToken: async () => accessToken,
+          parseList: parseStaffPhotoListResponse,
+        });
+        const placements = await photoClient.list(guideId, controller.signal);
+        const current = placements.filter((item) => item.photo);
+        const entries = await Promise.all(current.map(async (item) => {
+          const photo = item.photo;
+          if (!photo) return null;
+          const variant = item.placement === "location" || item.placement === "record_context" ? "thumb" : "full";
+          const blob = await photoClient.image(photo.versionId, variant, controller.signal);
+          const url = URL.createObjectURL(blob);
+          objectUrls.push(url);
+          return [photo.versionId, url] as const;
+        }));
+        if (!active) return;
+        const imageUrlsByVersion = new Map(entries.filter((entry): entry is readonly [string, string] => entry !== null));
+        setPhotoSources(buildStaffPreviewPhotoSources(placements, imageUrlsByVersion));
+        setPhotoLoadState("ready");
+      } catch {
+        if (active) setPhotoLoadState("error");
+      }
+    }
+
+    void loadPhotos();
+    return () => {
+      active = false;
+      controller.abort();
+      for (const url of objectUrls) URL.revokeObjectURL(url);
+    };
+  }, [guide, guideId, loadedGuideId, session?.user.id]);
+
   if (state === "loading" || (state === "ready" && loadedGuideId !== guideId)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f1e8] px-6 text-[#20211f]" data-paint-guide-shell="true">
         <p className="text-sm font-semibold uppercase tracking-[0.16em]">
-          Loading Paint Guide Preview…
+          Loading Paint Guide Preview.
         </p>
       </main>
     );
@@ -152,8 +215,17 @@ export function GuidePreview() {
           </span>
         </div>
 
-        <HomeownerGuideDocument data={documentData} />
+        {photoLoadState === "loading" ? <p className="mb-4 border border-[#20211f]/15 bg-white px-4 py-3 text-sm" role="status">Loading current guide photos.</p> : null}
+        {photoLoadState === "error" ? <p className="mb-4 border border-[#9b6b36]/40 bg-white px-4 py-3 text-sm" role="status">Guide details loaded, but photos could not be loaded for this preview.</p> : null}
+        <HomeownerGuideDocument
+          data={documentData}
+          heroImageUrl={photoSources.heroImageUrl}
+          roomPhotoUrls={photoSources.roomPhotoUrls}
+          recordPhotoUrls={photoSources.recordPhotoUrls}
+          formulaLabelPhotoUrls={photoSources.formulaLabelPhotoUrls}
+        />
       </div>
     </main>
   );
 }
+
