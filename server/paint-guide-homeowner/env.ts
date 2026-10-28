@@ -16,6 +16,13 @@ const CANONICAL_PRODUCTION_ORIGIN = "https://www.tauropainting.com";
 export const PAINT_GUIDE_ISOLATED_PREVIEW_BRANCH = "pgv1";
 export const PAINT_GUIDE_ISOLATED_PREVIEW_HOST = "tauro-paint-guide-v1-qa-git-pgv1-jose-ramos-projects-4c64cbba.vercel.app";
 export const PAINT_GUIDE_ISOLATED_PREVIEW_ORIGIN = `https://${PAINT_GUIDE_ISOLATED_PREVIEW_HOST}`;
+export const PAINT_GUIDE_PHOTO_PREVIEW_BRANCH = "codex/paint-guide-photo-loading-preview-20261028";
+export const PAINT_GUIDE_PHOTO_PREVIEW_HOST = "tauro-paint-guide-v1-qa-git-f6e590-jose-ramos-projects-4c64cbba.vercel.app";
+export const PAINT_GUIDE_PHOTO_PREVIEW_ORIGIN = `https://${PAINT_GUIDE_PHOTO_PREVIEW_HOST}`;
+const ISOLATED_PREVIEW_BRANCHES = new Map([
+  [PAINT_GUIDE_ISOLATED_PREVIEW_BRANCH, { host: PAINT_GUIDE_ISOLATED_PREVIEW_HOST, origin: PAINT_GUIDE_ISOLATED_PREVIEW_ORIGIN }],
+  [PAINT_GUIDE_PHOTO_PREVIEW_BRANCH, { host: PAINT_GUIDE_PHOTO_PREVIEW_HOST, origin: PAINT_GUIDE_PHOTO_PREVIEW_ORIGIN }],
+]);
 const ALLOWED_ENVIRONMENTS = new Set<HomeownerEnvironment>([
   "development",
   "preview",
@@ -93,10 +100,12 @@ function parseAllowedOrigins(value: string, environment: HomeownerEnvironment) {
 function assertIsolatedPreviewOrigin(source: EnvironmentSource, environment: HomeownerEnvironment,
   origins: ReadonlySet<string>) {
   if (environment !== "preview") return;
+  const branch = source.VERCEL_GIT_COMMIT_REF;
+  const isolatedBranch = branch ? ISOLATED_PREVIEW_BRANCHES.get(branch) : undefined;
   if (source.VERCEL !== "1" || source.VERCEL_ENV !== "preview" || source.VERCEL_TARGET_ENV !== "preview"
-    || source.VERCEL_GIT_COMMIT_REF !== PAINT_GUIDE_ISOLATED_PREVIEW_BRANCH
-    || source.VERCEL_BRANCH_URL !== PAINT_GUIDE_ISOLATED_PREVIEW_HOST
-    || origins.size !== 1 || !origins.has(PAINT_GUIDE_ISOLATED_PREVIEW_ORIGIN)) {
+    || !isolatedBranch
+    || source.VERCEL_BRANCH_URL !== isolatedBranch.host
+    || origins.size !== 1 || !origins.has(isolatedBranch.origin)) {
     throw new HomeownerEnvironmentError();
   }
 }

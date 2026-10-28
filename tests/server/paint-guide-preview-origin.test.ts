@@ -5,6 +5,9 @@ import {
   PAINT_GUIDE_ISOLATED_PREVIEW_BRANCH,
   PAINT_GUIDE_ISOLATED_PREVIEW_HOST,
   PAINT_GUIDE_ISOLATED_PREVIEW_ORIGIN,
+  PAINT_GUIDE_PHOTO_PREVIEW_BRANCH,
+  PAINT_GUIDE_PHOTO_PREVIEW_HOST,
+  PAINT_GUIDE_PHOTO_PREVIEW_ORIGIN,
 } from "../../server/paint-guide-homeowner/env.js";
 import { hasAllowedHomeownerOrigin } from "../../server/paint-guide-homeowner/origin.js";
 import { validateBrowserServerAgreement } from "../../src/paint-guide/lib/environment.js";
@@ -24,8 +27,8 @@ const config = {
   TAURO_PG_ALLOWED_ORIGINS: PAINT_GUIDE_ISOLATED_PREVIEW_ORIGIN,
   TAURO_PG_CUSTOMER_ACCESS_ENABLED: "false",
   TAURO_PG_PREVIEW_SYNTHETIC_RELEASE_ENABLED: "true",
-  TAURO_PG_SYNTHETIC_RELEASE_GUIDE_ID: "7e9f4c00-1723-4d88-9e5b-0e7a19f26a31",
-  TAURO_PG_SYNTHETIC_RELEASE_ACTOR_ID: "2bf0916e-7b1c-4930-a472-50dc0ae5e1a4",
+  TAURO_PG_SYNTHETIC_RELEASE_GUIDE_ID: "b28d3dd5-eb34-46a2-99de-7af143de80db",
+  TAURO_PG_SYNTHETIC_RELEASE_ACTOR_ID: "e8fa431f-ea5c-46fb-b92c-6d5d213531bc",
   TAURO_PG_TOKEN_LOOKUP_HMAC_ACTIVE_VERSION: "1",
   TAURO_PG_TOKEN_LOOKUP_HMAC_KEY_V1: key,
   TAURO_PG_TOKEN_ENCRYPTION_ACTIVE_VERSION: "1",
@@ -72,6 +75,32 @@ test("isolated Preview fails closed for mismatched identity or broad origins", (
   }
 });
 
+test("photo-loading Preview accepts only its pinned branch, alias, project, and origin", () => {
+  const candidate = {
+    ...config,
+    TAURO_PG_ALLOWED_ORIGINS: PAINT_GUIDE_PHOTO_PREVIEW_ORIGIN,
+    VERCEL_GIT_COMMIT_REF: PAINT_GUIDE_PHOTO_PREVIEW_BRANCH,
+    VERCEL_BRANCH_URL: PAINT_GUIDE_PHOTO_PREVIEW_HOST,
+  };
+  assert.doesNotThrow(() => loadHomeownerServerEnvironment(candidate));
+  const runtime = loadHomeownerServerEnvironment(candidate);
+  assert.deepEqual([...runtime.allowedOrigins], [PAINT_GUIDE_PHOTO_PREVIEW_ORIGIN]);
+  assert.equal(hasAllowedHomeownerOrigin(new Request(PAINT_GUIDE_PHOTO_PREVIEW_ORIGIN, {
+    headers: { Origin: PAINT_GUIDE_PHOTO_PREVIEW_ORIGIN },
+  }), runtime), true);
+
+  const rejected = [
+    { VERCEL_GIT_COMMIT_REF: "codex/another-branch" },
+    { VERCEL_BRANCH_URL: "tauro-paint-guide-v1-qa-git-other-jose-ramos-projects-4c64cbba.vercel.app" },
+    { TAURO_PG_ALLOWED_ORIGINS: "https://another-preview.vercel.app" },
+    { TAURO_PG_EXPECTED_PROJECT_REF: "abcdefghijklmnopqrst", VITE_TAURO_PG_EXPECTED_PROJECT_REF: "abcdefghijklmnopqrst",
+      TAURO_PG_SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co", VITE_SUPABASE_URL: "https://abcdefghijklmnopqrst.supabase.co" },
+  ];
+  for (const overrides of rejected) {
+    assert.throws(() => loadHomeownerServerEnvironment({ ...candidate, ...overrides }));
+  }
+});
+
 test("existing production origin policy does not depend on Preview branch markers", () => {
   const production: Record<string, string | undefined> = { ...config };
   production.VITE_TAURO_PG_ENVIRONMENT = "production";
@@ -79,9 +108,9 @@ test("existing production origin policy does not depend on Preview branch marker
   production.TAURO_PG_ALLOWED_ORIGINS = "https://www.tauropainting.com";
   production.TAURO_PG_CUSTOMER_ACCESS_ENABLED = "true";
   production.VERCEL_ENV = "production";
-  delete production.VERCEL_TARGET_ENV;
-  delete production.VERCEL_GIT_COMMIT_REF;
-  delete production.VERCEL_BRANCH_URL;
+  production.VERCEL_TARGET_ENV = "production";
+  production.VERCEL_GIT_COMMIT_REF = PAINT_GUIDE_PHOTO_PREVIEW_BRANCH;
+  production.VERCEL_BRANCH_URL = PAINT_GUIDE_PHOTO_PREVIEW_HOST;
   delete production.TAURO_PG_PREVIEW_SYNTHETIC_RELEASE_ENABLED;
   delete production.TAURO_PG_SYNTHETIC_RELEASE_GUIDE_ID;
   delete production.TAURO_PG_SYNTHETIC_RELEASE_ACTOR_ID;
