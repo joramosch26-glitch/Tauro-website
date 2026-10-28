@@ -10,6 +10,7 @@
     "src/paint-guide/homeowner/document.ts",
     "src/paint-guide/homeowner/fragment.ts",
     "src/paint-guide/staff/preview-photo-sources.ts",
+    "src/paint-guide/staff/guide-preview-loader.ts",
     "src/paint-guide/presentation/types.ts",
     "tests/homeowner-bootstrap.test.ts"
   ]

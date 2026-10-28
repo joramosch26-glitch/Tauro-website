@@ -6,6 +6,7 @@ import { getPaintGuide } from "../data/guides";
 import { listGuideLocations } from "../data/locations";
 import { listPaintRecordLocations } from "../data/paint-record-locations";
 import { listPaintRecords } from "../data/paint-records";
+import { loadGuidePreviewData } from "../staff/guide-preview-loader";
 import { useAuth } from "../auth/useAuth";
 import { supabase } from "../lib/supabase";
 import { createStaffPhotoClient, parseStaffPhotoListResponse } from "../staff/photo-client";
@@ -28,7 +29,7 @@ const EMPTY_PHOTO_SOURCES: StaffPreviewPhotoSources = {
 };
 
 function statusLabel(status: PaintGuideStatus) {
-  return `${status.charAt(0).toUpperCase()}${status.slice(1)} · Staff Preview`;
+  return `${status.charAt(0).toUpperCase()}${status.slice(1)} � Staff Preview`;
 }
 
 export function GuidePreview() {
@@ -44,7 +45,8 @@ export function GuidePreview() {
   const [photoLoadState, setPhotoLoadState] = useState<PhotoLoadState>("idle");
 
   useEffect(() => {
-    let active = true;
+    const controller = new AbortController();
+    const { signal } = controller;
 
     setState("loading");
     setGuide(null);
@@ -55,38 +57,31 @@ export function GuidePreview() {
     setPhotoSources(EMPTY_PHOTO_SOURCES);
     setPhotoLoadState("idle");
 
-    async function load() {
-      try {
-        const nextGuide = await getPaintGuide(guideId);
-        if (!active) return;
-
-        if (!nextGuide) {
-          setState("not_found");
-          return;
-        }
-
-        const [nextRecords, nextLocations, nextAssignments] = await Promise.all([
-          listPaintRecords(guideId),
-          listGuideLocations(guideId),
-          listPaintRecordLocations(guideId),
-        ]);
-        if (!active) return;
-
+    void loadGuidePreviewData({
+      guideId,
+      signal,
+      getGuide: getPaintGuide,
+      listRecords: listPaintRecords,
+      listLocations: listGuideLocations,
+      listAssignments: listPaintRecordLocations,
+      onGuideConfirmed: (nextGuide) => {
+        // The verified guide is enough to start photo hydration; the display
+        // metadata reads below are independent and may take longer.
         setGuide(nextGuide);
+        setLoadedGuideId(guideId);
+      },
+      onMetadataLoaded: ({ records: nextRecords, locations: nextLocations, assignments: nextAssignments }) => {
         setRecords(nextRecords);
         setLocations(nextLocations);
         setAssignments(nextAssignments);
-        setLoadedGuideId(guideId);
         setState("ready");
-      } catch {
-        if (active) setState("error");
-      }
-    }
-
-    void load();
+      },
+      onNotFound: () => setState("not_found"),
+      onError: () => setState("error"),
+    });
 
     return () => {
-      active = false;
+      controller.abort();
     };
   }, [guideId]);
 
@@ -116,6 +111,7 @@ export function GuidePreview() {
           if (!photo) throw new Error("Photo version is unavailable");
           const variant = item.placement === "location" || item.placement === "record_context" ? "thumb" : "full";
           const blob = await photoClient.image(photo.versionId, variant, signal);
+          if (signal.aborted) throw new Error("Photo request aborted");
           const url = URL.createObjectURL(blob);
           objectUrls.push(url);
           return url;
@@ -138,11 +134,11 @@ export function GuidePreview() {
     };
   }, [guide, guideId, loadedGuideId, session?.user.id]);
 
-  if (state === "loading" || (state === "ready" && loadedGuideId !== guideId)) {
+  if ((state === "loading" && !guide) || (state === "ready" && loadedGuideId !== guideId)) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f1e8] px-6 text-[#20211f]" data-paint-guide-shell="true">
         <p className="text-sm font-semibold uppercase tracking-[0.16em]">
-          Loading Paint Guide Preview…
+          Loading Paint Guide Preview.
         </p>
       </main>
     );
@@ -216,7 +212,8 @@ export function GuidePreview() {
           </span>
         </div>
 
-        {photoLoadState === "loading" ? <p className="mb-4 border border-[#20211f]/15 bg-white px-4 py-3 text-sm" role="status">Loading current guide photos…</p> : null}
+        {state === "loading" ? <p className="mb-4 border border-[#20211f]/15 bg-white px-4 py-3 text-sm" role="status">Loading guide details.</p> : null}
+        {photoLoadState === "loading" ? <p className="mb-4 border border-[#20211f]/15 bg-white px-4 py-3 text-sm" role="status">Loading current guide photos.</p> : null}
         {photoLoadState === "error" ? <p className="mb-4 border border-[#9b6b36]/40 bg-white px-4 py-3 text-sm" role="status">Guide details loaded, but photos could not be loaded for this preview.</p> : null}
         <HomeownerGuideDocument
           data={documentData}
@@ -229,3 +226,4 @@ export function GuidePreview() {
     </main>
   );
 }
+

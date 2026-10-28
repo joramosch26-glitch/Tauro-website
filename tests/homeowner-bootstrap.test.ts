@@ -9,14 +9,108 @@ import { exchangeHomeownerToken, fetchHomeownerDocument } from "../src/paint-gui
 import { parseHomeownerGuideDocument } from "../src/paint-guide/homeowner/document.js";
 import { buildHomeownerPhotoSources } from "../src/paint-guide/homeowner/photo-sources.js";
 import { buildStaffPreviewPhotoSources, loadStaffPreviewPhotosProgressively } from "../src/paint-guide/staff/preview-photo-sources.js";
+import { loadGuidePreviewData } from "../src/paint-guide/staff/guide-preview-loader.js";
 import { captureHomeownerFragment } from "../src/paint-guide/homeowner/fragment.js";
 import type { HomeownerGuideDocumentData } from "../src/paint-guide/presentation/types.js";
+import type { PaintGuide } from "../src/paint-guide/data/types.js";
 
 const fixture = (residenceName: string): HomeownerGuideDocumentData => ({
   guide: { residence_name: residenceName, primary_scope_note: null },
   locations: [], records: [], assignments: [],
 });
 const transportFixture = fixture("Test Residence");
+
+test("staff preview starts photo hydration before deferred display metadata finishes", async () => {
+  let releaseRecords!: (value: never[]) => void;
+  let photoStarted!: () => void;
+  const recordsGate = new Promise<never[]>((resolve) => { releaseRecords = resolve; });
+  const photoStart = new Promise<void>((resolve) => { photoStarted = resolve; });
+  const controller = new AbortController();
+  const confirmedGuide: PaintGuide = {
+    id: "guide-a", residence_name: "Guide A", status: "published", primary_scope_note: null,
+    created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z",
+  };
+  let metadataPublished = false;
+
+  const loading = loadGuidePreviewData({
+    guideId: "guide-a",
+    signal: controller.signal,
+    getGuide: async () => confirmedGuide,
+    listRecords: async () => recordsGate,
+    listLocations: async () => [],
+    listAssignments: async () => [],
+    onGuideConfirmed: () => photoStarted(),
+    onMetadataLoaded: () => { metadataPublished = true; },
+    onNotFound: () => assert.fail("confirmed guide must not be reported missing"),
+    onError: () => assert.fail("metadata request should remain pending"),
+  });
+
+  await photoStart;
+  assert.equal(metadataPublished, false, "photo loading begins before metadata completion");
+  releaseRecords([]);
+  await loading;
+  assert.equal(metadataPublished, true);
+});
+
+test("guide change aborts in-flight preview work and suppresses stale metadata updates", async () => {
+  let releaseRecords!: (value: never[]) => void;
+  let photosAborted!: () => void;
+  const recordsGate = new Promise<never[]>((resolve) => { releaseRecords = resolve; });
+  const controller = new AbortController();
+  const photoController = new AbortController();
+  const photoAborted = new Promise<void>((resolve) => { photosAborted = resolve; });
+  const confirmedGuide: PaintGuide = {
+    id: "guide-a", residence_name: "Guide A", status: "published", primary_scope_note: null,
+    created_at: "2026-01-01T00:00:00Z", updated_at: "2026-01-01T00:00:00Z",
+  };
+  let metadataPublished = false;
+  let photoRequestStarted = false;
+  let guideConfirmed!: () => void;
+  const confirmed = new Promise<void>((resolve) => { guideConfirmed = resolve; });
+  const versionId = "73000000-0000-4000-8000-000000000301";
+  const placements = [{
+    id: "cover",
+    placement: "residence_cover" as const,
+    locationId: null,
+    recordId: null,
+    photo: { slotId: "73000000-0000-4000-8000-000000000302", versionId },
+  }];
+  const published: string[] = [];
+  let photoWork!: Promise<number>;
+
+  const loading = loadGuidePreviewData({
+    guideId: "guide-a",
+    signal: controller.signal,
+    getGuide: async () => confirmedGuide,
+    listRecords: async () => recordsGate,
+    listLocations: async () => [],
+    listAssignments: async () => [],
+    onGuideConfirmed: () => {
+      photoRequestStarted = true;
+      guideConfirmed();
+      photoWork = loadStaffPreviewPhotosProgressively(placements, (_placement, signal) => new Promise<string>((_resolve, reject) => {
+        signal.addEventListener("abort", () => {
+          photosAborted();
+          reject(new Error("aborted"));
+        }, { once: true });
+      }), (loadedVersion) => published.push(loadedVersion), photoController.signal);
+    },
+    onMetadataLoaded: () => { metadataPublished = true; },
+    onNotFound: () => assert.fail("confirmed guide must not be reported missing"),
+    onError: () => assert.fail("aborted work must not report an error"),
+  });
+
+  await confirmed;
+  assert.equal(photoRequestStarted, true);
+  controller.abort();
+  photoController.abort();
+  await photoAborted;
+  assert.equal(await photoWork, 0, "aborted photo work settles without counting a failed image");
+  releaseRecords([]);
+  await loading;
+  assert.equal(metadataPublished, false, "old guide metadata must not update a new route");
+  assert.deepEqual(published, [], "the old guide must not publish a late image");
+});
 
 test("homeowner formula-label descriptors map to the protected full-size photo route", () => {
   const slotId = "73000000-0000-4000-8000-000000000101";
@@ -306,3 +400,4 @@ test("document guard accepts only the presentation-safe response shape", () => {
   assert.equal(parseHomeownerGuideDocument({ ...transportFixture, guide: { ...transportFixture.guide, primary_scope_note: 7 } }), null);
   assert.equal(parseHomeownerGuideDocument({ ...transportFixture, records: {} }), null);
 });
+
