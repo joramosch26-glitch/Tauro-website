@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type ReactNode, type RefObject } from "rea
 import { ArrowLeft, ArrowUpRight, ChevronDown, ChevronRight, House, Layers3, PaintRoller } from "lucide-react";
 import { buildGuideNavigation, type GuideSelection } from "../presentation/guide-navigation";
 import { buildRoomNavigation, type RoomNavigationNode } from "../presentation/room-navigation";
-import { propertyMetadata, roomNotesForLocation, verifiedSwatchForRecord } from "../presentation/homeowner-features";
+import { approximateCatalogSwatchForRecord, propertyMetadata, roomNotesForLocation, verifiedSwatchForRecord } from "../presentation/homeowner-features";
 import type { HomeownerGuideDocumentData, HomeownerPaintRecord } from "../presentation/types";
 import "./guide-landing.css";
 
@@ -314,8 +314,8 @@ export function GuideLanding({ data, heroImageUrl, roomPhotoUrls = emptyPhotoSou
           {navigation.categories.length ? <div className="pg-category-grid" aria-label="Paint categories">
             {navigation.categories.map(category => <button className="pg-category-card" type="button" key={category.id} onClick={() => open({ kind: "category", id: category.id })} aria-label={`Browse ${category.name}, ${countLabel(category.records.length)}`}>
               <div className="pg-category-mark" aria-hidden="true">
-                {category.records[0] && verifiedSwatchForRecord(category.records[0])
-                  ? <span className="pg-category-swatch" style={{ backgroundColor: verifiedSwatchForRecord(category.records[0])!.hex }} />
+                {category.records[0] && (verifiedSwatchForRecord(category.records[0]) || approximateCatalogSwatchForRecord(category.records[0]))
+                  ? <span className="pg-category-swatch" style={{ backgroundColor: (verifiedSwatchForRecord(category.records[0]) || approximateCatalogSwatchForRecord(category.records[0]))!.hex }} />
                   : <PaintRoller size={25} strokeWidth={1} />}
               </div><h3>{category.name}</h3><div><span>{category.records.length} {category.records.length === 1 ? "color" : "colors"}</span><ChevronRight size={14} aria-hidden="true" /></div>
             </button>)}

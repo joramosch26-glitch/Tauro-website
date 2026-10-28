@@ -17,6 +17,7 @@
     "probe:homeowner-end-session": "tsc -p tsconfig.server-tests.json && node scripts/local-homeowner-end-session-contract.mjs",
     "test:homeowner-bootstrap": "tsc -p tsconfig.homeowner-tests.json && node --test dist/homeowner-tests/tests/homeowner-bootstrap.test.js",
     "test:homeowner-design": "tsc -p tsconfig.homeowner-design-tests.json && node --test dist/homeowner-design-tests/tests/homeowner-features.test.js",
+    "test:paint-guide-color-catalog": "tsc -p tsconfig.paint-guide-color-catalog-tests.json && node --test dist/color-catalog-tests/tests/paint-guide-color-catalog.test.js",
     "test:paint-guide-access-ui": "tsc -p tsconfig.paint-guide-access-tests.json && node --test dist/paint-guide-access-tests/tests/paint-guide-staff-access.test.js dist/paint-guide-access-tests/tests/paint-guide-qr.test.js",
     "build:local-homeowner-http-runtime": "tsc -p tsconfig.local-homeowner-runtime.json",
     "check:local-homeowner-http-runtime": "npm run build:local-homeowner-http-runtime && node scripts/local-homeowner-http-runtime.mjs --check",
@@ -98,4 +99,3 @@
     "vite": "^7.2.4"
   }
 }
-

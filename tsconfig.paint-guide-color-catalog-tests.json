@@ -1,0 +1,11 @@
+{
+  "extends": "./tsconfig.server.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "./dist/color-catalog-tests"
+  },
+  "include": [
+    "src/paint-guide/catalog/catalog.ts",
+    "tests/paint-guide-color-catalog.test.ts"
+  ]
+}

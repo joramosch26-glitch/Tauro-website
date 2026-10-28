@@ -12,7 +12,7 @@ import type {
   HomeownerPaintRecord,
 } from "../presentation/types";
 import { verifiedRoomSwatchFor, type VerifiedRoomSwatch } from "../presentation/room-presentation";
-import { verifiedSwatchForRecord } from "../presentation/homeowner-features";
+import { approximateCatalogSwatchForRecord, verifiedSwatchForRecord } from "../presentation/homeowner-features";
 
 function RoomContextPhoto({
   photoUrl,
@@ -58,6 +58,8 @@ function RoomPaintCard({
     ? [{ recordId: record.id, ...recordSwatchValue }]
     : [];
   const swatch = verifiedRoomSwatchFor(record.id, [...verifiedSwatches, ...recordSwatch]);
+  const approximateSwatch = swatch ? null : approximateCatalogSwatchForRecord(record);
+  const shownSwatch = swatch ?? approximateSwatch;
   const [detailsOpen, setDetailsOpen] = useState(false);
   return (
     <article className="pg-room-paint-card" data-paint-record-id={record.id}>
@@ -70,12 +72,12 @@ function RoomPaintCard({
           </div>
           <div className="pg-room-swatch-block">
             <span
-              className={swatch ? "pg-room-swatch" : "pg-room-swatch pg-room-swatch--unknown"}
-              style={swatch ? { backgroundColor: swatch.hex.trim() } : undefined}
+              className={shownSwatch ? "pg-room-swatch" : "pg-room-swatch pg-room-swatch--unknown"}
+              style={shownSwatch ? { backgroundColor: shownSwatch.hex.trim() } : undefined}
               role="img"
-              aria-label={swatch ? `Staff-recorded digital swatch for ${record.color_name}` : `Unverified swatch for ${record.color_name}`}
-            >{swatch ? null : <span>Not<br />verified</span>}</span>
-            <span className="pg-room-swatch-status">{swatch ? "Staff-recorded color" : "Swatch not verified"}</span>
+              aria-label={swatch ? `Staff-recorded digital swatch for ${record.color_name}` : approximateSwatch ? `Approximate catalog color reference for ${record.color_name}; not manufacturer-verified` : `Unverified swatch for ${record.color_name}`}
+            >{shownSwatch ? null : <span>Not<br />verified</span>}</span>
+            <span className="pg-room-swatch-status">{swatch ? "Staff-recorded color" : approximateSwatch ? "Approximate reference" : "Swatch not verified"}</span>
           </div>
         </div>
         <dl className="pg-room-paint-visible-facts">
@@ -86,7 +88,7 @@ function RoomPaintCard({
           <span>{detailsOpen ? "Less details" : "More details"}</span><ChevronRight className={detailsOpen ? "pg-record-chevron pg-record-chevron--open" : "pg-record-chevron"} size={16} aria-hidden="true" />
         </button>
         {detailsOpen ? <div className="pg-record-details">
-        {swatch ? <p className="pg-room-swatch-provenance">Staff-recorded color reference: {swatch.provenance}</p> : null}
+        {swatch ? <p className="pg-room-swatch-provenance">Staff-recorded color reference: {swatch.provenance}</p> : approximateSwatch ? <p className="pg-room-swatch-provenance">{approximateSwatch.provenance} <a href={approximateSwatch.url} target="_blank" rel="noreferrer">View PaintDB reference</a></p> : null}
         <dl className="pg-room-paint-facts">
           <div><dt>Brand</dt><dd>{record.brand || "Not recorded"}</dd></div>
           <div><dt>Color code</dt><dd>{record.color_code || "Not recorded"}</dd></div>

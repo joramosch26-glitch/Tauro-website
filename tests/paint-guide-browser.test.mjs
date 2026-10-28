@@ -100,6 +100,38 @@ test('color draft and mutation state are discarded when switching guides',async(
   await p.getByRole('button',{name:'Edit',exact:true}).click();
   assert.equal(await p.getByLabel('Color Name',{exact:true}).inputValue(),'White B');
 }));
+
+test('color catalog search is brand scoped, selection fills only the color identity, and keeps applied product fields separate',async()=>pageAt('/paint-guide/g/A/colors',async p=>{
+  let requestedUrl;
+  await p.route('https://paintdb.com/api/v1/colors**',async route=>{
+    requestedUrl=new URL(route.request().url());
+    await route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({data:[
+      {id:'bm-oc17',name:'White Dove',code:'OC-17',brand:{slug:'benjamin-moore',name:'Benjamin Moore'},hex:'#EFEEE5',lrv:83,url:'https://paintdb.com/colors/benjamin-moore/bm-oc17-white-dove'},
+      {id:'bm-oc18',name:'White Dove',code:'OC-18',brand:{slug:'benjamin-moore',name:'Benjamin Moore'},hex:'#F0EFE6',lrv:82,url:'https://paintdb.com/colors/benjamin-moore/bm-oc18-white-dove'},
+    ],meta:{total:2,limit:20,offset:0}})});
+  });
+  await readyColor(p);await p.getByRole('button',{name:'Add Paint Record',exact:true}).click();
+  await p.getByLabel('Surface',{exact:true}).fill('Walls');
+  await p.getByLabel('Color Name',{exact:true}).fill('Existing Color');
+  await p.getByLabel('Brand',{exact:true}).fill('Sherwin-Williams');
+  await p.getByLabel('Product',{exact:true}).fill('SuperPaint');
+  await p.getByLabel('Sheen',{exact:true}).fill('Satin');
+  await p.getByLabel('Color-origin brand',{exact:true}).selectOption('benjamin-moore');
+  await p.getByLabel('Search name or code',{exact:true}).fill('White Dove');
+  await p.getByRole('button',{name:'Search',exact:true}).click();
+  await p.getByRole('list',{name:'Color reference results'}).waitFor();
+  assert.equal(await p.getByRole('button',{name:'Use reference',exact:true}).count(),2,'duplicate-looking results stay separately selectable');
+  assert.equal(requestedUrl?.searchParams.get('brand'),'benjamin-moore');
+  assert.equal(requestedUrl?.searchParams.get('q'),'White Dove');
+  assert.equal(requestedUrl?.searchParams.has('guideId'),false);
+  await p.getByRole('button',{name:'Use reference',exact:true}).first().click();
+  assert.equal(await p.getByLabel('Color Name',{exact:true}).inputValue(),'White Dove');
+  assert.equal(await p.getByLabel('Color Code',{exact:true}).inputValue(),'OC-17');
+  assert.equal(await p.getByLabel('Brand',{exact:true}).inputValue(),'Sherwin-Williams');
+  assert.equal(await p.getByLabel('Product',{exact:true}).inputValue(),'SuperPaint');
+  assert.equal(await p.getByLabel('Sheen',{exact:true}).inputValue(),'Satin');
+  assert.match(await p.getByRole('status').allTextContents().then(text=>text.join(' ')),/Approximate swatch #EFEEE5/);
+}));
 test('late color create cannot contaminate B or keep its create button pending',async()=>pageAt('/paint-guide/g/A/colors',async p=>{
   await readyColor(p);await p.getByRole('button',{name:'Add Paint Record',exact:true}).click();
   await p.getByLabel('Surface',{exact:true}).fill('Late A');await p.getByLabel('Color Name',{exact:true}).fill('Blue');

@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { propertyFieldsToPersist, propertyMetadata, roomNotesFieldToPersist, roomNotesForLocation, verifiedSwatchFieldsToPersist, verifiedSwatchForRecord } from "../src/paint-guide/presentation/homeowner-features.js";
+import { approximateCatalogSwatchForRecord, propertyFieldsToPersist, propertyMetadata, roomNotesFieldToPersist, roomNotesForLocation, verifiedSwatchFieldsToPersist, verifiedSwatchForRecord } from "../src/paint-guide/presentation/homeowner-features.js";
 import { assertHomeownerDesignSchemaAvailable, HomeownerDesignMigrationRequiredError, homeownerDesignErrorMessage, normalizeHomeownerDesignDatabaseError, queryWithLegacyDesignColumns } from "../src/paint-guide/data/homeowner-design-schema.js";
 
 test("property row uses only configured values and keeps legacy documents empty", () => {
@@ -13,6 +13,18 @@ test("swatches require both a valid digital color and a stated source", () => {
   assert.equal(verifiedSwatchForRecord(record), null);
   assert.equal(verifiedSwatchForRecord({ ...record, swatch_hex: "red", swatch_provenance: "guess" }), null);
   assert.deepEqual(verifiedSwatchForRecord({ ...record, swatch_hex: "#f0e8d0", swatch_provenance: "Staff verified from the recorded product label" }), { hex: "#f0e8d0", provenance: "Staff verified from the recorded product label" });
+});
+
+test("catalog swatch is separately labeled approximate and requires a valid provider and origin", () => {
+  const record = { id: "r1", section: "primary" as const, surface: "Walls", brand: "Sherwin-Williams", product: "SuperPaint", color_name: "White Dove", color_code: "OC-17", sheen: "Satin", notes: null, sort_order: 0, created_at: "2026-01-01", color_origin_brand: "Benjamin Moore", color_reference_hex: "#EFEEE5", color_reference_provider: "PaintDB", color_reference_url: "https://paintdb.com/colors/benjamin-moore/bm-oc-17-white-dove", color_reference_retrieved_at: "2026-10-28T12:00:00.000Z" };
+  assert.deepEqual(approximateCatalogSwatchForRecord(record), {
+    hex: "#EFEEE5", brand: "Benjamin Moore", provider: "PaintDB",
+    url: "https://paintdb.com/colors/benjamin-moore/bm-oc-17-white-dove",
+    retrievedAt: "2026-10-28T12:00:00.000Z",
+    provenance: "Approximate digital color reference from PaintDB, retrieved 2026-10-28; not manufacturer-verified. Verify with a physical sample.",
+  });
+  assert.equal(approximateCatalogSwatchForRecord({ ...record, color_reference_hex: "ivory" }), null);
+  assert.equal(approximateCatalogSwatchForRecord({ ...record, color_reference_provider: null }), null);
 });
 
 test("room notes stay attached to their own location and empty notes stay absent", () => {
@@ -68,4 +80,3 @@ test("legacy reads retry only missing-column errors and preserve permission fail
   await assert.rejects(permissionRead, (error: { code?: string }) => error.code === "42501");
   assert.equal(legacyReads, 1);
 });
-

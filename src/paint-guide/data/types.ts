@@ -47,6 +47,12 @@ export type PaintRecord = {
   color_code: string | null;
   swatch_hex?: string | null;
   swatch_provenance?: string | null;
+  color_origin_brand?: string | null;
+  color_reference_hex?: string | null;
+  color_reference_provider?: string | null;
+  color_reference_id?: string | null;
+  color_reference_url?: string | null;
+  color_reference_retrieved_at?: string | null;
   sheen: string | null;
   notes: string | null;
   sort_order: number;

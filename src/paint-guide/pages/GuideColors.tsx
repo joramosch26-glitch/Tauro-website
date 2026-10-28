@@ -23,6 +23,7 @@ import type {
   PaintRecordSection,
 } from "../data/types";
 import { homeownerDesignErrorMessage } from "../data/homeowner-design-schema";
+import { applyCatalogReference, COLOR_CATALOG_BRANDS, PaintCatalogError, searchPaintColors, type CatalogColor, type ColorOriginSlug } from "../catalog/catalog";
 
 const sections: PaintRecordSection[] = ["primary", "exception", "additional"];
 const sectionOrder: Record<PaintRecordSection, number> = {
@@ -49,6 +50,10 @@ type TextField =
   | "colorCode"
   | "swatchHex"
   | "swatchProvenance"
+  | "colorOriginBrand"
+  | "colorReferenceHex"
+  | "colorReferenceProvider"
+  | "colorReferenceId"
   | "sheen";
 
 function sectionHeading(section: PaintRecordSection) {
@@ -67,6 +72,12 @@ function blankRecord(designFieldsAvailable = true): PaintRecordInput {
     colorCode: "",
     swatchHex: "",
     swatchProvenance: "",
+    colorOriginBrand: "",
+    colorReferenceHex: "",
+    colorReferenceProvider: "",
+    colorReferenceId: "",
+    colorReferenceUrl: "",
+    colorReferenceRetrievedAt: "",
     sheen: "",
     homeowner_design_fields_available: designFieldsAvailable,
     notes: "",
@@ -84,6 +95,12 @@ function recordInput(record: PaintRecord): PaintRecordInput {
     colorCode: record.color_code ?? "",
     swatchHex: record.swatch_hex ?? "",
     swatchProvenance: record.swatch_provenance ?? "",
+    colorOriginBrand: record.color_origin_brand ?? "",
+    colorReferenceHex: record.color_reference_hex ?? "",
+    colorReferenceProvider: record.color_reference_provider ?? "",
+    colorReferenceId: record.color_reference_id ?? "",
+    colorReferenceUrl: record.color_reference_url ?? "",
+    colorReferenceRetrievedAt: record.color_reference_retrieved_at ?? "",
     sheen: record.sheen ?? "",
     homeowner_design_fields_available: record.homeowner_design_fields_available,
     notes: record.notes ?? "",
@@ -166,6 +183,7 @@ function PaintRecordForm({
   failureMessage,
   submitLabel,
   pendingLabel,
+  catalogFieldsAvailable,
 }: {
   initial: PaintRecordInput;
   onSave: (value: PaintRecordInput) => Promise<boolean>;
@@ -174,9 +192,41 @@ function PaintRecordForm({
   failureMessage: string;
   submitLabel: string;
   pendingLabel: string;
+  catalogFieldsAvailable: boolean;
 }) {
   const [value, setValue] = useState(initial);
   const [error, setError] = useState("");
+  const [catalogBrand, setCatalogBrand] = useState<ColorOriginSlug>("sherwin-williams");
+  const [catalogQuery, setCatalogQuery] = useState("");
+  const [catalogColors, setCatalogColors] = useState<CatalogColor[]>([]);
+  const [catalogMessage, setCatalogMessage] = useState("");
+  const [catalogBusy, setCatalogBusy] = useState(false);
+  const catalogRequest = useRef<AbortController | null>(null);
+
+  useEffect(() => () => catalogRequest.current?.abort(), []);
+
+  async function searchCatalog() {
+    catalogRequest.current?.abort();
+    const controller = new AbortController();
+    catalogRequest.current = controller;
+    setCatalogBusy(true);
+    setCatalogMessage("");
+    setCatalogColors([]);
+    try {
+      const result = await searchPaintColors({ brand: catalogBrand, query: catalogQuery, signal: controller.signal });
+      if (catalogRequest.current !== controller) return;
+      setCatalogColors(result.colors);
+      setCatalogMessage(result.colors.length ? `${result.total === null ? result.colors.length : result.total} matching reference colors. Choose one to fill the color name, code, and separate approximate swatch.` : "No matches. You can enter the color manually.");
+    } catch (caught) {
+      if (catalogRequest.current !== controller) return;
+      setCatalogMessage(caught instanceof PaintCatalogError ? caught.message : "Color search failed. You can enter the color manually.");
+    } finally {
+      if (catalogRequest.current === controller) {
+        catalogRequest.current = null;
+        setCatalogBusy(false);
+      }
+    }
+  }
 
   function field(key: TextField, label: string, required = false) {
     const newDesignField = key === "swatchHex" || key === "swatchProvenance";
@@ -187,10 +237,18 @@ function PaintRecordForm({
           className="mt-1 w-full border border-[#20211f]/25 px-3 py-2 disabled:bg-[#20211f]/5"
           disabled={pending || (newDesignField && value.homeowner_design_fields_available === false)}
           onChange={(event) =>
-            setValue((current) => ({
-              ...current,
-              [key]: event.target.value,
-            }))
+            setValue((current) => {
+              const next = { ...current, [key]: event.target.value };
+              if (key === "colorName" || key === "colorCode") {
+                next.colorOriginBrand = "";
+                next.colorReferenceHex = "";
+                next.colorReferenceProvider = "";
+                next.colorReferenceId = "";
+                next.colorReferenceUrl = "";
+                next.colorReferenceRetrievedAt = "";
+              }
+              return next;
+            })
           }
           required={required}
           value={value[key]}
@@ -204,6 +262,10 @@ function PaintRecordForm({
 
     if (!value.surface.trim() || !value.colorName.trim()) {
       setError("Surface and Color Name are required.");
+      return;
+    }
+    if (value.colorReferenceId && initial.colorName !== value.colorName && value.swatchHex.trim()) {
+      setError("The existing verified swatch is attached to the previous color. Clear it or re-enter its verified value and source before saving this new color reference. Review any formula-label photos separately.");
       return;
     }
     if (Boolean(value.swatchHex.trim()) !== Boolean(value.swatchProvenance.trim()) || (value.swatchHex.trim() && !/^#[\da-f]{6}$/i.test(value.swatchHex.trim()))) {
@@ -225,6 +287,34 @@ function PaintRecordForm({
       className="mt-5 grid gap-3 border border-[#20211f]/15 bg-white p-5 sm:grid-cols-2"
       onSubmit={(event) => void submit(event)}
     >
+      <section className="border border-[#9b6b36]/35 bg-[#faf8f4] p-4 sm:col-span-2" aria-label="Color catalog reference">
+        <p className="text-xs font-semibold uppercase tracking-[0.14em]">Find a color reference</p>
+        {catalogFieldsAvailable ? <>
+          <p className="mt-1 text-xs text-[#20211f]/65">Independent digital approximation. It does not verify the can formula or change the paint brand, product, or sheen used.</p>
+          <div className="mt-3 grid gap-2 sm:grid-cols-[12rem_1fr_auto]">
+            <label className="text-sm font-semibold">Color-origin brand
+              <select className="mt-1 w-full border border-[#20211f]/25 bg-white px-3 py-2" disabled={pending || catalogBusy} value={catalogBrand} onChange={(event) => setCatalogBrand(event.target.value as ColorOriginSlug)}>
+                {COLOR_CATALOG_BRANDS.map((brand) => <option key={brand.slug} value={brand.slug}>{brand.name}</option>)}
+              </select>
+            </label>
+            <label className="text-sm font-semibold">Search name or code
+              <input className="mt-1 w-full border border-[#20211f]/25 px-3 py-2" disabled={pending || catalogBusy} maxLength={80} value={catalogQuery} onChange={(event) => setCatalogQuery(event.target.value)} placeholder="e.g. White Dove or OC-17" />
+            </label>
+            <button className="self-end border border-[#20211f] px-3 py-2 text-xs font-semibold uppercase disabled:opacity-60" disabled={pending || catalogBusy || !catalogQuery.trim()} onClick={() => void searchCatalog()} type="button">{catalogBusy ? "Searching…" : "Search"}</button>
+          </div>
+          {catalogMessage ? <p className="mt-2 text-sm" role="status">{catalogMessage}</p> : null}
+          {catalogColors.length ? <ul className="mt-3 grid gap-2 sm:grid-cols-2" aria-label="Color reference results">
+            {catalogColors.map((color) => <li key={color.id} className="flex items-center gap-3 border border-[#20211f]/15 bg-white p-3">
+              <span className="h-10 w-10 shrink-0 border border-black/20" style={{ backgroundColor: color.referenceHex }} aria-label={`Approximate swatch ${color.referenceHex}`} />
+              <div className="min-w-0 flex-1 text-sm"><strong>{color.name}</strong><span className="ml-2">{color.code}</span><p className="text-xs text-[#20211f]/60">{color.colorOrigin.name} · PaintDB reference · {color.referenceHex}{color.lrv === null ? "" : ` · LRV ${color.lrv}`}{color.sourceUrl ? <> · <a className="underline" href={color.sourceUrl} target="_blank" rel="noreferrer">Source</a></> : " · No source link"}</p></div>
+              <button className="border border-[#20211f] px-2 py-1 text-xs font-semibold" disabled={pending || !color.sourceUrl} onClick={() => { setValue((current) => applyCatalogReference(current, color)); setError(""); setCatalogMessage(`${color.name} (${color.code}) selected. Review the changed name/code before saving.`); setCatalogColors([]); }} type="button">Use reference</button>
+            </li>)}
+          </ul> : null}
+          {value.colorReferenceHex ? <div className="mt-3 flex items-center gap-2 text-xs" role="status"><span className="h-5 w-5 border border-black/20" style={{ backgroundColor: value.colorReferenceHex }} />Selected approximate swatch {value.colorReferenceHex} · {value.colorOriginBrand} · {value.colorReferenceProvider} · retrieved {value.colorReferenceRetrievedAt.slice(0, 10)}. Verify with a physical sample.</div> : null}
+          {value.colorReferenceId && initial.colorName !== value.colorName && value.swatchHex.trim() ? <p className="mt-2 text-sm text-[#9c2f2f]" role="alert">This record has a verified swatch for the previous color. Review it and its source before saving; formula-label photos must be reviewed separately.</p> : null}
+          <p className="mt-2 text-[11px] text-[#20211f]/55">Color data via PaintDB. Independent reference, not manufacturer-verified. Verify color in person. <a className="underline" href="https://paintdb.com/api/v1" target="_blank" rel="noreferrer">API information</a>.</p>
+        </> : <p className="mt-2 text-sm text-[#20211f]/65">Catalog references need the separate Paint Guide catalog-fields migration. Manual paint entry remains available.</p>}
+      </section>
       <label className="text-sm font-semibold">
         Section
         <select
@@ -326,6 +416,7 @@ export function GuideColors() {
   const [assignmentStateTrusted, setAssignmentStateTrusted] = useState(true);
   const [loadError, setLoadError] = useState("");
   const [designDataError, setDesignDataError] = useState("");
+  const [catalogFieldsAvailable, setCatalogFieldsAvailable] = useState(true);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -373,6 +464,7 @@ export function GuideColors() {
 
         setGuide(nextGuide);
         setRecords(sortRecords(nextRecords));
+        setCatalogFieldsAvailable((nextRecords as PaintRecord[] & { catalog_reference_fields_available?: boolean }).catalog_reference_fields_available !== false);
         setLocations(nextLocations);
         setAssignments(nextAssignments);
         setState("ready");
@@ -680,6 +772,7 @@ export function GuideColors() {
             pending={createPending}
             pendingLabel="Adding…"
             submitLabel="Add Paint Record"
+            catalogFieldsAvailable={catalogFieldsAvailable}
           />
         ) : null}
 
@@ -712,6 +805,7 @@ export function GuideColors() {
                         pending={editPendingId === record.id}
                         pendingLabel="Saving…"
                         submitLabel="Save"
+                        catalogFieldsAvailable={catalogFieldsAvailable}
                       />
                     ) : (
                       <>
@@ -724,6 +818,7 @@ export function GuideColors() {
                               {record.color_name}
                               {record.sheen ? ` · ${record.sheen}` : ""}
                             </p>
+                            {record.color_reference_hex && /^#[\da-f]{6}$/i.test(record.color_reference_hex) ? <p className="mt-2 flex items-center gap-2 text-xs text-[#20211f]/65"><span className="h-5 w-5 border border-black/20" style={{ backgroundColor: record.color_reference_hex }} />Approximate {record.color_origin_brand} color reference {record.color_reference_hex}; not manufacturer-verified. {record.color_reference_url ? <a className="underline" href={record.color_reference_url} target="_blank" rel="noreferrer">PaintDB source</a> : null}</p> : null}
                             {[record.brand, record.product, record.color_code, record.notes]
                               .filter(Boolean)
                               .map((detail, index) => (

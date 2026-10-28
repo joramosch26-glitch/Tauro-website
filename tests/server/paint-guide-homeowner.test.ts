@@ -487,6 +487,50 @@ test("document DTO accepts PostgreSQL UUID lexical forms without version or vari
   }), null);
 });
 
+test("document DTO accepts a well-formed approximate catalog swatch without conflating it with a verified swatch", () => {
+  const validDocument = { schema_version: 1, ...documentFixture };
+  const record = documentFixture.records[0];
+  const valid = validateHomeownerGuideDocument({
+    ...validDocument,
+    guide: { ...documentFixture.guide, city: "Demo City", state: "UT", property_type: "Fictional residence" },
+    locations: [{ ...documentFixture.locations[0], room_notes: "Synthetic room note" }],
+    records: [{ ...record, swatch_hex: null, swatch_provenance: null, color_origin_brand: "Benjamin Moore", color_reference_hex: "#EFEEE5", color_reference_provider: "PaintDB", color_reference_url: "https://paintdb.com/colors/benjamin-moore/bm-oc-17-white-dove", color_reference_retrieved_at: "2026-10-28T12:00:00.000Z" }],
+  });
+  assert.equal(valid?.records[0].color_reference_hex, "#EFEEE5");
+  assert.equal(valid?.records[0].color_origin_brand, "Benjamin Moore");
+  assert.equal(valid?.records[0].brand, "Tauro", "the applied coating brand stays separate");
+  assert.equal(valid?.guide.city, "Demo City");
+  assert.equal(valid?.guide.property_type, "Fictional residence");
+  assert.equal(valid?.locations[0].room_notes, "Synthetic room note");
+  assert.equal(valid?.records[0].swatch_hex, null);
+  assert.equal(valid?.records[0].color_reference_url, "https://paintdb.com/colors/benjamin-moore/bm-oc-17-white-dove");
+  assert.equal(validateHomeownerGuideDocument({
+    ...validDocument,
+    records: [{ ...record, color_origin_brand: "Benjamin Moore", color_reference_hex: "ivory", color_reference_provider: "PaintDB" }],
+  }), null);
+  assert.equal(validateHomeownerGuideDocument({
+    ...validDocument,
+    records: [{ ...record, color_origin_brand: "Benjamin Moore", color_reference_hex: "#EFEEE5" }],
+  }), null, "partial catalog metadata is rejected");
+});
+
+test("document DTO accepts only current photo descriptors associated with this guide document", () => {
+  const validDocument = { schema_version: 1, ...documentFixture };
+  const photo = {
+    slot_id: "71000000-0000-4000-8000-000000000103",
+    version_id: "71000000-0000-4000-8000-000000000104",
+    placement_kind: "record_formula_label",
+    location_id: null,
+    paint_record_id: documentFixture.records[0].id,
+  };
+  assert.deepEqual(validateHomeownerGuideDocument({ ...validDocument, photos: [photo] })?.photos, [photo]);
+  assert.deepEqual(validateHomeownerGuideDocument({ ...validDocument, photos: [] })?.photos, []);
+  assert.equal(validateHomeownerGuideDocument({ ...validDocument, photos: [{ ...photo, paint_record_id: "71000000-0000-4000-8000-000000000199" }] }), null);
+  assert.equal(validateHomeownerGuideDocument({ ...validDocument, photos: [{ ...photo, version_id: "not-a-uuid" }] }), null);
+  assert.equal(validateHomeownerGuideDocument({ ...validDocument, photos: [{ ...photo, object_key: "private-bucket-key" }] }), null);
+  assert.equal(validateHomeownerGuideDocument({ ...validDocument, photos: null }), null);
+});
+
 test("document handler and RPC adapter fail closed for unavailable, malformed, and unexpected data", async () => {
   const session = createHomeownerSessionBearer(1);
   const handler = createHomeownerDocumentHandler({
@@ -516,11 +560,18 @@ test("document handler and RPC adapter fail closed for unavailable, malformed, a
   const input: HomeownerDocumentReadInput = { sessionKeyVersion: 1, sessionHmac: Buffer.alloc(32, 9) };
   let name = "";
   let values: Record<string, unknown> = {};
-  const rpcDocument = { schema_version: 1, ...documentFixture };
+  const rpcPhotos: NonNullable<HomeownerGuideDocumentData["photos"]> = [{
+    slot_id: "71000000-0000-4000-8000-000000000103",
+    version_id: "71000000-0000-4000-8000-000000000104",
+    placement_kind: "record_formula_label",
+    location_id: null,
+    paint_record_id: documentFixture.records[0].id,
+  }];
+  const rpcDocument = { schema_version: 1, ...documentFixture, photos: rpcPhotos };
   const accepted = await callHomeownerDocumentRead({ rpc: async (functionName, arguments_) => {
     name = functionName; values = arguments_; return { data: rpcDocument, error: null };
   } }, input);
-  assert.deepEqual(accepted, { kind: "document", document: documentFixture });
+  assert.deepEqual(accepted, { kind: "document", document: { ...documentFixture, photos: rpcPhotos } });
   assert.equal(name, "paint_guide_homeowner_document_read");
   assert.deepEqual(values, { p_session_key_version: 1, p_session_hmac: `\\x${"09".repeat(32)}` });
   for (const data of [

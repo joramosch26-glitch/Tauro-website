@@ -12,6 +12,18 @@ export function verifiedSwatchForRecord(record: HomeownerPaintRecord) {
   return /^#[\da-f]{6}$/i.test(hex) && provenance ? { hex, provenance } : null;
 }
 
+export function approximateCatalogSwatchForRecord(record: HomeownerPaintRecord) {
+  const hex = record.color_reference_hex?.trim() ?? "";
+  const brand = record.color_origin_brand?.trim() ?? "";
+  const provider = record.color_reference_provider?.trim() ?? "";
+  const url = record.color_reference_url?.trim() ?? "";
+  const retrievedAt = record.color_reference_retrieved_at?.trim() ?? "";
+  return /^#[\da-f]{6}$/i.test(hex) && ["Sherwin-Williams", "Benjamin Moore", "Farrow & Ball"].includes(brand) && provider === "PaintDB"
+    && /^https:\/\/paintdb\.com\/colors\/\S+$/i.test(url) && Number.isFinite(Date.parse(retrievedAt))
+    ? { hex, brand, provider, url, retrievedAt, provenance: `Approximate digital color reference from ${provider}, retrieved ${retrievedAt.slice(0, 10)}; not manufacturer-verified. Verify with a physical sample.` }
+    : null;
+}
+
 export function roomNotesForLocation(location: HomeownerGuideLocation) {
   return location.room_notes?.trim() || null;
 }
@@ -36,4 +48,3 @@ export function verifiedSwatchFieldsToPersist(input: { swatchHex: string; swatch
   }
   return { swatch_hex: swatchHex || null, swatch_provenance: swatchProvenance || null };
 }
-

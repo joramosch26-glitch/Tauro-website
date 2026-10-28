@@ -18,12 +18,22 @@ function parseLocation(value: unknown): HomeownerGuideLocation | null {
 }
 function parseRecord(value: unknown): HomeownerPaintRecord | null {
   if (!isRecord(value)) return null;
-  const id = requiredString(value.id); const section = value.section; const surface = requiredString(value.surface); const brand = nullableString(value.brand); const product = nullableString(value.product); const colorName = requiredString(value.color_name); const colorCode = nullableString(value.color_code); const swatchHex = nullableString(value.swatch_hex); const swatchProvenance = nullableString(value.swatch_provenance); const sheen = nullableString(value.sheen); const notes = nullableString(value.notes); const sortOrder = finiteNumber(value.sort_order); const createdAt = requiredString(value.created_at);
+  const id = requiredString(value.id); const section = value.section; const surface = requiredString(value.surface); const brand = nullableString(value.brand); const product = nullableString(value.product); const colorName = requiredString(value.color_name); const colorCode = nullableString(value.color_code); const swatchHex = nullableString(value.swatch_hex); const swatchProvenance = nullableString(value.swatch_provenance); const colorOriginBrand = nullableString(value.color_origin_brand); const colorReferenceHex = nullableString(value.color_reference_hex); const colorReferenceProvider = nullableString(value.color_reference_provider); const colorReferenceUrl = nullableString(value.color_reference_url); const colorReferenceRetrievedAt = nullableString(value.color_reference_retrieved_at); const sheen = nullableString(value.sheen); const notes = nullableString(value.notes); const sortOrder = finiteNumber(value.sort_order); const createdAt = requiredString(value.created_at);
   const validSection = section === "primary" || section === "exception" || section === "additional";
   const validHex = swatchHex === undefined || swatchHex === null || /^#[\da-f]{6}$/i.test(swatchHex);
   const validProvenancePair = (swatchHex == null) === (swatchProvenance == null);
   const validSwatchShape = (!hasOwn(value, "swatch_hex") && !hasOwn(value, "swatch_provenance")) || (swatchHex !== undefined && swatchProvenance !== undefined);
-  return id !== null && validSection && surface !== null && colorName !== null && brand !== undefined && product !== undefined && colorCode !== undefined && validSwatchShape && validHex && validProvenancePair && sheen !== undefined && notes !== undefined && sortOrder !== null && createdAt !== null ? { id, section: section as HomeownerPaintRecordSection, surface, brand, product, color_name: colorName, color_code: colorCode, ...(swatchHex === undefined ? {} : { swatch_hex: swatchHex }), ...(swatchProvenance === undefined ? {} : { swatch_provenance: swatchProvenance }), sheen, notes, sort_order: sortOrder, created_at: createdAt } : null;
+  const validCatalogHex = colorReferenceHex === undefined || colorReferenceHex === null || /^#[\da-f]{6}$/i.test(colorReferenceHex);
+  const catalogFields = ["color_origin_brand", "color_reference_hex", "color_reference_provider", "color_reference_url", "color_reference_retrieved_at"];
+  const hasCatalogReference = catalogFields.some((key) => hasOwn(value, key));
+  const validCatalogShape = !hasCatalogReference || catalogFields.every((key) => hasOwn(value, key) && nullableString(value[key]));
+  const validCatalogValues = !hasCatalogReference
+    || (colorOriginBrand === null && colorReferenceHex === null && colorReferenceProvider === null && colorReferenceUrl === null && colorReferenceRetrievedAt === null)
+    || (typeof colorOriginBrand === "string" && ["Sherwin-Williams", "Benjamin Moore", "Farrow & Ball"].includes(colorOriginBrand)
+      && typeof colorReferenceHex === "string" && /^#[\da-f]{6}$/i.test(colorReferenceHex) && colorReferenceProvider === "PaintDB"
+      && typeof colorReferenceUrl === "string" && /^https:\/\/paintdb\.com\/colors\/\S+$/i.test(colorReferenceUrl)
+      && typeof colorReferenceRetrievedAt === "string" && Number.isFinite(Date.parse(colorReferenceRetrievedAt)));
+  return id !== null && validSection && surface !== null && colorName !== null && brand !== undefined && product !== undefined && colorCode !== undefined && validSwatchShape && validHex && validProvenancePair && validCatalogHex && validCatalogShape && validCatalogValues && sheen !== undefined && notes !== undefined && sortOrder !== null && createdAt !== null ? { id, section: section as HomeownerPaintRecordSection, surface, brand, product, color_name: colorName, color_code: colorCode, ...(swatchHex === undefined ? {} : { swatch_hex: swatchHex }), ...(swatchProvenance === undefined ? {} : { swatch_provenance: swatchProvenance }), ...(colorOriginBrand === undefined ? {} : { color_origin_brand: colorOriginBrand }), ...(colorReferenceHex === undefined ? {} : { color_reference_hex: colorReferenceHex }), ...(colorReferenceProvider === undefined ? {} : { color_reference_provider: colorReferenceProvider }), ...(colorReferenceUrl === undefined ? {} : { color_reference_url: colorReferenceUrl }), ...(colorReferenceRetrievedAt === undefined ? {} : { color_reference_retrieved_at: colorReferenceRetrievedAt }), sheen, notes, sort_order: sortOrder, created_at: createdAt } : null;
 }
 function parseAssignment(value: unknown): HomeownerPaintRecordLocation | null {
   if (!isRecord(value)) return null;
@@ -62,4 +72,3 @@ export function parseHomeownerGuideDocument(value: unknown): HomeownerGuideDocum
     ? { guide: { residence_name: residenceName, primary_scope_note: primaryScopeNote, ...(city === undefined ? {} : { city }), ...(state === undefined ? {} : { state }), ...(propertyType === undefined ? {} : { property_type: propertyType }) }, locations, records, assignments, ...(photos === undefined ? {} : { photos }) }
     : null;
 }
-
