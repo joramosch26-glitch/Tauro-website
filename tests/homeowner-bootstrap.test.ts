@@ -8,6 +8,7 @@ import {
 import { exchangeHomeownerToken, fetchHomeownerDocument } from "../src/paint-guide/homeowner/client.js";
 import { parseHomeownerGuideDocument } from "../src/paint-guide/homeowner/document.js";
 import { buildHomeownerPhotoSources } from "../src/paint-guide/homeowner/photo-sources.js";
+import { buildStaffPreviewPhotoSources } from "../src/paint-guide/staff/preview-photo-sources.js";
 import { captureHomeownerFragment } from "../src/paint-guide/homeowner/fragment.js";
 import type { HomeownerGuideDocumentData } from "../src/paint-guide/presentation/types.js";
 
@@ -29,6 +30,42 @@ test("homeowner formula-label descriptors map to the protected full-size photo r
   assert.ok(parsed);
   assert.deepEqual(buildHomeownerPhotoSources(parsed.photos).formulaLabelPhotoUrls[recordId],
     [`/api/paint-guide/homeowner/photos/${versionId}`]);
+});
+
+test("staff preview maps current authorized photo versions to their exact presentation roles", () => {
+  const cover = "73000000-0000-4000-8000-000000000111";
+  const room = "73000000-0000-4000-8000-000000000112";
+  const record = "73000000-0000-4000-8000-000000000113";
+  const versionIds = [
+    "73000000-0000-4000-8000-000000000121",
+    "73000000-0000-4000-8000-000000000122",
+    "73000000-0000-4000-8000-000000000123",
+    "73000000-0000-4000-8000-000000000124",
+  ];
+  const placements = [
+    { id: "cover", placement: "residence_cover" as const, locationId: null, recordId: null, photo: { slotId: cover, versionId: versionIds[0] } },
+    { id: "room", placement: "location" as const, locationId: room, recordId: null, photo: { slotId: room, versionId: versionIds[1] } },
+    { id: "context", placement: "record_context" as const, locationId: room, recordId: record, photo: { slotId: record, versionId: versionIds[2] } },
+    { id: "label", placement: "record_formula_label" as const, locationId: null, recordId: record, photo: { slotId: cover, versionId: versionIds[3] } },
+  ];
+  const urls = new Map(versionIds.map((versionId, index) => [versionId, `blob:staff-preview-${index}`]));
+  assert.deepEqual(buildStaffPreviewPhotoSources(placements, urls), {
+    heroImageUrl: "blob:staff-preview-0",
+    roomPhotoUrls: { [room]: "blob:staff-preview-1" },
+    recordPhotoUrls: { [room]: { [record]: "blob:staff-preview-2" } },
+    formulaLabelPhotoUrls: { [record]: ["blob:staff-preview-3"] },
+  });
+});
+
+test("staff preview omits photos whose version was not returned by authorized image fetch", () => {
+  const roomId = "73000000-0000-4000-8000-000000000132";
+  const photo = { id: "room", placement: "location" as const, locationId: roomId, recordId: null, photo: { slotId: roomId, versionId: "73000000-0000-4000-8000-000000000133" } };
+  assert.deepEqual(buildStaffPreviewPhotoSources([photo], new Map()), {
+    heroImageUrl: null,
+    roomPhotoUrls: {},
+    recordPhotoUrls: {},
+    formulaLabelPhotoUrls: {},
+  });
 });
 
 type FakeLocation = { pathname: string; search: string; hash: string };
@@ -198,3 +235,4 @@ test("document guard accepts only the presentation-safe response shape", () => {
   assert.equal(parseHomeownerGuideDocument({ ...transportFixture, guide: { ...transportFixture.guide, primary_scope_note: 7 } }), null);
   assert.equal(parseHomeownerGuideDocument({ ...transportFixture, records: {} }), null);
 });
+
