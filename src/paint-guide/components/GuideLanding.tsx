@@ -3,6 +3,7 @@ import { ArrowLeft, ArrowUpRight, ChevronDown, ChevronRight, House, Layers3, Pai
 import { buildGuideNavigation, type GuideSelection } from "../presentation/guide-navigation";
 import { buildRoomNavigation, type RoomNavigationNode } from "../presentation/room-navigation";
 import { approximateCatalogSwatchForRecord, propertyMetadata, roomNotesForLocation, verifiedSwatchForRecord } from "../presentation/homeowner-features";
+import { HomeownerPrivateImage } from "./HomeownerPrivateImage";
 import type { HomeownerGuideDocumentData, HomeownerPaintRecord } from "../presentation/types";
 import "./guide-landing.css";
 
@@ -28,8 +29,8 @@ function LocationPhoto({ photoUrl, variant = "card" }: { photoUrl: string | null
   const [failedPhotoUrl, setFailedPhotoUrl] = useState<string | null>(null);
   useEffect(() => setFailedPhotoUrl(null), [photoUrl]);
   const showPhoto = photoUrl !== null && failedPhotoUrl !== photoUrl;
-  return <div className={variant === "card" ? "pg-location-photo" : "pg-subspace-photo"} aria-hidden="true">
-    {showPhoto ? <img src={photoUrl ?? undefined} alt="" onError={() => setFailedPhotoUrl(photoUrl)} /> : variant === "card" ? <><Layers3 strokeWidth={0.8} /><span>Location photograph not added</span></> : <Layers3 strokeWidth={0.8} />}
+  return <div className={variant === "card" ? "pg-location-photo" : "pg-subspace-photo"}>
+    {showPhoto ? <HomeownerPrivateImage src={photoUrl!} alt="" loading="lazy" allowRetry={false} /> : variant === "card" ? <><Layers3 strokeWidth={0.8} /><span>Location photograph not added</span></> : <Layers3 strokeWidth={0.8} />}
   </div>;
 }
 
@@ -100,11 +101,12 @@ function RoomHero({
   return (
     <section className={showPhoto ? "pg-room-hero pg-room-hero--photo" : "pg-room-hero"} aria-label={`${node.location.name} room details`}>
       {showPhoto ? (
-        <img
+        <HomeownerPrivateImage
           className="pg-room-hero-image"
           src={photoUrl ?? undefined}
           alt={`Room photograph for ${node.location.name}`}
-          onError={() => { setFailedPhotoKey(photoKey); onPhotoError(photoKey); }}
+          fetchPriority="high"
+          onFailure={() => { setFailedPhotoKey(photoKey); onPhotoError(photoKey); }}
         />
       ) : (
         <div className="pg-room-hero-placeholder" role="img" aria-label={photoUrl ? `Room photograph unavailable for ${node.location.name}` : `Room photograph not added for ${node.location.name}`}>
@@ -267,11 +269,12 @@ export function GuideLanding({ data, heroImageUrl, roomPhotoUrls = emptyPhotoSou
   return (
     <article className="pg-experience">
       <header className={showHeroImage ? "pg-hero pg-hero--photo" : "pg-hero"}>
-        {showHeroImage ? <img
+        {showHeroImage ? <HomeownerPrivateImage
           className="pg-hero-background"
           src={resolvedHeroImageUrl ?? undefined}
           alt={`Photograph of ${data.guide.residence_name}`}
-          onError={() => setFailedHeroImageUrl(resolvedHeroImageUrl)}
+          fetchPriority="high"
+          onFailure={() => setFailedHeroImageUrl(resolvedHeroImageUrl)}
         /> : null}
         <div className="pg-hero-copy">
           <p className="pg-eyebrow">Tauro Painting</p>

@@ -21,6 +21,7 @@ import {
 } from "../../server/paint-guide-homeowner/cookies.js";
 import { createHomeownerDocumentHandler } from "../../server/paint-guide-homeowner/document-handler.js";
 import { createHomeownerEndSessionHandler } from "../../server/paint-guide-homeowner/end-session.js";
+import { createHomeownerPhotoReadHandler } from "../../server/paint-guide-photo/handlers.js";
 import {
   validateHomeownerGuideDocument,
   type HomeownerGuideDocumentData,
@@ -665,6 +666,100 @@ test("end-session reports operational failures generically while clearing the br
     assert.equal(response.headers.get("cache-control"), "no-store, private");
     assert.equal(response.headers.get("referrer-policy"), "no-referrer");
   }
+});
+
+test("private photo reads distinguish unavailable sessions, missing files, and temporary failures without exposing the reason", async () => {
+  const session = createHomeownerSessionBearer(1);
+  const cookie = `${HOMEOWNER_SESSION_COOKIE_NAME}=${session.canonical}`;
+  const photoVersion = "71000000-0000-4000-8000-000000000303";
+  const validRpcDocument = { schema_version: 1, ...documentFixture };
+  const metadata = { guide_id: GUIDE_ID, object_key: "thumb/synthetic.webp", content_length: 4, width: 2, height: 2 };
+  const makeHandler = (rpcResponses: Record<string, { data: unknown; error: unknown }>, download?: { data: Blob | null; error: unknown }) => {
+    const calls: string[] = [];
+    const client = {
+      rpc: async (name: string) => { calls.push(name); return rpcResponses[name] ?? { data: null, error: null }; },
+      storage: { from: () => ({ download: async () => download ?? { data: new Blob(["webp"]), error: null } }) },
+    };
+    const handler = createHomeownerPhotoReadHandler({
+      loadHomeownerEnvironment: () => serverEnvironment,
+      createClient: () => client as never,
+      enabled: () => true,
+    });
+    return { handler, calls };
+  };
+  const request = (cookieValue: string | null = cookie, requestedVersion = photoVersion) => new Request(`https://www.tauropainting.com/api/paint-guide/homeowner/photos/${requestedVersion}?variant=thumb`, { headers: cookieValue === null ? {} : { Cookie: cookieValue } });
+  const invalidSession = makeHandler({
+    paint_guide_homeowner_photo_read: { data: null, error: null },
+    paint_guide_homeowner_document_read: { data: null, error: null },
+  });
+  const invalidResponse = await invalidSession.handler(request());
+  assert.equal(invalidResponse.status, 401);
+  assert.deepEqual(await invalidResponse.json(), { available: false });
+  assert.equal(invalidResponse.headers.get("set-cookie"), null, "a delayed photo response must not clear a newer session cookie");
+  assert.equal(invalidResponse.headers.get("cache-control"), "no-store, private");
+  for (const missingCookie of [null, `${HOMEOWNER_SESSION_COOKIE_NAME}=invalid`]) {
+    const response = await invalidSession.handler(request(missingCookie));
+    assert.equal(response.status, 401);
+    assert.deepEqual(await response.json(), { available: false });
+    assert.equal(response.headers.get("set-cookie"), null);
+  }
+
+  const missingPhoto = makeHandler({
+    paint_guide_homeowner_photo_read: { data: null, error: null },
+    paint_guide_homeowner_document_read: { data: validRpcDocument, error: null },
+  });
+  const missingResponse = await missingPhoto.handler(request());
+  assert.equal(missingResponse.status, 404);
+  assert.deepEqual(await missingResponse.json(), { available: false });
+  assert.equal(missingResponse.headers.get("set-cookie"), null);
+  assert.deepEqual(missingPhoto.calls, ["paint_guide_homeowner_photo_read", "paint_guide_homeowner_document_read"]);
+
+  const concurrentMissingPhotos = makeHandler({
+    paint_guide_homeowner_photo_read: { data: null, error: null },
+    paint_guide_homeowner_document_read: { data: validRpcDocument, error: null },
+  });
+  const concurrentResponses = await Promise.all([
+    concurrentMissingPhotos.handler(request(cookie, photoVersion)),
+    concurrentMissingPhotos.handler(request(cookie, "71000000-0000-4000-8000-000000000304")),
+  ]);
+  assert.deepEqual(concurrentResponses.map(response => response.status), [404, 404]);
+  assert.equal(concurrentMissingPhotos.calls.filter(name => name === "paint_guide_homeowner_document_read").length, 1);
+
+  const separateSessions = makeHandler({
+    paint_guide_homeowner_photo_read: { data: null, error: null },
+    paint_guide_homeowner_document_read: { data: validRpcDocument, error: null },
+  });
+  const otherSession = `${HOMEOWNER_SESSION_COOKIE_NAME}=${createHomeownerSessionBearer(1).canonical}`;
+  await Promise.all([separateSessions.handler(request(cookie)), separateSessions.handler(request(otherSession))]);
+  assert.equal(separateSessions.calls.filter(name => name === "paint_guide_homeowner_document_read").length, 2, "session checks are coalesced only within the same session");
+
+  const transientRpc = makeHandler({ paint_guide_homeowner_photo_read: { data: null, error: { message: "synthetic" } } });
+  assert.equal((await transientRpc.handler(request())).status, 503);
+
+  const validationUnavailable = makeHandler({
+    paint_guide_homeowner_photo_read: { data: null, error: null },
+    paint_guide_homeowner_document_read: { data: null, error: { message: "synthetic outage" } },
+  });
+  assert.equal((await validationUnavailable.handler(request())).status, 503);
+
+  const readyPhoto = makeHandler({ paint_guide_homeowner_photo_read: { data: metadata, error: null } }, {
+    data: null, error: { statusCode: "503", message: "synthetic storage outage" },
+  });
+  assert.equal((await readyPhoto.handler(request())).status, 503);
+  assert.deepEqual(readyPhoto.calls, ["paint_guide_homeowner_photo_read"]);
+
+  const missingStorageObject = makeHandler({ paint_guide_homeowner_photo_read: { data: metadata, error: null } }, {
+    data: null, error: { statusCode: "404", message: "synthetic missing object" },
+  });
+  const missingStorageResponse = await missingStorageObject.handler(request());
+  assert.equal(missingStorageResponse.status, 404);
+  assert.equal(missingStorageResponse.headers.get("set-cookie"), null);
+
+  const successfulRead = makeHandler({ paint_guide_homeowner_photo_read: { data: metadata, error: null } });
+  const successfulResponse = await successfulRead.handler(request());
+  assert.equal(successfulResponse.status, 200);
+  assert.equal(successfulResponse.headers.get("cache-control"), "no-store, private");
+  assert.equal(await successfulResponse.text(), "webp");
 });
 
 // Composition regression: the simulated RPC backend makes expiry/revocation
