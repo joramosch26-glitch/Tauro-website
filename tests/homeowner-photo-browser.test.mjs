@@ -9,6 +9,8 @@ const fixture = `
 import React,{useEffect,useState} from 'react';
 import {createRoot} from 'react-dom/client';
 import {HomeownerPrivateImage} from '/src/paint-guide/components/HomeownerPrivateImage.tsx';
+import {HomeownerGuideDocument} from '/src/paint-guide/components/HomeownerGuideDocument.tsx';
+import {buildHomeownerPhotoSources} from '/src/paint-guide/homeowner/photo-sources.ts';
 const originalFetch=window.fetch.bind(window);
 window.fetch=(input,init={})=>{
  if(String(input).endsWith('/slow'))init.signal?.addEventListener('abort',()=>window.qaSlowAborted=true,{once:true});
@@ -18,8 +20,18 @@ function App(){
  const [source,setSource]=useState('slow');const [session,setSession]=useState(false);
  useEffect(()=>{const handler=()=>setSession(true);window.addEventListener('paintguide:homeowner-session-unavailable',handler);window.qaChangeSource=setSource;return()=>window.removeEventListener('paintguide:homeowner-session-unavailable',handler);},[]);
  const mode=new URL(location.href).searchParams.get('mode');
+ const recordId='73000000-0000-4000-8000-000000000301';
+ const locationId='73000000-0000-4000-8000-000000000302';
+ const photoVersion='73000000-0000-4000-8000-000000000303';
+ const homeownerDocument={guide:{residence_name:'Synthetic QA Formula Label Flow',primary_scope_note:null},
+  locations:[{id:locationId,parent_id:null,name:'Synthetic Test Room',sort_order:0,created_at:'2026-10-28T00:00:00Z'}],
+  records:[{id:recordId,section:'primary',surface:'Synthetic Test Wall',brand:null,product:'Synthetic Test Paint',color_name:'Synthetic Sample Color',color_code:null,sheen:'Eggshell',notes:null,sort_order:0,created_at:'2026-10-28T00:00:00Z'}],
+  assignments:[{paint_record_id:recordId,location_id:locationId}],
+  photos:[{slot_id:'73000000-0000-4000-8000-000000000304',version_id:photoVersion,placement_kind:'record_formula_label',location_id:null,paint_record_id:recordId}]};
+ const homeownerPhotoSources=buildHomeownerPhotoSources(homeownerDocument.photos);
  return React.createElement('main',null,
   session?React.createElement('p',{role:'alert'},'Private link may have ended or been disabled'):null,
+  mode==='category-formula'?React.createElement(HomeownerGuideDocument,{data:homeownerDocument,...homeownerPhotoSources}):
   mode==='lazy'?React.createElement(React.Fragment,null,
    React.createElement('section',{style:{height:'400px'}},React.createElement(HomeownerPrivateImage,{src:'/api/paint-guide/homeowner/photos/cover',alt:'cover',fetchPriority:'high'})),
    React.createElement('section',{style:{marginTop:'1200px',height:'300px'}},React.createElement(HomeownerPrivateImage,{src:'/api/paint-guide/homeowner/photos/room-context',alt:'room context',loading:'lazy'}))
@@ -50,7 +62,7 @@ before(async () => {
   });
   await vite.listen();
   origin=`http://127.0.0.1:${vite.httpServer.address().port}`;
-  browser=await chromium.launch({headless:true});
+  browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH || undefined,headless:true,args:process.env.CHROMIUM_PATH?['--no-sandbox']:[]});
 });
 after(async()=>{await browser?.close();await vite?.close();});
 
@@ -82,6 +94,24 @@ test('lazy private context photos load when scrolled into view on a mobile viewp
     await page.evaluate(()=>window.scrollTo(0,1000));
     await page.waitForFunction(()=>document.querySelector('img[alt="room context"]')?.src.startsWith('blob:'));
     assert.equal(requested.filter(id=>id==='room-context').length,1,'photo should load once after entering the mobile viewport');
+  } finally { await context.close(); }
+});
+
+test('formula label photo reaches the paint-by-category detail view and loads through the private route',async()=>{
+  const requested=[];
+  const photoVersion='73000000-0000-4000-8000-000000000303';
+  const photoHandler=async route=>{
+    requested.push(new URL(route.request().url()).pathname.split('/').pop());
+    await route.fulfill({status:200,contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="12" height="8"><rect width="12" height="8" fill="green"/></svg>'});
+  };
+  const {context,page}=await openPage('/paint-guide?mode=category-formula',photoHandler);
+  try {
+    await page.getByRole('button',{name:'Browse Synthetic Test Wall, 1 paint selection',exact:true}).click();
+    await page.getByRole('heading',{name:'Paint-can formula label photo',exact:true}).waitFor();
+    const image=page.getByAltText('Formula-label image for Synthetic Sample Color, photo 1');
+    await image.waitFor();
+    await page.waitForFunction(version=>document.querySelector('img[alt="Formula-label image for Synthetic Sample Color, photo 1"]')?.src.startsWith('blob:'),photoVersion);
+    assert.deepEqual(requested,[photoVersion]);
   } finally { await context.close(); }
 });
 

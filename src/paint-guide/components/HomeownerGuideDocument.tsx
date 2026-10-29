@@ -108,10 +108,12 @@ function PaintRecordDetails({
   record,
   compact = false,
   locationLabels = [],
+  formulaLabelPhotoUrls = [],
 }: {
   record: HomeownerPaintRecord;
   compact?: boolean;
   locationLabels?: string[];
+  formulaLabelPhotoUrls?: readonly string[];
 }) {
   return (
     <article
@@ -159,6 +161,12 @@ function PaintRecordDetails({
           </div>
         </div>
       ) : null}
+      {formulaLabelPhotoUrls.length ? (
+        <section className="mt-5 border-t border-[#20211f]/10 pt-4" aria-label={`Formula label photos for ${record.color_name}`}>
+          <h4 className="text-xs font-semibold uppercase tracking-[0.14em] text-[#9b6b36]">Paint-can formula label photo</h4>
+          <FormulaLabelPhotos record={record} urls={formulaLabelPhotoUrls} />
+        </section>
+      ) : null}
     </article>
   );
 }
@@ -191,10 +199,12 @@ function ExceptionLocationCard({
   title,
   parentName,
   records,
+  formulaLabelPhotoUrls = {},
 }: {
   title: string;
   parentName?: string;
   records: HomeownerPaintRecord[];
+  formulaLabelPhotoUrls?: Readonly<Record<string, readonly string[]>>;
 }) {
   return (
     <section className="min-w-0 break-words border border-[#20211f]/15 bg-white p-5 sm:p-6">
@@ -204,14 +214,14 @@ function ExceptionLocationCard({
       ) : null}
       <div className="mt-5">
         {records.map((record) => (
-          <PaintRecordDetails compact key={record.id} record={record} />
+          <PaintRecordDetails compact key={record.id} record={record} formulaLabelPhotoUrls={formulaLabelPhotoUrls[record.id] ?? []} />
         ))}
       </div>
     </section>
   );
 }
 
-function GuideSpecifications({ data }: { data: HomeownerGuideDocumentData }) {
+function GuideSpecifications({ data, formulaLabelPhotoUrls }: { data: HomeownerGuideDocumentData; formulaLabelPhotoUrls: Readonly<Record<string, readonly string[]>> }) {
   const { guide, locations } = data;
   const {
     primaryRecords,
@@ -253,7 +263,7 @@ function GuideSpecifications({ data }: { data: HomeownerGuideDocumentData }) {
           {primaryRecords.length ? (
             <div className="mt-8 grid gap-4 sm:grid-cols-2">
               {primaryRecords.map((record) => (
-                <PaintRecordDetails key={record.id} record={record} />
+                <PaintRecordDetails key={record.id} record={record} formulaLabelPhotoUrls={formulaLabelPhotoUrls[record.id] ?? []} />
               ))}
             </div>
           ) : (
@@ -275,6 +285,7 @@ function GuideSpecifications({ data }: { data: HomeownerGuideDocumentData }) {
                   title={group.location.name}
                   parentName={group.parentName}
                   records={group.records}
+                  formulaLabelPhotoUrls={formulaLabelPhotoUrls}
                 />
               ))}
               {unassignedExceptionRecords.length ? (
@@ -302,6 +313,7 @@ function GuideSpecifications({ data }: { data: HomeownerGuideDocumentData }) {
                       locationLabel(location, locations),
                     )}
                     record={record}
+                    formulaLabelPhotoUrls={formulaLabelPhotoUrls[record.id] ?? []}
                   />
                 );
               })}
@@ -390,7 +402,7 @@ export function HomeownerGuideDocument({ data, heroImageUrl, roomPhotoUrls, reco
     data={data}
     heroImageUrl={heroImageUrl}
     roomPhotoUrls={roomPhotoUrls}
-    renderSpecifications={document => <GuideSpecifications data={document} />}
+    renderSpecifications={document => <GuideSpecifications data={document} formulaLabelPhotoUrls={formulaLabelPhotoUrls} />}
     renderRoomPaints={(records, locationId) => {
       return <div className="pg-room-paint-list">
         {records.map(record => <RoomPaintCard
