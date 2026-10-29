@@ -20,6 +20,7 @@ import {
   serializeHomeownerSessionCookie,
 } from "../../server/paint-guide-homeowner/cookies.js";
 import { createHomeownerDocumentHandler } from "../../server/paint-guide-homeowner/document-handler.js";
+import { addHomeownerPreviewTiming } from "../../server/paint-guide-homeowner/server-timing.js";
 import { createHomeownerEndSessionHandler } from "../../server/paint-guide-homeowner/end-session.js";
 import { createHomeownerPhotoReadHandler } from "../../server/paint-guide-photo/handlers.js";
 import {
@@ -43,6 +44,23 @@ import type { EnvironmentSource, VersionedKeyring } from "../../server/paint-gui
 
 const PROJECT_REF = "abcdefghijklmnopqrst";
 const GUIDE_ID = "71000000-0000-4000-8000-000000000101";
+
+test("sanitized Server-Timing is Preview-only, bounded, and preserves no-store responses", async () => {
+  const original = new Response(JSON.stringify({ available: false }), {
+    status: 503,
+    headers: { "Cache-Control": "no-store, private" },
+  });
+  const instrumented = addHomeownerPreviewTiming(original, 100, 142.35, true);
+  assert.equal(instrumented.headers.get("server-timing"), "handler;dur=42.3");
+  assert.equal(instrumented.headers.get("cache-control"), "no-store, private");
+  assert.equal(instrumented.status, 503);
+  assert.equal(await instrumented.text(), JSON.stringify({ available: false }));
+
+  const productionResponse = addHomeownerPreviewTiming(new Response(null), 100, 200, false);
+  assert.equal(productionResponse.headers.has("server-timing"), false);
+  const bounded = addHomeownerPreviewTiming(new Response(null), 0, 90_000, true);
+  assert.equal(bounded.headers.get("server-timing"), "handler;dur=60000.0");
+});
 
 function key(byte: number) {
   return Buffer.alloc(32, byte).toString("base64url");
