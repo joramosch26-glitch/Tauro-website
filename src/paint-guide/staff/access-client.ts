@@ -10,14 +10,14 @@ export type StaffAccessStatus = {
 };
 export type StaffAccessOperation = "status" | "issue" | "recover" | "rotate" | "revoke";
 export type StaffAccessResponse = StaffAccessStatus & { privateUrl?: string };
-export type StaffAccessErrorStatus = 400 | 401 | 403 | 404 | 409 | 503 | "network";
+export type StaffAccessErrorStatus = 400 | 401 | 403 | 404 | 409 | 503 | "network" | "timeout";
 
 export class StaffAccessClientError extends Error {
   constructor(public readonly status: StaffAccessErrorStatus) { super("Staff access request failed."); }
 }
 
 type Fetcher = typeof fetch;
-type AccessRequest = { guideId: string; expectedTokenGeneration?: number; expectedSessionEpoch?: number };
+type AccessRequest = { guideId: string; expectedTokenGeneration?: number; expectedSessionEpoch?: number; signal?: AbortSignal; timeoutMs?: number };
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value) && Object.getPrototypeOf(value) === Object.prototype;
@@ -69,14 +69,23 @@ export async function requestStaffAccess(operation: StaffAccessOperation, access
   if (!accessToken) throw new StaffAccessClientError(401);
   const mutating = operation === "rotate" || operation === "revoke";
   const body = mutating ? { guideId: request.guideId, expectedTokenGeneration: request.expectedTokenGeneration, expectedSessionEpoch: request.expectedSessionEpoch } : { guideId: request.guideId };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(new DOMException("Staff access request timed out.", "TimeoutError")), request.timeoutMs ?? 15_000);
+  const abortFromCaller = () => controller.abort(request.signal?.reason);
+  if (request.signal?.aborted) abortFromCaller();
+  else request.signal?.addEventListener("abort", abortFromCaller, { once: true });
   try {
-    const response = await fetcher(`/api/paint-guide/staff/access/${operation}`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(body), credentials: "same-origin" });
+    const response = await fetcher(`/api/paint-guide/staff/access/${operation}`, { method: "POST", headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" }, body: JSON.stringify(body), credentials: "same-origin", signal: controller.signal });
     if (!response.ok) throw new StaffAccessClientError([400, 401, 403, 404, 409, 503].includes(response.status) ? response.status as StaffAccessErrorStatus : 503);
     const result = parseStaffAccessResponse(await response.json(), ["issue", "recover", "rotate"].includes(operation));
     if (!result) throw new StaffAccessClientError(503);
     return result;
   } catch (error) {
     if (error instanceof StaffAccessClientError) throw error;
+    if (controller.signal.reason instanceof DOMException && controller.signal.reason.name === "TimeoutError") throw new StaffAccessClientError("timeout");
     throw new StaffAccessClientError("network");
+  } finally {
+    clearTimeout(timeout);
+    request.signal?.removeEventListener("abort", abortFromCaller);
   }
 }

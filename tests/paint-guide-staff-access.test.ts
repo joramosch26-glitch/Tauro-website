@@ -80,3 +80,27 @@ test("client maps HTTP, malformed response, and network failures without exposin
   await assert.rejects(() => requestStaffAccess("status", "token", { guideId: GUIDE }, async () => { throw new Error("private network detail"); }), (error: unknown) => error instanceof StaffAccessClientError && error.status === "network");
   await assert.rejects(() => requestStaffAccess("status", null, { guideId: GUIDE }), (error: unknown) => error instanceof StaffAccessClientError && error.status === 401);
 });
+
+test("staff access requests time out and honor caller cancellation", async () => {
+  const timeoutSignals: AbortSignal[] = [];
+  const pending: typeof fetch = async (_input, init) => new Promise((_resolve, reject) => {
+    const signal = init?.signal as AbortSignal;
+    timeoutSignals.push(signal);
+    signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true });
+  });
+  await assert.rejects(() => requestStaffAccess("recover", "token", { guideId: GUIDE, timeoutMs: 10 }, pending),
+    (error: unknown) => error instanceof StaffAccessClientError && error.status === "timeout");
+  assert.equal(timeoutSignals[0]?.aborted, true);
+
+  const caller = new AbortController();
+  const callerSignals: AbortSignal[] = [];
+  const callerPending: typeof fetch = async (_input, init) => new Promise((_resolve, reject) => {
+    const signal = init?.signal as AbortSignal;
+    callerSignals.push(signal);
+    signal.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError")), { once: true });
+  });
+  const request = requestStaffAccess("recover", "token", { guideId: GUIDE, signal: caller.signal }, callerPending);
+  caller.abort();
+  await assert.rejects(() => request, (error: unknown) => error instanceof StaffAccessClientError && error.status === "network");
+  assert.equal(callerSignals[0]?.aborted, true);
+});

@@ -42,7 +42,7 @@ before(async () => {
 
 after(async () => { await browser?.close(); await vite?.close(); });
 
-async function signedInPage(accessState, { recoverFailure = false, synthetic = false } = {}) {
+async function signedInPage(accessState, { recoverFailure = false, recoverMalformed = false, recoverEmpty = false, recoverReject = false, recoverDelayMs = 0, synthetic = false } = {}) {
   const calls = [];
   const guideId = synthetic ? syntheticGuideId : modelGuideId;
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
@@ -68,7 +68,11 @@ async function signedInPage(accessState, { recoverFailure = false, synthetic = f
         }) });
       }
       if (operation === 'recover') {
+        if (recoverDelayMs) await new Promise(resolve => setTimeout(resolve, recoverDelayMs));
+        if (recoverReject) { try { await route.abort(); } catch { /* The page may already have cancelled this request. */ } return; }
         if (recoverFailure) return route.fulfill({ status: 503, contentType: 'application/json', body: JSON.stringify({ available: false }) });
+        if (recoverMalformed) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({}) });
+        if (recoverEmpty) return route.fulfill({ status: 200, contentType: 'application/json', body: '' });
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
           guideId, guideStatus: 'published', accessState: 'active', tokenGeneration: 1,
           sessionEpoch: 1, homeownerExchangeAvailable: true,
@@ -149,5 +153,79 @@ test('the independent synthetic QA guide uses status and recover only; it never 
     assert.ok(calls.every(call => call.body.guideId === syntheticGuideId));
     assert.equal(await page.getByRole('button', { name: 'Issue homeowner link', exact: true }).count(), 0);
     assert.equal(await page.getByRole('button', { name: /rotate/i }).count(), 0);
+  } finally { await context.close(); }
+});
+
+test('synthetic recovery replaces the stale active status while pending, then shows the recovered-link action', async () => {
+  const { context, page, calls } = await signedInPage('active', { synthetic: true, recoverDelayMs: 250 });
+  try {
+    await page.getByRole('button', { name: 'Check homeowner link status', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'An existing synthetic homeowner link is active' }).waitFor();
+    await page.getByRole('button', { name: 'Recover existing homeowner link', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Recovering the existing synthetic homeowner link' }).waitFor();
+    await page.getByRole('button', { name: 'Open synthetic homeowner guide', exact: true }).waitFor();
+    await page.getByRole('status').filter({ hasText: 'Existing synthetic homeowner link recovered in memory' }).waitFor();
+    assert.deepEqual(calls.map(call => call.operation), ['status', 'recover']);
+  } finally { await context.close(); }
+});
+
+test('synthetic recovery reports malformed successful responses without exposing a link', async () => {
+  const { context, page, calls } = await signedInPage('active', { synthetic: true, recoverMalformed: true });
+  try {
+    await page.getByRole('button', { name: 'Check homeowner link status', exact: true }).click();
+    await page.getByRole('button', { name: 'Recover existing homeowner link', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Could not recover the existing synthetic link' }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Open synthetic homeowner guide', exact: true }).count(), 0);
+    assert.deepEqual(calls.map(call => call.operation), ['status', 'recover']);
+  } finally { await context.close(); }
+});
+
+test('synthetic recovery reports an empty successful response without exposing a link', async () => {
+  const { context, page, calls } = await signedInPage('active', { synthetic: true, recoverEmpty: true });
+  try {
+    await page.getByRole('button', { name: 'Check homeowner link status', exact: true }).click();
+    await page.getByRole('button', { name: 'Recover existing homeowner link', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Could not recover the existing synthetic link' }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Open synthetic homeowner guide', exact: true }).count(), 0);
+    assert.deepEqual(calls.map(call => call.operation), ['status', 'recover']);
+  } finally { await context.close(); }
+});
+
+test('synthetic recovery rejection reports a safe error and never falls back to issuing access', async () => {
+  const { context, page, calls } = await signedInPage('active', { synthetic: true, recoverReject: true });
+  try {
+    await page.getByRole('button', { name: 'Check homeowner link status', exact: true }).click();
+    await page.getByRole('button', { name: 'Recover existing homeowner link', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Could not recover the existing synthetic link' }).waitFor();
+    assert.equal(await page.getByRole('button', { name: 'Open synthetic homeowner guide', exact: true }).count(), 0);
+    assert.deepEqual(calls.map(call => call.operation), ['status', 'recover']);
+  } finally { await context.close(); }
+});
+
+test('signing out cancels an in-flight synthetic recovery and ignores its late response', async () => {
+  const { context, page, calls } = await signedInPage('active', { synthetic: true, recoverDelayMs: 350 });
+  try {
+    await page.getByRole('button', { name: 'Check homeowner link status', exact: true }).click();
+    await page.getByRole('button', { name: 'Recover existing homeowner link', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Recovering the existing synthetic homeowner link' }).waitFor();
+    await page.getByRole('button', { name: 'Sign out', exact: true }).click();
+    await page.getByLabel('Temporary test password', { exact: true }).waitFor();
+    await page.waitForTimeout(450);
+    assert.equal(await page.getByRole('button', { name: 'Open synthetic homeowner guide', exact: true }).count(), 0);
+    assert.deepEqual(calls.map(call => call.operation), ['status', 'recover']);
+  } finally { await context.close(); }
+});
+
+test('leaving the synthetic page cancels an in-flight recovery request', async () => {
+  const { context, page, calls } = await signedInPage('active', { synthetic: true, recoverDelayMs: 350 });
+  try {
+    await page.getByRole('button', { name: 'Check homeowner link status', exact: true }).click();
+    const failed = page.waitForEvent('requestfailed', event => new URL(event.url()).pathname.endsWith('/staff/access/recover'));
+    await page.getByRole('button', { name: 'Recover existing homeowner link', exact: true }).click();
+    await page.getByRole('status').filter({ hasText: 'Recovering the existing synthetic homeowner link' }).waitFor();
+    await page.goto(`${origin}/paint-guide/away`);
+    await failed;
+    await page.waitForTimeout(400);
+    assert.deepEqual(calls.map(call => call.operation), ['status', 'recover']);
   } finally { await context.close(); }
 });

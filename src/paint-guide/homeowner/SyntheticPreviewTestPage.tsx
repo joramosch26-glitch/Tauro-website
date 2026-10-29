@@ -61,6 +61,7 @@ export function SyntheticPreviewTestPage() {
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [lastUpload, setLastUpload] = useState<string | null>(null);
   const imageUrlRef = useRef<string | null>(null);
+  const recoverControllerRef = useRef<AbortController | null>(null);
 
   const photoClient: PhotoClient | null = useMemo(() => accessToken ? createStaffPhotoClient({
     getAccessToken: async () => accessToken,
@@ -68,6 +69,8 @@ export function SyntheticPreviewTestPage() {
   }) : null, [accessToken]);
 
   useEffect(() => () => {
+    recoverControllerRef.current?.abort();
+    recoverControllerRef.current = null;
     if (imageUrlRef.current) URL.revokeObjectURL(imageUrlRef.current);
   }, []);
 
@@ -110,7 +113,10 @@ export function SyntheticPreviewTestPage() {
 
   const signOut = async () => {
     const token = accessToken;
+    recoverControllerRef.current?.abort();
+    recoverControllerRef.current = null;
     setAccessToken(null);
+    setBusy(false);
     setPhotos([]);
     setPrivateLink(null);
     setLastUpload(null);
@@ -204,22 +210,35 @@ export function SyntheticPreviewTestPage() {
     if (!accessToken || homeownerAccessStatus?.accessState !== "active"
       || homeownerAccessStatus.guideStatus !== "published" || !homeownerAccessStatus.homeownerExchangeAvailable) return;
     setBusy(true);
+    setMessage("Recovering the existing synthetic homeowner link. No new link will be issued.");
     setPrivateLink(null);
+    const controller = new AbortController();
+    recoverControllerRef.current?.abort();
+    recoverControllerRef.current = controller;
     try {
-      const result = await requestStaffAccess("recover", accessToken, { guideId: GUIDE_ID });
+      const result = await requestStaffAccess("recover", accessToken, { guideId: GUIDE_ID, signal: controller.signal });
+      if (controller.signal.aborted || recoverControllerRef.current !== controller) return;
       const link = result.privateUrl ? new URL(result.privateUrl) : null;
       if (!link || link.origin !== window.location.origin || link.pathname !== "/paint-guide/p"
         || !/^#tpgh1\.[1-9][0-9]*\.[A-Za-z0-9_-]{43}$/.test(link.hash)) throw new Error("link");
       setPrivateLink(link.href);
       setMessage("Existing synthetic homeowner link recovered in memory. No new link was issued or rotated.");
     } catch (error) {
+      if (controller.signal.aborted || recoverControllerRef.current !== controller) return;
       const status = error instanceof StaffAccessClientError ? error.status : null;
       setMessage(status === 404
         ? "No recoverable synthetic homeowner link exists. No new link was issued."
         : status === 409
           ? "Synthetic homeowner access is no longer active. No link was recovered or issued."
+          : status === "timeout"
+            ? "Recovery timed out. No new link was issued; you can safely retry."
           : "Could not recover the existing synthetic link. No new link was issued.");
-    } finally { setBusy(false); }
+    } finally {
+      if (recoverControllerRef.current === controller) {
+        recoverControllerRef.current = null;
+        setBusy(false);
+      }
+    }
   };
 
   return <main className="min-h-screen bg-[#f5f1e8] px-5 py-10 text-[#20211f]">
@@ -239,7 +258,7 @@ export function SyntheticPreviewTestPage() {
           <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy || photos.length === 0} onClick={() => void readFormulaLabel()}>Read current private photo</button>
           <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy} onClick={() => void checkHomeownerLinkStatus()}>Check homeowner link status</button>
           <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy || homeownerAccessStatus?.accessState !== "active" || homeownerAccessStatus.guideStatus !== "published" || !homeownerAccessStatus.homeownerExchangeAvailable} onClick={() => void recoverExistingHomeownerLink()}>Recover existing homeowner link</button>
-          <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy} onClick={() => void signOut()}>Sign out</button>
+          <button className="border border-[#20211f] px-4 py-3 text-sm font-semibold" disabled={busy && recoverControllerRef.current === null} onClick={() => void signOut()}>Sign out</button>
         </div>
         {privateLink ? <button className="w-fit border border-[#9b6b36] bg-[#9b6b36] px-5 py-3 text-sm font-semibold text-white" onClick={() => { const link = privateLink; setPrivateLink(null); window.location.assign(link); }}>Open synthetic homeowner guide</button> : null}
         <ul className="grid gap-2 text-sm" aria-label="Synthetic photo placements">{photos.map((photo) => <li className="border border-[#20211f]/15 p-3" key={`${photo.placement}:${photo.locationId}:${photo.recordId}`}>{photo.placement} � {photo.recordId ?? "guide"} � current version {photo.photo?.versionId ?? "none"}</li>)}</ul>
